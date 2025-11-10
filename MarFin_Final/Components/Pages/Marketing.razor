@@ -1,0 +1,240 @@
+@page "/marketing"
+
+<div class="marketing-container">
+    <!-- Header -->
+    <div class="marketing-header mb-4">
+        <div class="header-title">
+            <h1 class="fw-bold mb-0">Marketing Campaign</h1>
+            <span class="campaign-count text-secondary">32 campaigns</span>
+        </div>
+    </div>
+
+    <!-- Campaign Performance Summary -->
+    <div class="campaign-summary mb-4">
+        <h3 class="mb-3">Campaign Performance Summary</h3>
+        <div class="summary-cards d-flex flex-wrap gap-3">
+            <div class="summary-card card p-3 flex-fill">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="card-icon text-primary fs-3">
+                        <i class="bi bi-send"></i>
+                    </div>
+                    <div>
+                        <h2 class="mb-0">1,903</h2>
+                        <p class="text-muted mb-1">Total Sent</p>
+                        <span class="card-badge text-success">
+                            <i class="bi bi-graph-up"></i> +12.5%
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-card card p-3 flex-fill">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="card-icon text-info fs-3">
+                        <i class="bi bi-envelope-open"></i>
+                    </div>
+                    <div>
+                        <h2 class="mb-0">1,903</h2>
+                        <p class="text-muted mb-1">Avg Open</p>
+                        <span class="card-badge text-success">
+                            <i class="bi bi-graph-up"></i> +12.5%
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-card card p-3 flex-fill">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="card-icon text-warning fs-3">
+                        <i class="bi bi-hand-index"></i>
+                    </div>
+                    <div>
+                        <h2 class="mb-0">1,903</h2>
+                        <p class="text-muted mb-1">Avg Click</p>
+                        <span class="card-badge text-success">
+                            <i class="bi bi-graph-up"></i> +12.5%
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-card card p-3 flex-fill">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="card-icon text-success fs-3">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div>
+                        <h2 class="mb-0">1,903</h2>
+                        <p class="text-muted mb-1">Total ROI</p>
+                        <span class="card-badge text-success">
+                            <i class="bi bi-graph-up"></i> +12.5%
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="marketing-toolbar d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+        <button class="btn btn-primary d-flex align-items-center gap-2" @onclick="NewCampaign">
+            <i class="bi bi-plus-lg"></i> New Campaign
+        </button>
+
+        <div class="toolbar-filters d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-outline-secondary">
+                <i class="bi bi-grid-3x3"></i> View
+            </button>
+            <button class="btn btn-outline-secondary">
+                <i class="bi bi-funnel"></i> Filter by
+            </button>
+            <button class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-down-up"></i> Sort by
+            </button>
+
+            <div class="input-group search-box">
+                <span class="input-group-text">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" class="form-control" placeholder="Search here.." @bind="searchTerm" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Cards -->
+    <div class="campaigns-grid d-grid gap-3">
+        @foreach (var campaign in campaigns)
+        {
+            <div class="campaign-card card p-3 shadow-sm">
+                <div class="campaign-header d-flex justify-content-between align-items-center mb-2">
+                    <div class="campaign-title d-flex align-items-center gap-2">
+                        <i class="bi bi-tag"></i>
+                        <span class="fw-semibold">@campaign.Name</span>
+                    </div>
+                    <span class="campaign-status @campaign.StatusClass">
+                        <i class="bi bi-circle-fill"></i> @campaign.Status
+                    </span>
+                </div>
+
+                <div class="campaign-metrics mb-2">
+                    <div class="metric-row d-flex flex-wrap gap-3 text-muted">
+                        <span><strong>Budget:</strong> @campaign.Budget</span>
+                        <span><strong>Spent:</strong> @campaign.Spent</span>
+                        <span><strong>ROI:</strong> @campaign.ROI</span>
+                    </div>
+                </div>
+
+                <div class="campaign-date text-secondary mb-2">
+                    <i class="bi bi-calendar-event"></i> @campaign.DateRange
+                </div>
+
+                <div class="campaign-stats d-flex justify-content-between text-center border-top border-bottom py-2 mb-2">
+                    <div class="stat-box flex-fill">
+                        <span class="d-block text-muted">Sent</span>
+                        <span class="fw-bold">@campaign.Sent</span>
+                    </div>
+                    <div class="stat-box flex-fill">
+                        <span class="d-block text-muted">Opened</span>
+                        <span class="fw-bold">@campaign.Opened</span>
+                        <span class="text-success d-block small">@campaign.OpenRate</span>
+                    </div>
+                    <div class="stat-box flex-fill">
+                        <span class="d-block text-muted">Clicked</span>
+                        <span class="fw-bold">@campaign.Clicked</span>
+                        <span class="text-success d-block small">@campaign.ClickRate</span>
+                    </div>
+                </div>
+
+                <div class="campaign-revenue mb-2">
+                    <i class="bi bi-currency-exchange"></i>
+                    Revenue Generated: <strong>@campaign.Revenue</strong>
+                </div>
+
+                <div class="campaign-actions d-flex gap-2 mt-2">
+                    <button class="btn btn-link p-0 text-primary">View Details</button>
+                    <button class="btn btn-link p-0 text-secondary">Edit</button>
+                    <button class="btn btn-link p-0 text-info">Duplicate</button>
+                    <button class="btn btn-link p-0 text-danger">Pause</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string searchTerm = "";
+
+    private class Campaign
+    {
+        public string Name { get; set; } = "";
+        public string Status { get; set; } = "";
+        public string StatusClass { get; set; } = "";
+        public string Budget { get; set; } = "";
+        public string Spent { get; set; } = "";
+        public string ROI { get; set; } = "";
+        public string DateRange { get; set; } = "";
+        public string Sent { get; set; } = "";
+        public string Opened { get; set; } = "";
+        public string OpenRate { get; set; } = "";
+        public string Clicked { get; set; } = "";
+        public string ClickRate { get; set; } = "";
+        public string Revenue { get; set; } = "";
+    }
+
+    private List<Campaign> campaigns = new()
+    {
+        new Campaign
+        {
+            Name = "Summer Sale 2025",
+            Status = "Active",
+            StatusClass = "text-success",
+            Budget = "Php 200k",
+            Spent = "Php 100k",
+            ROI = "203%",
+            DateRange = "Oct 25 - Nov 1, 2025",
+            Sent = "1,203",
+            Opened = "500",
+            OpenRate = "54%",
+            Clicked = "500",
+            ClickRate = "54%",
+            Revenue = "Php 200,324.00"
+        },
+        new Campaign
+        {
+            Name = "Email Blast Q3",
+            Status = "Completed",
+            StatusClass = "text-secondary",
+            Budget = "Php 180k",
+            Spent = "Php 160k",
+            ROI = "185%",
+            DateRange = "Sep 10 - Sep 20, 2025",
+            Sent = "1,503",
+            Opened = "620",
+            OpenRate = "58%",
+            Clicked = "310",
+            ClickRate = "51%",
+            Revenue = "Php 296,000.00"
+        },
+        new Campaign
+        {
+            Name = "Promo Giveaway",
+            Status = "Paused",
+            StatusClass = "text-warning",
+            Budget = "Php 120k",
+            Spent = "Php 80k",
+            ROI = "132%",
+            DateRange = "Nov 5 - Nov 10, 2025",
+            Sent = "800",
+            Opened = "430",
+            OpenRate = "62%",
+            Clicked = "220",
+            ClickRate = "51%",
+            Revenue = "Php 158,400.00"
+        }
+    };
+
+    private void NewCampaign()
+    {
+        // Add new campaign logic here
+    }
+}

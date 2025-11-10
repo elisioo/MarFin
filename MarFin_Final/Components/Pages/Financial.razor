@@ -1,0 +1,150 @@
+﻿@page "/financial"
+
+<div class="financial-container">
+    <div class="financial-header">
+        <div class="header-title">
+            <h1>Financial Transactions</h1>
+            <span class="transaction-count">103 transactions</span>
+        </div>
+    </div>
+
+    <!-- Financial Summary -->
+    <div class="financial-summary">
+        <h3>Financial Summary</h3>
+        <div class="summary-cards">
+            <div class="summary-card revenue">
+                <div class="card-icon">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <div class="card-content">
+                    <h2>Php 300,234</h2>
+                    <p>Total Revenue</p>
+                    <span class="card-badge positive">
+                        <i class="bi bi-graph-up"></i> +12.5%
+                    </span>
+                </div>
+            </div>
+
+            <div class="summary-card pending">
+                <div class="card-icon">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div class="card-content">
+                    <h2>Php 300,234</h2>
+                    <p>Pending</p>
+                    <span class="card-badge info">
+                        <i class="bi bi-file-earmark-text"></i> 12 inv.
+                    </span>
+                </div>
+            </div>
+
+            <div class="summary-card overdue">
+                <div class="card-icon">
+                    <i class="bi bi-exclamation-triangle"></i>
+                </div>
+                <div class="card-content">
+                    <h2>Php 43,329</h2>
+                    <p>Overdue</p>
+                    <span class="card-badge warning">
+                        <i class="bi bi-clock-history"></i> 3 inv.
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="financial-toolbar">
+        <button class="btn btn-primary d-flex align-items-center gap-2" @onclick="NewInvoice">
+            <i class="bi bi-plus-lg"></i> New Invoice
+        </button>
+
+        <div class="toolbar-filters d-flex align-items-center gap-2">
+            <div class="dropdown-filter">
+                <button class="btn btn-outline-secondary">
+                    This Month <i class="bi bi-caret-down-fill"></i>
+                </button>
+            </div>
+
+            <button class="btn btn-outline-secondary">
+                <i class="bi bi-funnel"></i> Filter
+            </button>
+
+            <button class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-down-up"></i> Sort
+            </button>
+
+            <div class="input-group search-box">
+                <span class="input-group-text">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" class="form-control" placeholder="Search here..."
+                       @bind="searchTerm" />
+            </div>
+
+            <button class="btn btn-outline-success">
+                <i class="bi bi-download"></i> Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="transactions-table">
+        <div class="table-header">
+            <span>Invoice ID</span>
+            <span>Customer</span>
+            <span>Amount</span>
+            <span>Date</span>
+        </div>
+
+        @if (transactions.Any())
+        {
+            @foreach (var transaction in transactions)
+            {
+                <div class="table-row">
+                    <span>@transaction.InvoiceId</span>
+                    <span>@transaction.Customer</span>
+                    <span>@transaction.Amount</span>
+                    <span>@transaction.Date.ToString("MM/dd/yyyy")</span>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state text-center">
+                <i class="bi bi-inbox fs-2 text-muted"></i>
+                <p>No transactions found</p>
+            </div>
+        }
+    </div>
+
+    <div class="table-footer">
+        <span>Showing 1–10 of 54</span>
+    </div>
+</div>
+
+@code {
+    private string searchTerm = "";
+
+    private class Transaction
+    {
+        public string InvoiceId { get; set; } = "";
+        public string Customer { get; set; } = "";
+        public string Amount { get; set; } = "";
+        public DateTime Date { get; set; }
+    }
+
+    private List<Transaction> transactions = new()
+    {
+        new() { InvoiceId = "INV-001", Customer = "John Doe", Amount = "Php 15,000", Date = DateTime.Now.AddDays(-5) },
+        new() { InvoiceId = "INV-002", Customer = "Jane Smith", Amount = "Php 22,500", Date = DateTime.Now.AddDays(-3) },
+        new() { InvoiceId = "INV-003", Customer = "ABC Corp", Amount = "Php 45,000", Date = DateTime.Now.AddDays(-2) },
+        new() { InvoiceId = "INV-004", Customer = "XYZ Company", Amount = "Php 18,750", Date = DateTime.Now.AddDays(-1) },
+        new() { InvoiceId = "INV-005", Customer = "Bob Johnson", Amount = "Php 30,000", Date = DateTime.Now },
+    };
+
+    private void NewInvoice()
+    {
+        // Add new invoice logic here
+    }
+}

@@ -1,0 +1,146 @@
+@page "/dashboard"
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <div>
+            <h1>Dashboard</h1>
+            <p class="subtitle">Manage your dashboard efficiently</p>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Customer Stats Cards -->
+        <div class="stats-column">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div class="stat-content">
+                    <h2>1,903</h2>
+                    <p>Customers</p>
+                    <span class="stat-change positive"><i class="bi bi-arrow-up-right"></i> +12.5%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div class="stat-content">
+                    <h2>1,903</h2>
+                    <p>Customers</p>
+                    <span class="stat-change positive"><i class="bi bi-arrow-up-right"></i> +12.5%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div class="stat-content">
+                    <h2>1,903</h2>
+                    <p>Customers</p>
+                    <span class="stat-change positive"><i class="bi bi-arrow-up-right"></i> +12.5%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div class="stat-content">
+                    <h2>1,903</h2>
+                    <p>Customers</p>
+                    <span class="stat-change positive"><i class="bi bi-arrow-up-right"></i> +12.5%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pipeline Chart -->
+        <div class="pipeline-card">
+            <h3>Pipeline</h3>
+            <div class="pipeline-chart">
+                @foreach (var item in pipelineData)
+                {
+                    <div class="pipeline-row">
+                        <span class="pipeline-label">@item.Name</span>
+                        <div class="pipeline-bars">
+                            <div class="pipeline-bar bar-2020" style="width:@item.Value2020%">
+                                <span class="bar-label">@item.Value2020</span>
+                            </div>
+                            <div class="pipeline-bar bar-2021" style="width:@item.Value2021%">
+                                <span class="bar-label">@item.Value2021</span>
+                            </div>
+                            <div class="pipeline-bar bar-2022" style="width:@item.Value2022%">
+                                <span class="bar-label">@item.Value2022</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="pipeline-legend">
+                <span class="legend-item"><span class="legend-color bar-2020"></span> 2020</span>
+                <span class="legend-item"><span class="legend-color bar-2021"></span> 2021</span>
+                <span class="legend-item"><span class="legend-color bar-2022"></span> 2022</span>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="transactions-card">
+            <h3>Recent Transactions</h3>
+            <div class="transaction-header">
+                <span>Invoice #</span>
+                <span>Customer</span>
+                <span>Amount</span>
+                <span>Status</span>
+            </div>
+            <div class="empty-state">
+                <p>No recent transactions</p>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="activity-card">
+            <div class="activity-header">
+                <h3>Recent Activity</h3>
+                <button class="refresh-btn"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+            <div class="activity-list">
+                <div class="activity-item">
+                    <span class="activity-icon"><i class="bi bi-clock"></i></span>
+                    <div class="activity-content">
+                        <p>New Customer added...</p>
+                        <span class="activity-time">30 min</span>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <span class="activity-icon"><i class="bi bi-clock"></i></span>
+                    <div class="activity-content">
+                        <p>Payment received</p>
+                        <span class="activity-time">1 hr</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty Cards Row -->
+    <div class="empty-cards-row">
+        <div class="empty-card"></div>
+        <div class="empty-card"></div>
+        <div class="empty-card"></div>
+    </div>
+</div>
+
+@code {
+    private class PipelineItem
+    {
+        public string Name { get; set; } = "";
+        public double Value2020 { get; set; }
+        public double Value2021 { get; set; }
+        public double Value2022 { get; set; }
+    }
+
+    private List<PipelineItem> pipelineData = new()
+    {
+        new PipelineItem { Name = "Figma", Value2020 = 79.19, Value2021 = 86.21, Value2022 = 89.6 },
+        new PipelineItem { Name = "Sketch", Value2020 = 75.14, Value2021 = 92.29, Value2022 = 95 },
+        new PipelineItem { Name = "XD", Value2020 = 12.39, Value2021 = 40.91, Value2022 = 53.35 },
+        new PipelineItem { Name = "PS", Value2020 = 12.5, Value2021 = 55.25, Value2022 = 43.04 },
+        new PipelineItem { Name = "AI", Value2020 = 35.35, Value2021 = 54.88, Value2022 = 55.69 },
+        new PipelineItem { Name = "CorelDRAW", Value2020 = 87.88, Value2021 = 90.35, Value2022 = 13.56 },
+    };
+}

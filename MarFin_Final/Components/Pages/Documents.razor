@@ -1,0 +1,170 @@
+@page "/documents"
+
+<div class="documents-container">
+    <div class="documents-header">
+        <div class="header-title">
+            <h1>Document Management</h1>
+        </div>
+        <button class="btn-primary" @onclick="UploadDocument">
+            <i class="bi bi-plus-lg"></i> Upload Document
+        </button>
+    </div>
+
+    <!-- Category Filters -->
+    <div class="category-filters">
+        <button class="category-btn @(selectedCategory == "all" ? "active" : "")" @onclick='() => SetCategory("all")'>
+            All
+        </button>
+        <button class="category-btn @(selectedCategory == "contracts" ? "active" : "")" @onclick='() => SetCategory("contracts")'>
+            Contracts
+        </button>
+        <button class="category-btn @(selectedCategory == "invoices" ? "active" : "")" @onclick='() => SetCategory("invoices")'>
+            Invoices
+        </button>
+        <button class="category-btn @(selectedCategory == "proposals" ? "active" : "")" @onclick='() => SetCategory("proposals")'>
+            Proposals
+        </button>
+        <button class="category-btn @(selectedCategory == "other" ? "active" : "")" @onclick='() => SetCategory("other")'>
+            Other
+        </button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="documents-toolbar">
+        <div class="search-box">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" placeholder="Search documents..." @bind="searchTerm" />
+        </div>
+        <button class="btn-filter">
+            <i class="bi bi-funnel"></i> Filter
+        </button>
+        <div class="dropdown-filter">
+            <button class="btn-filter">
+                Sort: Date <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Documents Table -->
+    <div class="documents-table">
+        <div class="table-header">
+            <span>Name</span>
+            <span>Type</span>
+            <span>Customer</span>
+            <span>Date</span>
+            <span>Size</span>
+            <span></span>
+        </div>
+
+        @foreach (var doc in documents)
+        {
+            <div class="table-row">
+                <div class="document-name">
+                    <i class="bi @GetDocumentIcon(doc.FileName) document-icon"></i>
+                    <span>@doc.FileName</span>
+                </div>
+                <span>@doc.Type</span>
+                <span>@doc.Customer</span>
+                <span>@doc.Date</span>
+                <span>@doc.Size</span>
+                <div class="action-buttons">
+                    <button class="action-btn" title="View" @onclick="() => ViewDocument(doc.Id)">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="action-btn" title="Download" @onclick="() => DownloadDocument(doc.Id)">
+                        <i class="bi bi-download"></i>
+                    </button>
+                    <button class="action-btn delete" title="Delete" @onclick="() => DeleteDocument(doc.Id)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Upload Zone -->
+    <div class="upload-zone">
+        <div class="upload-content">
+            <i class="bi bi-cloud-upload upload-icon"></i>
+            <p class="upload-text">Drag & Drop files here or click Upload</p>
+            <p class="upload-hint">Supported: PDF, DOCX, XLSX, PNG, JPG (Max 5MB)</p>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+        <span class="pagination-info">Showing 1-15 of 89</span>
+        <div class="pagination-controls">
+            <button class="page-btn" disabled>
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <button class="page-btn">4</button>
+            <button class="page-btn">5</button>
+            <span class="page-dots">...</span>
+            <button class="page-btn">6</button>
+            <button class="page-btn">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string searchTerm = "";
+    private string selectedCategory = "all";
+
+    private void SetCategory(string category)
+    {
+        selectedCategory = category;
+    }
+
+    private class Document
+    {
+        public int Id { get; set; }
+        public string FileName { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string Customer { get; set; } = "";
+        public string Date { get; set; } = "";
+        public string Size { get; set; } = "";
+    }
+
+    private List<Document> documents = new()
+    {
+        new() { Id = 1, FileName = "Service Agreement.pdf", Type = "Contract", Customer = "ABC Corp", Date = "Oct 20, 2025", Size = "2.1MB" },
+        new() { Id = 2, FileName = "INV-2025-001.pdf", Type = "Invoice", Customer = "XYZ Ltd", Date = "Oct 19, 2025", Size = "156KB" },
+        new() { Id = 3, FileName = "Project Proposal.docx", Type = "Proposal", Customer = "Tech Sol", Date = "Oct 18, 2025", Size = "3.8MB" },
+        new() { Id = 4, FileName = "Campaign Brief.xlsx", Type = "Other", Customer = "Design Co", Date = "Oct 17, 2025", Size = "892KB" }
+    };
+
+    private string GetDocumentIcon(string fileName)
+    {
+        if (fileName.EndsWith(".pdf")) return "bi-file-pdf";
+        if (fileName.EndsWith(".docx") || fileName.EndsWith(".doc")) return "bi-file-word";
+        if (fileName.EndsWith(".xlsx") || fileName.EndsWith(".xls")) return "bi-file-excel";
+        if (fileName.EndsWith(".png") || fileName.EndsWith(".jpg") || fileName.EndsWith(".jpeg")) return "bi-file-image";
+        return "bi-file-earmark";
+    }
+
+    private void UploadDocument()
+    {
+        // Upload document logic
+    }
+
+    private void ViewDocument(int id)
+    {
+        // View document logic
+    }
+
+    private void DownloadDocument(int id)
+    {
+        // Download document logic
+    }
+
+    private void DeleteDocument(int id)
+    {
+        // Delete document logic
+    }
+}

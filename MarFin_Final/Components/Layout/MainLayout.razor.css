@@ -1,0 +1,133 @@
+.page {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    min-height: 100vh;
+    background-color: #f5f5f5;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: 250px;
+    transition: margin-left 0.3s ease;
+}
+
+    main.sidebar-collapsed {
+        margin-left: 70px;
+    }
+
+.sidebar {
+    background-color: #0A1828;
+    width: 250px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transition: width 0.3s ease;
+    overflow: hidden;
+}
+
+    .sidebar.collapsed {
+        width: 70px;
+    }
+
+.top-row {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.search-container {
+    position: relative;
+    width: 400px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 15px 10px 45px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    font-size: 14px;
+    outline: none;
+}
+
+    .search-input:focus {
+        border-color: #007bff;
+        background-color: #ffffff;
+    }
+
+.top-row-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.icon-button {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background-color: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+    .icon-button:hover {
+        background-color: #f0f0f0;
+    }
+
+.admin-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    border: none;
+    background-color: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+    .admin-button:hover {
+        background-color: #f0f0f0;
+    }
+
+.admin-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.content {
+    padding: 2rem;
+    flex: 1;
+}

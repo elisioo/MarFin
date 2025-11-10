@@ -1,0 +1,104 @@
+﻿@page "/customers"
+
+<div class="customers-container">
+    <div class="customers-header">
+        <div class="header-title">
+            <h1>Customers</h1>
+            <span class="record-count">400 records</span>
+        </div>
+    </div>
+
+    <div class="customers-toolbar">
+        <button class="btn-primary" @onclick="AddCustomer">
+            <span><i class="bi bi-plus-lg"></i></span> New Customer
+        </button>
+        <div class="toolbar-right">
+            <button class="btn-secondary">
+                <span><i class="bi bi-filter"></i></span> Filter by
+            </button>
+            <button class="btn-secondary">
+                <span><i class="bi bi-arrow-down-up"></i></span> Sort by
+            </button>
+            <div class="search-box">
+                <span class="search-icon"><i class="bi bi-search"></i></span>
+                <input type="text" placeholder="Search here.." @bind="searchTerm" />
+            </div>
+            <button class="btn-secondary">Export</button>
+        </div>
+    </div>
+
+    @foreach (var customer in customers)
+    {
+        <div class="customer-card">
+            <div class="customer-card-header">
+                <span class="customer-name">@customer.CompanyName</span>
+                <button class="menu-btn">⋮</button>
+            </div>
+
+            <div class="customer-table">
+                <div class="table-header">
+                    <span>First Name</span>
+                    <span>Last Name</span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                @foreach (var contact in customer.Contacts)
+                {
+                    <div class="table-row">
+                        <span>@contact.FirstName</span>
+                        <span>@contact.LastName</span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string searchTerm = "";
+
+    private class Contact
+    {
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+    }
+
+    // Renamed the inner class to avoid CS0542 error
+    private class CustomerModel
+    {
+        public string CompanyName { get; set; } = "";
+        public List<Contact> Contacts { get; set; } = new();
+    }
+
+    private List<CustomerModel> customers = new()
+    {
+        new CustomerModel
+        {
+            CompanyName = "XYZ Company",
+            Contacts = new List<Contact>
+            {
+                new Contact { FirstName = "John", LastName = "Doe" },
+                new Contact { FirstName = "Jane", LastName = "Smith" },
+                new Contact { FirstName = "Bob", LastName = "Johnson" }
+            }
+        },
+        new CustomerModel
+        {
+            CompanyName = "ABC Corporation",
+            Contacts = new List<Contact>
+            {
+                new Contact { FirstName = "Alice", LastName = "Brown" },
+                new Contact { FirstName = "Charlie", LastName = "Davis" },
+                new Contact { FirstName = "Emma", LastName = "Wilson" }
+            }
+        }
+    };
+
+    private void AddCustomer()
+    {
+        // Add customer logic
+    }
+}

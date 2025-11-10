@@ -1,0 +1,69 @@
+# =============================
+# Visual Studio
+# =============================
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# =============================
+# Build Folders
+# =============================
+bin/
+obj/
+Debug/
+Release/
+
+# =============================
+# MAUI / Xamarin / .NET generated files
+# =============================
+*.apk
+*.aab
+*.ap_
+*.xamarin
+*.xcworkspace
+*.xcuserdata/
+*.xcodeproj/
+*.app/
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+
+# =============================
+# NuGet packages
+# =============================
+*.nupkg
+packages/
+*.snupkg
+.nuget/
+
+# =============================
+# Blazor / Web / Node
+# =============================
+wwwroot/**/*.map
+wwwroot/**/*.lock.json
+node_modules/
+
+# =============================
+# OS generated files
+# =============================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =============================
+# Logs
+# =============================
+*.log
+
+# =============================
+# Other temporary files
+# =============================
+*.vsix
+*.cache
+*.db
+*.sdf
+*.pdb

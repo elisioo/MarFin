@@ -1,0 +1,41 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar @(sidebarCollapsed ? "collapsed" : "")">
+        <NavMenu IsCollapsed="@sidebarCollapsed" OnToggleSidebar="@ToggleSidebar" />
+    </div>
+
+    <main class="@(sidebarCollapsed ? "sidebar-collapsed" : "")">
+        <div class="top-row">
+            <div class="search-container">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" placeholder="Search here.." class="search-input" />
+            </div>
+            <div class="top-row-right">
+                <button class="icon-button">
+                    <i class="bi bi-gear"></i>
+                </button>
+                <button class="icon-button">
+                    <i class="bi bi-bell"></i>
+                </button>
+                <button class="admin-button">
+                    <i class="bi bi-person-circle admin-icon"></i>
+                    <span>Admin</span>
+                </button>
+            </div>
+        </div>
+
+        <article class="content">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private bool sidebarCollapsed = false;
+
+    private void ToggleSidebar()
+    {
+        sidebarCollapsed = !sidebarCollapsed;
+    }
+}

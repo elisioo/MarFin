@@ -1,0 +1,278 @@
+﻿@page "/reports"
+
+<div class="reports-container">
+    <div class="reports-header">
+        <div class="header-title">
+            <h1>Reports & Analytics</h1>
+            <span class="header-subtitle">Generate your report</span>
+        </div>
+    </div>
+
+    <!-- Date Range Filters -->
+    <div class="date-filters">
+        <button class="filter-btn @(selectedFilter == "thisMonth" ? "active" : "")" @onclick='() => SetFilter("thisMonth")'>
+            This Month
+        </button>
+        <button class="filter-btn @(selectedFilter == "last3Months" ? "active" : "")" @onclick='() => SetFilter("last3Months")'>
+            Last 3 Months
+        </button>
+        <button class="filter-btn @(selectedFilter == "custom" ? "active" : "")" @onclick='() => SetFilter("custom")'>
+            Custom Range
+        </button>
+        <div class="date-inputs">
+            <input type="date" class="date-input" value="2025-10-01" />
+            <span>-</span>
+            <input type="date" class="date-input" value="2025-10-08" />
+        </div>
+    </div>
+
+    <!-- Performance Overview -->
+    <div class="section-title">Performance Overview</div>
+
+    <div class="charts-grid">
+        <!-- Revenue by Month Chart -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Revenue by Month</h3>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="chart-content">
+                <div class="bar-chart">
+                    @foreach (var data in revenueData)
+                    {
+                        <div class="bar-group">
+                            <div class="bar green" style="height: @(data.Value1 * 10)px"></div>
+                            <div class="bar dark" style="height: @(data.Value2 * 10)px"></div>
+                            <span class="bar-label">@data.Month</span>
+                        </div>
+                    }   
+                </div>
+            </div>
+        </div>
+
+        <!-- Campaign Performance -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Campaign Performance</h3>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="chart-content">
+                <div class="metric-list">
+                    <div class="metric-item">
+                        <span class="metric-label">Email Open Rate</span>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar" style="width: 23.3%"></div>
+                        </div>
+                        <span class="metric-value">23.3%</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Click Through Rate</span>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar" style="width: 23.3%"></div>
+                        </div>
+                        <span class="metric-value">23.3%</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Conversion Rate</span>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar" style="width: 23.3%"></div>
+                        </div>
+                        <span class="metric-value">23.3%</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Average Deal Size</span>
+                        <div class="metric-bar-container">
+                            <div class="metric-bar" style="width: 53.3%"></div>
+                        </div>
+                        <span class="metric-value">53.3%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Customers -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Top Customers</h3>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="chart-content">
+                <div class="customer-list">
+                    @foreach (var customer in topCustomers)
+                    {
+                        <div class="customer-item">
+                            <span class="customer-rank">@customer.Rank.</span>
+                            <span class="customer-name">@customer.Name</span>
+                            <span class="customer-amount">@customer.Amount</span>
+                            <span class="customer-transactions">@customer.Transactions transactions</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row -->
+    <div class="charts-grid-2">
+        <!-- Revenue by Source -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Revenue by Source</h3>
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="chart-content">
+                <div class="source-list">
+                    @foreach (var source in revenueSources)
+                    {
+                        <div class="source-item">
+                            <span class="source-label">@source.Name</span>
+                            <div class="source-bar-container">
+                                <div class="source-bar" style="width: @source.Percentage%"></div>
+                            </div>
+                            <span class="source-value">@source.Percentage%</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Pipeline Health -->
+        <div class="chart-card large">
+            <div class="chart-header">
+                <h3>Sales Pipeline Health</h3>
+            </div>
+            <div class="chart-content">
+                <div class="pipeline-summary">
+                    <div class="pipeline-stat">
+                        <span class="stat-label">Total Pipeline Value:</span>
+                        <span class="stat-value">Php 2,042,423.00</span>
+                    </div>
+                    <div class="pipeline-stat">
+                        <span class="stat-label">Weighted Pipeline:</span>
+                        <span class="stat-value">Php 2,042,423.00 (65% probability)</span>
+                    </div>
+                </div>
+                <div class="pipeline-stages">
+                    <div class="stage-label">By Stage:</div>
+                    <div class="stage-item">
+                        <span class="stage-name">Prospecting: ₱800K (33%)</span>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar" style="width: 33%"></div>
+                        </div>
+                    </div>
+                    <div class="stage-item">
+                        <span class="stage-name">Qualified: ₱600K (25%)</span>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar" style="width: 25%"></div>
+                        </div>
+                    </div>
+                    <div class="stage-item">
+                        <span class="stage-name">Closed Won: ₱200K (8%)</span>
+                        <div class="stage-bar-container">
+                            <div class="stage-bar" style="width: 8%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generate Custom Reports -->
+    <div class="section-title">Generate Custom Reports</div>
+
+    <div class="custom-reports-grid">
+        <div class="report-card">
+            <div class="report-icon">
+                <i class="bi bi-person-badge"></i>
+            </div>
+            <div class="report-content">
+                <h4>Customer Report</h4>
+                <p>All customer data with interactions and revenue</p>
+            </div>
+            <button class="btn-generate">Generate</button>
+        </div>
+
+        <div class="report-card">
+            <div class="report-icon">
+                <i class="bi bi-bar-chart"></i>
+            </div>
+            <div class="report-content">
+                <h4>Financial Report</h4>
+                <p>All customer data with interactions and revenue</p>
+            </div>
+            <button class="btn-generate">Generate</button>
+        </div>
+
+        <div class="report-card">
+            <div class="report-icon">
+                <i class="bi bi-megaphone"></i>
+            </div>
+            <div class="report-content">
+                <h4>Campaign Report</h4>
+                <p>Marketing campaign performance ROI</p>
+            </div>
+            <button class="btn-generate">Generate</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string selectedFilter = "thisMonth";
+
+    private void SetFilter(string filter)
+    {
+        selectedFilter = filter;
+    }
+
+    private class RevenueData
+    {
+        public int Month { get; set; }
+        public int Value1 { get; set; }
+        public int Value2 { get; set; }
+    }
+
+    private class Customer
+    {
+        public int Rank { get; set; }
+        public string Name { get; set; } = "";
+        public string Amount { get; set; } = "";
+        public int Transactions { get; set; }
+    }
+
+    private class RevenueSource
+    {
+        public string Name { get; set; } = "";
+        public double Percentage { get; set; }
+    }
+
+    private List<RevenueData> revenueData = new()
+    {
+        new() { Month = 0, Value1 = 9, Value2 = 10 },
+        new() { Month = 1, Value1 = 3, Value2 = 10 },
+        new() { Month = 2, Value1 = 5, Value2 = 4 },
+        new() { Month = 3, Value1 = 4, Value2 = 5 },
+        new() { Month = 4, Value1 = 1, Value2 = 2 },
+        new() { Month = 5, Value1 = 2, Value2 = 1 },
+        new() { Month = 6, Value1 = 1, Value2 = 3 },
+        new() { Month = 7, Value1 = 3, Value2 = 10 },
+        new() { Month = 8, Value1 = 5, Value2 = 5 },
+        new() { Month = 9, Value1 = 2, Value2 = 3 }
+    };
+
+    private List<Customer> topCustomers = new()
+    {
+        new() { Rank = 1, Name = "Design Co.", Amount = "Php 300,432.00", Transactions = 12 },
+        new() { Rank = 2, Name = "ABC Corp.", Amount = "Php 300,432.00", Transactions = 12 },
+        new() { Rank = 3, Name = "XYZ ltd.", Amount = "Php 300,432.00", Transactions = 14 },
+        new() { Rank = 4, Name = "Read Corp", Amount = "Php 300,432.00", Transactions = 20 },
+        new() { Rank = 5, Name = "Google", Amount = "Php 100,340.00", Transactions = 4 }
+    };
+
+    private List<RevenueSource> revenueSources = new()
+    {
+        new() { Name = "Direct Sales", Percentage = 23.3 },
+        new() { Name = "Marketing Camp", Percentage = 23.3 },
+        new() { Name = "Referrals", Percentage = 23.3 }
+    };
+}

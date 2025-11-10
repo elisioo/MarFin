@@ -1,0 +1,236 @@
+@page "/sales-pipeline"
+
+<div class="sales-pipeline-container">
+    <!-- Header -->
+    <div class="pipeline-header">
+        <div class="header-title">
+            <h1>Sales Pipeline</h1>
+            <span class="header-subtitle">Track and manage your sales opportunities</span>
+        </div>
+    </div>
+
+    <!-- Pipeline Metrics -->
+    <div class="pipeline-metrics">
+        <div class="metric-card">
+            <div class="metric-icon green">
+                <i class="bi bi-bullseye"></i>
+            </div>
+            <div class="metric-content">
+                <h2>Php 100K</h2>
+                <p>Total Pipeline Value</p>
+                <span class="metric-badge positive">
+                    <i class="bi bi-graph-up"></i> +12.5%
+                </span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon blue">
+                <i class="bi bi-bell"></i>
+            </div>
+            <div class="metric-content">
+                <h2>33</h2>
+                <p>Active Deals</p>
+                <span class="metric-badge positive">
+                    <i class="bi bi-graph-up"></i> +5
+                </span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon red">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+            <div class="metric-content">
+                <h2>Php 20K</h2>
+                <p>Avg. Deal Size</p>
+                <span class="metric-badge negative">
+                    <i class="bi bi-graph-down"></i> -2.5%
+                </span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon teal">
+                <i class="bi bi-check-circle"></i>
+            </div>
+            <div class="metric-content">
+                <h2>75%</h2>
+                <p>Win Rate</p>
+                <span class="metric-badge positive">
+                    <i class="bi bi-graph-up"></i> +8.5%
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Toggle -->
+    <div class="view-toggle">
+        <button class="toggle-btn @(isPipelineView ? "active" : "")" @onclick="@(() => SetView(true))">
+            Pipeline View
+        </button>
+        <button class="toggle-btn @(!isPipelineView ? "active" : "")" @onclick="@(() => SetView(false))">
+            List View
+        </button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="pipeline-toolbar">
+        <button class="btn-primary" @onclick="NewDeal">
+            <i class="bi bi-plus-lg"></i> New Deal
+        </button>
+
+        <div class="toolbar-filters">
+            <div class="search-box">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" placeholder="Search here.." @bind="searchTerm" />
+            </div>
+
+            <div class="dropdown-filter">
+                <button class="btn-filter">
+                    All Stages <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pipeline Board -->
+    @if (isPipelineView)
+    {
+        <div class="pipeline-board">
+            @foreach (var stage in pipelineStages)
+            {
+                <div class="pipeline-column">
+                    <div class="column-header">
+                        <div class="stage-indicator" style="background-color: @stage.Color"></div>
+                        <span class="stage-name">@stage.Name</span>
+                    </div>
+
+                    <div class="column-content">
+                        @foreach (var deal in stage.Deals)
+                        {
+                            <div class="deal-card">
+                                <h4>@deal.Title</h4>
+                                <p class="deal-company">@deal.Company</p>
+                                <div class="deal-value">@deal.Value</div>
+
+                                <div class="deal-meta">
+                                    <span><i class="bi bi-calendar"></i> @deal.Date</span>
+                                    <span><i class="bi bi-person"></i> @deal.Owner</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- List View -->
+        <div class="list-view">
+            <div class="list-header">
+                <span>Deal Name</span>
+                <span>Company</span>
+                <span>Value</span>
+                <span>Stage</span>
+                <span>Owner</span>
+                <span>Date</span>
+            </div>
+
+            @foreach (var stage in pipelineStages)
+            {
+                @foreach (var deal in stage.Deals)
+                {
+                    <div class="list-row">
+                        <span>@deal.Title</span>
+                        <span>@deal.Company</span>
+                        <span>@deal.Value</span>
+                        <span>
+                            <span class="stage-badge" style="background-color: @stage.Color">
+                                @stage.Name
+                            </span>
+                        </span>
+                        <span>@deal.Owner</span>
+                        <span>@deal.Date</span>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private string searchTerm = "";
+    private bool isPipelineView = true;
+
+    private void SetView(bool pipelineView)
+    {
+        isPipelineView = pipelineView;
+    }
+
+    private class Deal
+    {
+        public string Title { get; set; } = "";
+        public string Company { get; set; } = "";
+        public string Value { get; set; } = "";
+        public string Date { get; set; } = "";
+        public string Owner { get; set; } = "";
+    }
+
+    private class PipelineStage
+    {
+        public string Name { get; set; } = "";
+        public string Color { get; set; } = "";
+        public List<Deal> Deals { get; set; } = new();
+    }
+
+    private List<PipelineStage> pipelineStages = new()
+    {
+        new PipelineStage
+        {
+            Name = "Closed Won",
+            Color = "#10b981",
+            Deals = new()
+            {
+                new() { Title = "Enterprise License", Company = "Tech Corp", Value = "Php 250K", Date = "Nov 15", Owner = "John D." },
+                new() { Title = "Annual Subscription", Company = "ABC Inc", Value = "Php 180K", Date = "Nov 12", Owner = "Jane S." }
+            }
+        },
+        new PipelineStage
+        {
+            Name = "Qualified",
+            Color = "#3b82f6",
+            Deals = new()
+            {
+                new() { Title = "Software Package", Company = "XYZ Ltd", Value = "Php 120K", Date = "Nov 18", Owner = "Mike R." },
+                new() { Title = "Consulting Project", Company = "Global Inc", Value = "Php 200K", Date = "Nov 20", Owner = "Sarah L." }
+            }
+        },
+        new PipelineStage
+        {
+            Name = "Proposal",
+            Color = "#6b7280",
+            Deals = new()
+            {
+                new() { Title = "Integration Service", Company = "Smart Co", Value = "Php 95K", Date = "Nov 22", Owner = "Tom B." },
+                new() { Title = "Platform License", Company = "Digital Corp", Value = "Php 310K", Date = "Nov 25", Owner = "Emma W." }
+            }
+        },
+        new PipelineStage
+        {
+            Name = "Negotiation",
+            Color = "#8b5cf6",
+            Deals = new()
+            {
+                new() { Title = "Custom Solution", Company = "Future Tech", Value = "Php 420K", Date = "Nov 28", Owner = "Alex P." },
+                new() { Title = "Partnership Deal", Company = "Innovation LLC", Value = "Php 550K", Date = "Dec 1", Owner = "Chris M." }
+            }
+        }
+    };
+
+    private void NewDeal()
+    {
+        // Add new deal logic here
+    }
+}

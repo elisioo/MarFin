@@ -1,0 +1,152 @@
+﻿<div class="nav-container">
+    <div class="nav-header">
+        <div class="logo-container">
+            <NavLink href="/">
+                <img src="img/marfin_logo.png" alt="MarFin Logo" class="logo" />
+            </NavLink>
+            @if (!IsCollapsed)
+            {
+                <span class="brand-name">MarFin</span>
+            }
+        </div>
+    </div>
+
+    <nav class="nav-menu">
+        <!-- Home -->
+        <button class="nav-btn @(IsActive("") ? "active" : "")" @onclick="@(() => NavigateTo(""))">
+            <i class="bi bi-house-door nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Home</span>
+            }
+        </button>
+
+        <div class="nav-divider"></div>
+
+        <!-- Customers -->
+        <button class="nav-btn @(IsActive("customers") ? "active" : "")" @onclick="@(() => NavigateTo("customers"))">
+            <i class="bi bi-person-badge nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Customer</span>
+            }
+        </button>
+
+        <!-- Sales Pipeline -->
+        <button class="nav-btn @(IsActive("sales-pipeline") ? "active" : "")" @onclick="@(() => NavigateTo("sales-pipeline"))">
+            <i class="bi bi-bar-chart-line nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Sales Pipeline</span>
+            }
+        </button>
+
+        <!-- Marketing -->
+        <button class="nav-btn @(IsActive("marketing") ? "active" : "")" @onclick="@(() => NavigateTo("marketing"))">
+            <i class="bi bi-megaphone nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Marketing</span>
+            }
+        </button>
+
+        <!-- Financial -->
+        <button class="nav-btn @(IsActive("financial") ? "active" : "")" @onclick="@(() => NavigateTo("financial"))">
+            <i class="bi bi-headset nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Financial</span>
+            }
+        </button>
+
+        <!-- Reports -->
+        <button class="nav-btn @(IsActive("reports") ? "active" : "")" @onclick="@(() => NavigateTo("reports"))">
+            <i class="bi bi-graph-up-arrow nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Reports</span>
+            }
+        </button>
+
+        <!-- Dashboard -->
+        <button class="nav-btn @(IsActive("dashboard") ? "active" : "")" @onclick="@(() => NavigateTo("dashboard"))">
+            <i class="bi bi-grid nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Dashboard</span>
+            }
+        </button>
+
+        <!-- Documents -->
+        <button class="nav-btn @(IsActive("documents") ? "active" : "")" @onclick="@(() => NavigateTo("documents"))">
+            <i class="bi bi-file-earmark-text nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Documents</span>
+            }
+        </button>
+
+        <div class="nav-divider"></div>
+    </nav>
+
+    <!-- Footer -->
+    <div class="nav-footer">
+        <button class="collapse-btn" @onclick="OnToggleSidebar">
+            <i class="bi bi-list nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Collapse</span>
+            }
+        </button>
+
+        <button class="theme-btn">
+            <i class="bi bi-sun nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Light</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool IsCollapsed { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleSidebar { get; set; }
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
+    private string currentPath = "";
+
+    protected override void OnInitialized()
+    {
+        currentPath = new Uri(NavigationManager.Uri).AbsolutePath.TrimStart('/');
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentPath = new Uri(e.Location).AbsolutePath.TrimStart('/');
+        StateHasChanged();
+    }
+
+    private bool IsActive(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return string.IsNullOrEmpty(currentPath) || currentPath == "/";
+        return currentPath.Equals(path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void NavigateTo(string path)
+    {
+        NavigationManager.NavigateTo(path);
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}
