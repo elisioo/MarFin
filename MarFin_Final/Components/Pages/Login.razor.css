@@ -22,25 +22,28 @@
 }
 
 .logo-section {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    justify-content: center;
 }
 
 .login-logo {
-    width: 80px;
-    height: 80px;
+    position: absolute;
+    top: -20px; 
+    transform: translateY(-30%); 
+    width: 300px; 
+    height: 300px;
     object-fit: contain;
+    z-index: 2; 
+    pointer-events: none; 
 }
 
 .logo-section h1 {
-    font-size: 28px;
-    font-weight: 700;
-    margin: 0;
-    color: #0A1828;
+    margin-top: 90px;
 }
+
 
 .login-subtitle {
     font-size: 16px;
@@ -335,3 +338,4 @@
         font-size: 28px;
     }
 }
+

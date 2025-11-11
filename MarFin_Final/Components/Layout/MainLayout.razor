@@ -21,81 +21,91 @@
                         <i class="bi bi-gear"></i>
                     </button>
 
-                    <!-- Notifications Dropdown -->
-                    <div class="dropdown-container">
-                        <button class="icon-button" @onclick="ToggleNotifications">
+                    <!-- Notifications Dropdown (Bootstrap) -->
+                    <div class="dropdown" style="position: relative; z-index: 1200;">
+                        <button class="btn position-relative" type="button" id="notificationDropdown" data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false" style="width: 40px; height: 40px; border: none; background-color: transparent; border-radius: 8px; font-size: 18px;">
                             <i class="bi bi-bell"></i>
                             @if (unreadNotifications > 0)
                             {
-                                <span class="notification-badge">@unreadNotifications</span>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.625rem;">
+                                    @unreadNotifications
+                                </span>
                             }
                         </button>
-                        @if (showNotifications)
-                        {
-                            <div class="dropdown-menu notifications-menu">
-                                <div class="dropdown-header">
-                                    <h4>Notifications</h4>
-                                    <button class="mark-read-btn" @onclick="MarkAllAsRead">Mark all as read</button>
-                                </div>
-                                <div class="notifications-list">
-                                    @foreach (var notification in notifications)
-                                    {
-                                        <div class="notification-item @(notification.IsRead ? "read" : "unread")">
-                                            <div class="notification-icon @notification.Type.ToLower()">
-                                                <i class="bi @GetNotificationIcon(notification.Type)"></i>
+                        <ul class="dropdown-menu dropdown-menu-end p-0 shadow" aria-labelledby="notificationDropdown" style="width: 380px; max-height: 500px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                            <li class="px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">Notifications</h6>
+                                <button class="btn btn-link btn-sm p-0 text-decoration-none" @onclick="MarkAllAsRead">Mark all as read</button>
+                            </li>
+                            <li style="max-height: 400px; overflow-y: auto;">
+                                @foreach (var notification in notifications)
+                                {
+                                    <div class="p-3 border-bottom @(notification.IsRead ? "" : "bg-light")" style="cursor: pointer;">
+                                        <div class="d-flex gap-2">
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                                 style="width: 40px; height: 40px; background-color: @GetNotificationBgColor(notification.Type);">
+                                                <i class="bi @GetNotificationIcon(notification.Type)" style="color: @GetNotificationColor(notification.Type);"></i>
                                             </div>
-                                            <div class="notification-content">
-                                                <p class="notification-title">@notification.Title</p>
-                                                <p class="notification-message">@notification.Message</p>
-                                                <span class="notification-time">@notification.TimeAgo</span>
+                                            <div class="flex-grow-1">
+                                                <p class="mb-1 fw-semibold" style="font-size: 0.875rem;">@notification.Title</p>
+                                                <p class="mb-1 text-muted" style="font-size: 0.8125rem;">@notification.Message</p>
+                                                <small class="text-muted" style="font-size: 0.75rem;">@notification.TimeAgo</small>
                                             </div>
                                         </div>
-                                    }
-                                </div>
-                                <div class="dropdown-footer">
-                                    <a href="/notifications">View all notifications</a>
-                                </div>
-                            </div>
-                        }
+                                    </div>
+                                }
+                            </li>
+                            <li class="text-center py-2 border-top">
+                                <a href="/notifications" class="text-decoration-none" style="font-size: 0.875rem;">View all notifications</a>
+                            </li>
+                        </ul>
                     </div>
 
-                    <!-- User Profile Dropdown -->
-                    <div class="admin-dropdown">
-                        <button class="admin-button" @onclick="ToggleUserMenu">
-                            <i class="bi bi-person-circle admin-icon"></i>
-                            <span>@(AuthService.CurrentUser ?? "User")</span>
+                    <!-- User Profile Dropdown (Bootstrap) -->
+                    <div class="dropdown">
+                        <button class="btn d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                style="border: none; background-color: transparent; border-radius: 8px; padding: 8px 15px;">
+                            <i class="bi bi-person-circle" style="font-size: 20px; color: #0A1828;"></i>
+                            <span style="font-size: 14px; font-weight: 500;">@(AuthService.CurrentUser ?? "User")</span>
                             <i class="bi bi-chevron-down"></i>
                         </button>
-                        @if (showUserMenu)
-                        {
-                            <div class="dropdown-menu user-menu">
-                                <div class="user-info">
-                                    <i class="bi bi-person-circle user-avatar"></i>
+                        <ul class="dropdown-menu dropdown-menu-end p-0" style="width: 260px;">
+                            <li class="p-3 bg-light">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-person-circle" style="font-size: 2.5rem; color: #6c757d;"></i>
                                     <div>
-                                        <p class="user-name">@(AuthService.CurrentUser ?? "User")</p>
-                                        <p class="user-role">Administrator</p>
+                                        <p class="mb-0 fw-semibold" style="font-size: 0.875rem;">@(AuthService.CurrentUser ?? "User")</p>
+                                        <p class="mb-0 text-muted" style="font-size: 0.75rem;">Administrator</p>
                                     </div>
                                 </div>
-                                <div class="dropdown-divider"></div>
-                                <button class="dropdown-item" @onclick="NavigateToProfile">
+                            </li>
+                            <li><hr class="dropdown-divider my-0"></li>
+                            <li>
+                                <button class="dropdown-item d-flex align-items-center gap-2 py-2" @onclick="NavigateToProfile">
                                     <i class="bi bi-person"></i>
                                     <span>My Profile</span>
                                 </button>
-                                <button class="dropdown-item" @onclick="NavigateToAccountManagement">
+                            </li>
+                            <li>
+                                <button class="dropdown-item d-flex align-items-center gap-2 py-2" @onclick="NavigateToAccountManagement">
                                     <i class="bi bi-people"></i>
                                     <span>Manage Accounts</span>
                                 </button>
-                                <button class="dropdown-item" @onclick="NavigateToSettings">
+                            </li>
+                            <li>
+                                <button class="dropdown-item d-flex align-items-center gap-2 py-2" @onclick="NavigateToSettings">
                                     <i class="bi bi-gear"></i>
                                     <span>Settings</span>
                                 </button>
-                                <div class="dropdown-divider"></div>
-                                <button class="dropdown-item logout" @onclick="Logout">
+                            </li>
+                            <li><hr class="dropdown-divider my-0"></li>
+                            <li>
+                                <button class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" @onclick="Logout">
                                     <i class="bi bi-box-arrow-right"></i>
                                     <span>Logout</span>
                                 </button>
-                            </div>
-                        }
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -114,8 +124,6 @@
 
 @code {
     private bool sidebarCollapsed = false;
-    private bool showUserMenu = false;
-    private bool showNotifications = false;
     private int unreadNotifications = 3;
 
     private List<Notification> notifications = new();
@@ -185,19 +193,31 @@
         };
     }
 
+    private string GetNotificationColor(string type)
+    {
+        return type.ToLower() switch
+        {
+            "success" => "#10b981",
+            "warning" => "#f59e0b",
+            "info" => "#3b82f6",
+            "error" => "#ef4444",
+            _ => "#666"
+        };
+    }
+
+    private string GetNotificationBgColor(string type)
+    {
+        return type.ToLower() switch
+        {
+            "success" => "#d1fae5",
+            "warning" => "#fef3c7",
+            "info" => "#dbeafe",
+            "error" => "#fee2e2",
+            _ => "#f0f0f0"
+        };
+    }
+
     private void ToggleSidebar() => sidebarCollapsed = !sidebarCollapsed;
-
-    private void ToggleUserMenu()
-    {
-        showUserMenu = !showUserMenu;
-        if (showUserMenu) showNotifications = false;
-    }
-
-    private void ToggleNotifications()
-    {
-        showNotifications = !showNotifications;
-        if (showNotifications) showUserMenu = false;
-    }
 
     private void MarkAllAsRead()
     {
@@ -211,25 +231,21 @@
 
     private void NavigateToProfile()
     {
-        showUserMenu = false;
         Navigation.NavigateTo("/profile");
     }
 
     private void NavigateToAccountManagement()
     {
-        showUserMenu = false;
         Navigation.NavigateTo("/users");
     }
 
     private void NavigateToSettings()
     {
-        showUserMenu = false;
         Navigation.NavigateTo("/settings");
     }
 
     private void Logout()
     {
-        showUserMenu = false;
         AuthService.Logout();
     }
 

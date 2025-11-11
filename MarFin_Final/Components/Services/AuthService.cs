@@ -40,7 +40,7 @@ namespace MarFin_Final.Services
             _isAuthenticated = false;
             _currentUser = string.Empty;
             NotifyAuthStateChanged();
-            _navigationManager.NavigateTo("/login", true);
+            _navigationManager.NavigateTo("/login");
         }
 
         private void NotifyAuthStateChanged()
