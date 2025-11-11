@@ -114,6 +114,7 @@
     padding: 2.5rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     margin-bottom: 2rem;
+    overflow: hidden;
 }
 
 .section-title {
@@ -126,15 +127,19 @@
 
 .flow-container {
     display: flex;
-    gap: 2rem;
+    gap: 1.5rem;
     margin-bottom: 2rem;
     overflow-x: auto;
     padding: 1rem 0;
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 }
 
 .flow-column {
     flex: 1;
-    min-width: 280px;
+    min-width: 250px;
 }
 
 .flow-header {
@@ -223,13 +228,15 @@
     color: #cbd5e0;
     display: flex;
     align-items: center;
-    padding: 0 1rem;
+    padding: 0;
+    margin: 0 0.5rem;
+    flex-shrink: 0;
 }
 
 .flow-benefits {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
-    gap: 2rem;
+    gap: 1.5rem;
     align-items: center;
     margin-top: 2rem;
     padding-top: 2rem;
@@ -288,236 +295,6 @@
     color: #2d3748;
 }
 
-/* Get Started Section */
-.get-started-section {
-    background: white;
-    border-radius: 8px;
-    padding: 2rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    margin-bottom: 2rem;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-    .section-header h2 {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #2d3748;
-        margin: 0;
-    }
-
-.view-plan-link {
-    color: #0066cc;
-    text-decoration: none;
-    font-size: 0.875rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-    .view-plan-link:hover {
-        text-decoration: underline;
-    }
-
-.progress-container {
-    margin-bottom: 2rem;
-}
-
-.progress-bar-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
-}
-
-.progress-bar {
-    flex: 1;
-    height: 10px;
-    background: #e2e8f0;
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-    transition: width 0.3s ease;
-}
-
-.progress-text {
-    font-weight: 700;
-    color: #10b981;
-    min-width: 45px;
-    font-size: 1.125rem;
-}
-
-.progress-subtext {
-    color: #6c757d;
-    font-size: 0.875rem;
-}
-
-.task-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.task-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 1.5rem;
-    background: white;
-    transition: box-shadow 0.2s;
-}
-
-    .task-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-
-.task-badge {
-    display: inline-block;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-}
-
-.task-content {
-    margin-bottom: 1rem;
-}
-
-.task-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #2d3748;
-    margin-bottom: 0.5rem;
-}
-
-.task-description {
-    color: #6c757d;
-    font-size: 0.875rem;
-    line-height: 1.5;
-}
-
-.task-video-preview {
-    margin-bottom: 1.5rem;
-}
-
-.video-thumbnail {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 8px;
-    height: 180px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-}
-
-.play-button {
-    width: 60px;
-    height: 60px;
-    background: rgba(255,255,255,0.95);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-    .play-button:hover {
-        transform: scale(1.1);
-    }
-
-    .play-button i {
-        font-size: 1.5rem;
-        color: #667eea;
-        margin-left: 4px;
-    }
-
-.video-duration {
-    position: absolute;
-    bottom: 0.75rem;
-    left: 0.75rem;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-}
-
-.video-source {
-    position: absolute;
-    bottom: 0.75rem;
-    right: 0.75rem;
-    color: white;
-    font-size: 0.75rem;
-}
-
-.task-actions {
-    display: flex;
-    gap: 0.75rem;
-}
-
-.btn {
-    padding: 0.625rem 1.25rem;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    border: none;
-    transition: all 0.2s;
-}
-
-.btn-primary {
-    background: #2d3748;
-    color: white;
-}
-
-    .btn-primary:hover {
-        background: #1a202c;
-    }
-
-.btn-secondary {
-    background: transparent;
-    color: #6c757d;
-    border: 1px solid #e2e8f0;
-}
-
-    .btn-secondary:hover {
-        background: #f7fafc;
-    }
-
-.btn-outline {
-    background: white;
-    color: #2d3748;
-    border: 1px solid #cbd5e0;
-    padding: 0.5rem 1rem;
-}
-
-    .btn-outline:hover {
-        background: #f7fafc;
-    }
-
-.see-all-link {
-    color: #0066cc;
-    text-decoration: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-}
-
-    .see-all-link:hover {
-        text-decoration: underline;
-    }
-
 /* Recent Activity */
 .recent-activity-section {
     background: white;
@@ -536,7 +313,7 @@
 
 .activity-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.5rem;
 }
 
@@ -645,15 +422,34 @@
         margin: 0;
     }
 
+.btn-outline {
+    background: white;
+    color: #2d3748;
+    border: 1px solid #cbd5e0;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .btn-outline:hover {
+        background: #f7fafc;
+    }
+
 /* Responsive Design */
 @media (max-width: 1200px) {
     .flow-container {
         flex-direction: column;
     }
 
+    .flow-column {
+        min-width: 100%;
+    }
+
     .flow-connector {
         transform: rotate(90deg);
         padding: 1rem 0;
+        margin: 0;
     }
 
     .flow-benefits {
@@ -671,26 +467,21 @@
         padding: 1rem;
     }
 
+    .system-flow-section {
+        padding: 1.5rem;
+    }
+
     .welcome-title {
         font-size: 1.5rem;
     }
 
     .quick-stats-grid {
         grid-template-columns: repeat(2, 1fr);
-    }
-
-    .task-cards-grid {
-        grid-template-columns: 1fr;
+        gap: 1rem;
     }
 
     .activity-cards-grid {
         grid-template-columns: 1fr;
-    }
-
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
     }
 
     .feedback-section {
@@ -705,10 +496,22 @@
     .stat-value {
         font-size: 1.5rem;
     }
+
+    .flow-benefits {
+        gap: 1rem;
+    }
+
+    .benefit-card {
+        padding: 1rem;
+    }
 }
 
 @media (max-width: 480px) {
     .quick-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .activity-cards-grid {
         grid-template-columns: 1fr;
     }
 }
