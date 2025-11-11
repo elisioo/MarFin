@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using MarFin_Final.Services;
 
 namespace MarFin_Final
 {
@@ -20,7 +21,7 @@ namespace MarFin_Final
     		builder.Services.AddBlazorWebViewDeveloperTools();
     		builder.Logging.AddDebug();
 #endif
-
+            builder.Services.AddSingleton<AuthService>();
             return builder.Build();
         }
     }

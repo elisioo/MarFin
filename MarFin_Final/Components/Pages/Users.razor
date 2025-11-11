@@ -1,0 +1,297 @@
+@page "/settings/users"
+@inject NavigationManager Navigation
+
+<div class="users-page">
+    <!-- Header with Back Button -->
+    <div class="page-header">
+        <button class="back-button" @onclick="NavigateToHome">
+            <i class="bi bi-arrow-left"></i>
+            <span>Back to Home</span>
+        </button>
+        <div class="header-title">
+            <h1>User Management</h1>
+            <p>Manage user accounts and permissions</p>
+        </div>
+        <button class="btn-primary" @onclick="OpenAddUserModal">
+            <i class="bi bi-plus-lg"></i>
+            Add User
+        </button>
+    </div>
+
+    <!-- Users Table -->
+    <div class="content-card">
+        <div class="table-container">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in users)
+                    {
+                        <tr>
+                            <td>
+                                <div class="user-cell">
+                                    <div class="user-avatar">@user.Initials</div>
+                                    <span>@user.Name</span>
+                                </div>
+                            </td>
+                            <td>@user.Email</td>
+                            <td>
+                                <span class="role-badge @user.Role.ToLower()">@user.Role</span>
+                            </td>
+                            <td>
+                                <span class="status-badge @(user.IsActive ? "active" : "inactive")">
+                                    @(user.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn-icon" @onclick="() => EditUser(user)" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn-icon delete" @onclick="() => DeleteUser(user)" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Role Permissions Section -->
+    <div class="content-card permissions-card">
+        <h2>Role Permissions</h2>
+        <div class="role-selector">
+            <label>Select Role:</label>
+            <select class="form-select" @bind="selectedRole">
+                <option value="Admin">Admin</option>
+                <option value="Sales">Sales</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Finance">Finance</option>
+            </select>
+        </div>
+
+        <div class="permissions-grid">
+            @foreach (var permission in GetPermissionsForRole(selectedRole))
+            {
+                <div class="permission-item">
+                    <label class="permission-checkbox">
+                        <input type="checkbox" checked="@permission.IsGranted" disabled />
+                        <span class="checkmark"></span>
+                        <span class="permission-label">@permission.Name</span>
+                    </label>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit User Modal -->
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(isEditMode ? "Edit User" : "Add New User")</h3>
+                <button class="close-button" @onclick="CloseModal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" class="form-input" @bind="currentUser.Name" placeholder="Enter full name" />
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" class="form-input" @bind="currentUser.Email" placeholder="Enter email address" />
+                </div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select class="form-select" @bind="currentUser.Role">
+                        <option value="Admin">Admin</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Finance">Finance</option>
+                    </select>
+                </div>
+                @if (!isEditMode)
+                {
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" class="form-input" @bind="currentUser.Password" placeholder="Enter password" />
+                    </div>
+                }
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" @bind="currentUser.IsActive" />
+                        <span>Active User</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+                <button class="btn-primary" @onclick="SaveUser">
+                    @(isEditMode ? "Update User" : "Add User")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    private List<User> users = new();
+    private string selectedRole = "Admin";
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private User currentUser = new();
+
+    protected override void OnInitialized()
+    {
+        LoadUsers();
+    }
+
+    private void LoadUsers()
+    {
+        users = new List<User>
+        {
+            new User { Name = "Admin User", Email = "admin@marfin.com", Role = "Admin", IsActive = true, Initials = "A" },
+            new User { Name = "Eli Sorono", Email = "eli@marfin.com", Role = "Sales", IsActive = true, Initials = "E" },
+            new User { Name = "Cedric Israel", Email = "cedric@marfin.com", Role = "Finance", IsActive = true, Initials = "C" },
+            new User { Name = "Javier Cordero", Email = "javier@marfin.com", Role = "Marketing", IsActive = true, Initials = "J" },
+            new User { Name = "William Duncombe", Email = "william@marfin.com", Role = "Admin", IsActive = true, Initials = "W" }
+        };
+    }
+
+    private List<Permission> GetPermissionsForRole(string role)
+    {
+        return role switch
+        {
+            "Admin" => new List<Permission>
+            {
+                new() { Name = "View all customers", IsGranted = true },
+                new() { Name = "Edit all customers", IsGranted = true },
+                new() { Name = "Delete customers", IsGranted = true },
+                new() { Name = "View all transactions", IsGranted = true },
+                new() { Name = "Create invoices", IsGranted = true },
+                new() { Name = "Edit invoices", IsGranted = true },
+                new() { Name = "Void invoices", IsGranted = true },
+                new() { Name = "Manage campaigns", IsGranted = true },
+                new() { Name = "View reports", IsGranted = true },
+                new() { Name = "Manage users", IsGranted = true },
+                new() { Name = "System settings", IsGranted = true }
+            },
+            "Sales" => new List<Permission>
+            {
+                new() { Name = "View own customers", IsGranted = true },
+                new() { Name = "Edit own customers", IsGranted = true },
+                new() { Name = "Manage sales pipeline", IsGranted = true },
+                new() { Name = "View basic reports", IsGranted = true },
+                new() { Name = "Delete customers", IsGranted = false },
+                new() { Name = "Access financial data", IsGranted = false }
+            },
+            "Marketing" => new List<Permission>
+            {
+                new() { Name = "View all customers", IsGranted = true },
+                new() { Name = "Create campaigns", IsGranted = true },
+                new() { Name = "View marketing reports", IsGranted = true },
+                new() { Name = "Edit invoices", IsGranted = false },
+                new() { Name = "Manage users", IsGranted = false }
+            },
+            "Finance" => new List<Permission>
+            {
+                new() { Name = "View all customers", IsGranted = true },
+                new() { Name = "Create invoices", IsGranted = true },
+                new() { Name = "Edit invoices", IsGranted = true },
+                new() { Name = "Record payments", IsGranted = true },
+                new() { Name = "View financial reports", IsGranted = true },
+                new() { Name = "Delete customers", IsGranted = false },
+                new() { Name = "Manage users", IsGranted = false }
+            },
+            _ => new List<Permission>()
+        };
+    }
+
+    private void NavigateToHome() => Navigation.NavigateTo("/");
+
+    private void OpenAddUserModal()
+    {
+        isEditMode = false;
+        currentUser = new User { IsActive = true };
+        showModal = true;
+    }
+
+    private void EditUser(User user)
+    {
+        isEditMode = true;
+        currentUser = new User
+        {
+            Name = user.Name,
+            Email = user.Email,
+            Role = user.Role,
+            IsActive = user.IsActive,
+            Initials = user.Initials
+        };
+        showModal = true;
+    }
+
+    private void DeleteUser(User user)
+    {
+        // if (confirm($"Are you sure you want to delete {user.Name}?"))
+        // {
+        //     users.Remove(user);
+        //     StateHasChanged();
+        // }
+    }
+
+    private void SaveUser()
+    {
+        if (isEditMode)
+        {
+            // Update existing user logic
+        }
+        else
+        {
+            // Generate initials
+            var names = currentUser.Name.Split(' ');
+            currentUser.Initials = names.Length > 1
+                ? $"{names[0][0]}{names[names.Length - 1][0]}"
+                : names[0].Substring(0, Math.Min(2, names[0].Length));
+
+            users.Add(currentUser);
+        }
+        CloseModal();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentUser = new();
+    }
+
+    private class User
+    {
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Role { get; set; } = "Sales";
+        public bool IsActive { get; set; }
+        public string Initials { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    private class Permission
+    {
+        public string Name { get; set; } = "";
+        public bool IsGranted { get; set; }
+    }
+}

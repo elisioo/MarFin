@@ -55,34 +55,31 @@
 
     <!-- Toolbar -->
     <div class="financial-toolbar">
-        <button class="btn btn-primary d-flex align-items-center gap-2" @onclick="NewInvoice">
+        <button class="btn-primary" @onclick="ToggleInvoiceModal">
             <i class="bi bi-plus-lg"></i> New Invoice
         </button>
 
-        <div class="toolbar-filters d-flex align-items-center gap-2">
+        <div class="toolbar-filters">
             <div class="dropdown-filter">
-                <button class="btn btn-outline-secondary">
-                    This Month <i class="bi bi-caret-down-fill"></i>
+                <button class="btn-filter">
+                    This Month <i class="bi bi-chevron-down"></i>
                 </button>
             </div>
 
-            <button class="btn btn-outline-secondary">
-                <i class="bi bi-funnel"></i> Filter
+            <button class="btn-filter">
+                <i class="bi bi-funnel"></i> Filter by
             </button>
 
-            <button class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-down-up"></i> Sort
+            <button class="btn-filter">
+                <i class="bi bi-arrow-down-up"></i> Sort by
             </button>
 
-            <div class="input-group search-box">
-                <span class="input-group-text">
-                    <i class="bi bi-search"></i>
-                </span>
-                <input type="text" class="form-control" placeholder="Search here..."
-                       @bind="searchTerm" />
+            <div class="search-box">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" placeholder="Search here..." @bind="searchTerm" />
             </div>
 
-            <button class="btn btn-outline-success">
+            <button class="btn-filter">
                 <i class="bi bi-download"></i> Export
             </button>
         </div>
@@ -101,7 +98,7 @@
         {
             @foreach (var transaction in transactions)
             {
-                <div class="table-row">
+                <div class="table-row" @onclick="() => ViewInvoice(transaction)">
                     <span>@transaction.InvoiceId</span>
                     <span>@transaction.Customer</span>
                     <span>@transaction.Amount</span>
@@ -123,8 +120,301 @@
     </div>
 </div>
 
+@* New/Edit Invoice Modal *@
+@if (showInvoiceModal)
+{
+    <div class="modal-overlay" @onclick="ToggleInvoiceModal">
+        <div class="modal-content invoice-modal" @onclick:stopPropagation>
+            <div class="invoice-modal-header">
+                <button class="btn-back" @onclick="ToggleInvoiceModal">
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+                <div class="modal-actions">
+                    <button class="btn-cancel" @onclick="ToggleInvoiceModal">Cancel</button>
+                    <button class="btn-secondary">Save Draft</button>
+                    <button class="btn-primary">
+                        Generate Invoice <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="invoice-modal-body">
+                <div class="invoice-form-section">
+                    <h3>Invoice Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Select Customer</label>
+                            <select class="form-control">
+                                <option>Select Customer</option>
+                                <option>ABC Corporation</option>
+                                <option>XYZ Company</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Invoice Number</label>
+                            <input type="text" class="form-control" value="INV-2025-23" readonly />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Invoice Date*</label>
+                            <input type="date" class="form-control" @bind="newInvoice.InvoiceDate" />
+                        </div>
+                        <div class="form-group">
+                            <label>Due Date*</label>
+                            <input type="date" class="form-control" @bind="newInvoice.DueDate" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Payment Terms</label>
+                            <select class="form-control">
+                                <option>Payment Terms</option>
+                                <option>Net 30</option>
+                                <option>Net 60</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Currency</label>
+                            <input type="text" class="form-control" value="Currency (PHP)" readonly />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes / Payment Instructions</label>
+                        <textarea class="form-control" rows="3" placeholder="Payment due within 30 days. Please...">@newInvoice.Notes</textarea>
+                    </div>
+                </div>
+
+                <div class="invoice-items-section">
+                    <div class="section-header">
+                        <h3>Line Items</h3>
+                        <button class="btn-add-item">
+                            <i class="bi bi-plus-lg"></i> Add Item
+                        </button>
+                    </div>
+
+                    <div class="line-items-table">
+                        <div class="items-table-header">
+                            <span>Description</span>
+                            <span>Qty</span>
+                            <span>Unit Price</span>
+                            <span>Amount</span>
+                            <span>Remove</span>
+                        </div>
+                        @foreach (var item in newInvoice.LineItems)
+                        {
+                            <div class="items-table-row">
+                                <input type="text" class="form-control" @bind="item.Description" />
+                                <input type="number" class="form-control" @bind="item.Quantity" />
+                                <input type="number" class="form-control" @bind="item.UnitPrice" />
+                                <span class="item-amount">Php @((item.Quantity * item.UnitPrice).ToString("N2"))</span>
+                                <button class="btn-remove">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="invoice-summary">
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span>Php 300,423</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Tax (12%)</span>
+                            <span>Php 30,423</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Discount</span>
+                            <span>Php 0</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total</span>
+                            <span>Php 300,423</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* View Invoice Modal *@
+@if (showViewModal && selectedTransaction != null)
+{
+    <div class="modal-overlay" @onclick="CloseViewModal">
+        <div class="modal-content view-invoice-modal" @onclick:stopPropagation>
+            <div class="view-invoice-header">
+                <button class="btn-back" @onclick="CloseViewModal">
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+                <div class="invoice-title-section">
+                    <span>Invoice @selectedTransaction.InvoiceId</span>
+                </div>
+                <div class="invoice-actions">
+                    <button class="btn-icon" title="Email">
+                        <i class="bi bi-envelope"></i>
+                    </button>
+                    <button class="btn-icon" title="Download">
+                        <i class="bi bi-download"></i>
+                    </button>
+                    <button class="btn-icon" title="Print">
+                        <i class="bi bi-printer"></i>
+                    </button>
+                    <button class="btn-icon" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="view-invoice-body">
+                <div class="invoice-preview">
+                    <div class="invoice-preview-header">
+                        <div class="company-info">
+                            <div class="company-logo">
+                                <i class="bi bi-buildings"></i>
+                                <span>MarFin</span>
+                            </div>
+                            <p>
+                                123 Business Street<br />
+                                Makati, Manila Philippines<br />
+                                1200
+                            </p>
+                            <p>
+                                contact@marfin.com<br />
+                                +63 912 345 6789
+                            </p>
+                        </div>
+                        <div class="invoice-badge">
+                            <div class="badge-label">INVOICE</div>
+                            <div class="badge-number">@selectedTransaction.InvoiceId</div>
+                        </div>
+                    </div>
+
+                    <div class="invoice-preview-details">
+                        <div class="bill-to">
+                            <h4>Bill to:</h4>
+                            <p>
+                                <strong>ABC Corporation</strong><br />
+                                Alice Smith<br />
+                                alice@abc.com<br />
+                                Manila, Philippines
+                            </p>
+                        </div>
+                        <div class="invoice-details">
+                            <h4>Invoice Details:</h4>
+                            <div class="detail-row">
+                                <span>Invoice Date:</span>
+                                <span>@selectedTransaction.Date.ToString("MM/dd/yyyy")</span>
+                            </div>
+                            <div class="detail-row">
+                                <span>Due Date:</span>
+                                <span>@selectedTransaction.Date.AddDays(30).ToString("MM/dd/yyyy")</span>
+                            </div>
+                            <div class="detail-row">
+                                <span>Payment Terms:</span>
+                                <span>Net 30</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="invoice-items-preview">
+                        <table class="preview-table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th>Qty</th>
+                                    <th>Unit Price</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Web Development Services</td>
+                                    <td>1</td>
+                                    <td>Php 250,000</td>
+                                    <td>Php 250,000</td>
+                                </tr>
+                                <tr>
+                                    <td>UI/UX Design</td>
+                                    <td>2</td>
+                                    <td>Php 25,211.50</td>
+                                    <td>Php 50,423</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="invoice-totals">
+                        <div class="totals-row">
+                            <span>Subtotal</span>
+                            <span>Php 300,423</span>
+                        </div>
+                        <div class="totals-row">
+                            <span>Tax (12%)</span>
+                            <span>Php 30,423</span>
+                        </div>
+                        <div class="totals-row total">
+                            <span>Total</span>
+                            <span>Php 300,423</span>
+                        </div>
+                    </div>
+
+                    <div class="payment-info">
+                        <h4>PAYMENT INFORMATION:</h4>
+                        <p>
+                            Bank Name: BPI (Bank of the Philippine Islands)<br />
+                            Account Number: 1234-5678-9012-3456<br />
+                            Account Name: MarFin Business Account
+                        </p>
+                    </div>
+                </div>
+
+                <div class="sidebar-actions">
+                    <button class="btn-icon-large" title="Invoice">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </button>
+                    <button class="btn-icon-large" title="Receipt">
+                        <i class="bi bi-receipt"></i>
+                    </button>
+                    <button class="btn-icon-large" title="Edit">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private string searchTerm = "";
+    private bool showInvoiceModal = false;
+    private bool showViewModal = false;
+    private Transaction? selectedTransaction = null;
+
+    private class LineItem
+    {
+        public string Description { get; set; } = "";
+        public int Quantity { get; set; } = 1;
+        public decimal UnitPrice { get; set; } = 0;
+    }
+
+    private class InvoiceModel
+    {
+        public string Customer { get; set; } = "";
+        public DateTime InvoiceDate { get; set; } = DateTime.Now;
+        public DateTime DueDate { get; set; } = DateTime.Now.AddDays(30);
+        public string Notes { get; set; } = "Payment due within 30 days. Please...";
+        public List<LineItem> LineItems { get; set; } = new()
+        {
+            new LineItem { Description = "", Quantity = 1, UnitPrice = 0 }
+        };
+    }
+
+    private InvoiceModel newInvoice = new();
 
     private class Transaction
     {
@@ -136,15 +426,31 @@
 
     private List<Transaction> transactions = new()
     {
-        new() { InvoiceId = "INV-001", Customer = "John Doe", Amount = "Php 15,000", Date = DateTime.Now.AddDays(-5) },
+        new() { InvoiceId = "INV-2025-006", Customer = "ABC Corporation", Amount = "Php 300,423", Date = DateTime.Now.AddDays(-5) },
         new() { InvoiceId = "INV-002", Customer = "Jane Smith", Amount = "Php 22,500", Date = DateTime.Now.AddDays(-3) },
         new() { InvoiceId = "INV-003", Customer = "ABC Corp", Amount = "Php 45,000", Date = DateTime.Now.AddDays(-2) },
         new() { InvoiceId = "INV-004", Customer = "XYZ Company", Amount = "Php 18,750", Date = DateTime.Now.AddDays(-1) },
-        new() { InvoiceId = "INV-005", Customer = "Bob Johnson", Amount = "Php 30,000", Date = DateTime.Now },
+        new() { InvoiceId = "INV-005", Customer = "Bob Johnson", Amount = "Php 30,000", Date = DateTime.Now }
     };
 
-    private void NewInvoice()
+    private void ToggleInvoiceModal()
     {
-        // Add new invoice logic here
+        showInvoiceModal = !showInvoiceModal;
+        if (showInvoiceModal)
+        {
+            newInvoice = new InvoiceModel();
+        }
+    }
+
+    private void ViewInvoice(Transaction transaction)
+    {
+        selectedTransaction = transaction;
+        showViewModal = true;
+    }
+
+    private void CloseViewModal()
+    {
+        showViewModal = false;
+        selectedTransaction = null;
     }
 }

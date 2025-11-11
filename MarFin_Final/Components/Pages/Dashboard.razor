@@ -1,4 +1,16 @@
 @page "/dashboard"
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+
+@code {
+    protected override void OnInitialized()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+    }
+}
 
 <div class="dashboard-container">
     <div class="dashboard-header">

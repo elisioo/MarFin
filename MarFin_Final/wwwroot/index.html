@@ -27,6 +27,18 @@
     </div>
 
     <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script>
+        window.initializeDropdownClickOutside = (dotNetHelper) => {
+            document.addEventListener('click', (event) => {
+                const target = event.target;
+                // Only close dropdowns if click is outside any dropdown-container
+                if (!target.closest('.dropdown-container')) {
+                    dotNetHelper.invokeMethodAsync('CloseDropdowns');
+                }
+            });
+        };
+
+    </script>
 
 </body>
 

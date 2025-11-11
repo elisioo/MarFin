@@ -1,168 +1,398 @@
 @page "/marketing"
 
 <div class="marketing-container">
-    <!-- Header -->
-    <div class="marketing-header mb-4">
+    <div class="marketing-header">
         <div class="header-title">
-            <h1 class="fw-bold mb-0">Marketing Campaign</h1>
-            <span class="campaign-count text-secondary">32 campaigns</span>
+            <h1>Marketing Campaign</h1>
+            <span class="campaign-count">32 campaigns</span>
         </div>
     </div>
 
     <!-- Campaign Performance Summary -->
-    <div class="campaign-summary mb-4">
-        <h3 class="mb-3">Campaign Performance Summary</h3>
-        <div class="summary-cards d-flex flex-wrap gap-3">
-            <div class="summary-card card p-3 flex-fill">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="card-icon text-primary fs-3">
-                        <i class="bi bi-send"></i>
-                    </div>
-                    <div>
-                        <h2 class="mb-0">1,903</h2>
-                        <p class="text-muted mb-1">Total Sent</p>
-                        <span class="card-badge text-success">
-                            <i class="bi bi-graph-up"></i> +12.5%
-                        </span>
-                    </div>
+    <div class="campaign-summary">
+        <h3>Campaign Performance Summary</h3>
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="card-icon blue">
+                    <i class="bi bi-send"></i>
+                </div>
+                <div class="card-content">
+                    <h2>1,903</h2>
+                    <p>Total Sent</p>
+                    <span class="card-badge positive">
+                        <i class="bi bi-graph-up"></i> +12.5%
+                    </span>
                 </div>
             </div>
 
-            <div class="summary-card card p-3 flex-fill">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="card-icon text-info fs-3">
-                        <i class="bi bi-envelope-open"></i>
-                    </div>
-                    <div>
-                        <h2 class="mb-0">1,903</h2>
-                        <p class="text-muted mb-1">Avg Open</p>
-                        <span class="card-badge text-success">
-                            <i class="bi bi-graph-up"></i> +12.5%
-                        </span>
-                    </div>
+            <div class="summary-card">
+                <div class="card-icon blue">
+                    <i class="bi bi-envelope-open"></i>
+                </div>
+                <div class="card-content">
+                    <h2>1,903</h2>
+                    <p>Avg Open</p>
+                    <span class="card-badge positive">
+                        <i class="bi bi-graph-up"></i> +12.5%
+                    </span>
                 </div>
             </div>
 
-            <div class="summary-card card p-3 flex-fill">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="card-icon text-warning fs-3">
-                        <i class="bi bi-hand-index"></i>
-                    </div>
-                    <div>
-                        <h2 class="mb-0">1,903</h2>
-                        <p class="text-muted mb-1">Avg Click</p>
-                        <span class="card-badge text-success">
-                            <i class="bi bi-graph-up"></i> +12.5%
-                        </span>
-                    </div>
+            <div class="summary-card">
+                <div class="card-icon blue">
+                    <i class="bi bi-hand-index"></i>
+                </div>
+                <div class="card-content">
+                    <h2>1,903</h2>
+                    <p>Avg Click</p>
+                    <span class="card-badge positive">
+                        <i class="bi bi-graph-up"></i> +12.5%
+                    </span>
                 </div>
             </div>
 
-            <div class="summary-card card p-3 flex-fill">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="card-icon text-success fs-3">
-                        <i class="bi bi-graph-up-arrow"></i>
-                    </div>
-                    <div>
-                        <h2 class="mb-0">1,903</h2>
-                        <p class="text-muted mb-1">Total ROI</p>
-                        <span class="card-badge text-success">
-                            <i class="bi bi-graph-up"></i> +12.5%
-                        </span>
-                    </div>
+            <div class="summary-card">
+                <div class="card-icon blue">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div class="card-content">
+                    <h2>1,903</h2>
+                    <p>Total ROI</p>
+                    <span class="card-badge positive">
+                        <i class="bi bi-graph-up"></i> +12.5%
+                    </span>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Toolbar -->
-    <div class="marketing-toolbar d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-        <button class="btn btn-primary d-flex align-items-center gap-2" @onclick="NewCampaign">
+    <div class="marketing-toolbar">
+        <button class="btn-primary" @onclick="NewCampaign">
             <i class="bi bi-plus-lg"></i> New Campaign
         </button>
 
-        <div class="toolbar-filters d-flex align-items-center gap-2 flex-wrap">
-            <button class="btn btn-outline-secondary">
+        <div class="toolbar-filters">
+            <button class="btn-filter">
                 <i class="bi bi-grid-3x3"></i> View
             </button>
-            <button class="btn btn-outline-secondary">
+            <button class="btn-filter">
                 <i class="bi bi-funnel"></i> Filter by
             </button>
-            <button class="btn btn-outline-secondary">
+            <button class="btn-filter">
                 <i class="bi bi-arrow-down-up"></i> Sort by
             </button>
-
-            <div class="input-group search-box">
-                <span class="input-group-text">
-                    <i class="bi bi-search"></i>
-                </span>
-                <input type="text" class="form-control" placeholder="Search here.." @bind="searchTerm" />
+            <div class="search-box">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" placeholder="Search here.." @bind="searchTerm" />
             </div>
         </div>
     </div>
 
     <!-- Campaign Cards -->
-    <div class="campaigns-grid d-grid gap-3">
+    <div class="campaigns-grid">
         @foreach (var campaign in campaigns)
         {
-            <div class="campaign-card card p-3 shadow-sm">
-                <div class="campaign-header d-flex justify-content-between align-items-center mb-2">
-                    <div class="campaign-title d-flex align-items-center gap-2">
+            <div class="campaign-card">
+                <div class="campaign-header">
+                    <div class="campaign-title">
                         <i class="bi bi-tag"></i>
-                        <span class="fw-semibold">@campaign.Name</span>
+                        <span>@campaign.Name</span>
                     </div>
                     <span class="campaign-status @campaign.StatusClass">
                         <i class="bi bi-circle-fill"></i> @campaign.Status
                     </span>
                 </div>
 
-                <div class="campaign-metrics mb-2">
-                    <div class="metric-row d-flex flex-wrap gap-3 text-muted">
-                        <span><strong>Budget:</strong> @campaign.Budget</span>
-                        <span><strong>Spent:</strong> @campaign.Spent</span>
-                        <span><strong>ROI:</strong> @campaign.ROI</span>
+                <div class="campaign-metrics">
+                    <div class="metric-row">
+                        <span class="metric-label">Budget:</span>
+                        <span class="metric-value">@campaign.Budget</span>
+                        <span class="metric-label">Spent:</span>
+                        <span class="metric-value">@campaign.Spent</span>
+                        <span class="metric-label">ROI:</span>
+                        <span class="metric-value">@campaign.ROI</span>
                     </div>
                 </div>
 
-                <div class="campaign-date text-secondary mb-2">
-                    <i class="bi bi-calendar-event"></i> @campaign.DateRange
+                <div class="campaign-date">
+                    @campaign.DateRange
                 </div>
 
-                <div class="campaign-stats d-flex justify-content-between text-center border-top border-bottom py-2 mb-2">
-                    <div class="stat-box flex-fill">
-                        <span class="d-block text-muted">Sent</span>
-                        <span class="fw-bold">@campaign.Sent</span>
+                <div class="campaign-stats">
+                    <div class="stat-box">
+                        <span class="stat-label">Sent</span>
+                        <span class="stat-value">@campaign.Sent</span>
                     </div>
-                    <div class="stat-box flex-fill">
-                        <span class="d-block text-muted">Opened</span>
-                        <span class="fw-bold">@campaign.Opened</span>
-                        <span class="text-success d-block small">@campaign.OpenRate</span>
+                    <div class="stat-box">
+                        <span class="stat-label">Opened</span>
+                        <span class="stat-value">@campaign.Opened</span>
+                        <span class="stat-percent">@campaign.OpenRate</span>
                     </div>
-                    <div class="stat-box flex-fill">
-                        <span class="d-block text-muted">Clicked</span>
-                        <span class="fw-bold">@campaign.Clicked</span>
-                        <span class="text-success d-block small">@campaign.ClickRate</span>
+                    <div class="stat-box">
+                        <span class="stat-label">Clicked</span>
+                        <span class="stat-value">@campaign.Clicked</span>
+                        <span class="stat-percent">@campaign.ClickRate</span>
                     </div>
                 </div>
 
-                <div class="campaign-revenue mb-2">
-                    <i class="bi bi-currency-exchange"></i>
+                <div class="campaign-revenue">
                     Revenue Generated: <strong>@campaign.Revenue</strong>
                 </div>
 
-                <div class="campaign-actions d-flex gap-2 mt-2">
-                    <button class="btn btn-link p-0 text-primary">View Details</button>
-                    <button class="btn btn-link p-0 text-secondary">Edit</button>
-                    <button class="btn btn-link p-0 text-info">Duplicate</button>
-                    <button class="btn btn-link p-0 text-danger">Pause</button>
+                <div class="campaign-actions">
+                    <button class="action-link">View Details</button>
+                    <button class="action-link">Edit</button>
+                    <button class="action-link">Duplicate</button>
+                    <button class="action-link">Pause</button>
                 </div>
             </div>
         }
     </div>
 </div>
 
+@if (showNewCampaignModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <button class="back-button" @onclick="PreviousStep">
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+                <div class="modal-actions">
+                    <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button class="btn-secondary">Save Draft</button>
+                    <button class="btn-primary" @onclick="NextStep">
+                        @(currentStep == 4 ? "Send Campaign" : "Next")
+                        @if (currentStep < 4)
+                        {
+                            <i class="bi bi-arrow-right"></i>
+                        }
+                        @if (currentStep == 4)
+                        {
+                            <i class="bi bi-send"></i>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Stepper -->
+            <div class="stepper">
+                <div class="step @(currentStep >= 1 ? "active" : "")">
+                    <div class="step-circle">
+                        <i class="bi bi-circle-fill"></i>
+                    </div>
+                    <span class="step-label">Details</span>
+                </div>
+                <div class="step-line @(currentStep >= 2 ? "active" : "")"></div>
+                <div class="step @(currentStep >= 2 ? "active" : "")">
+                    <div class="step-circle">
+                        <i class="bi bi-circle-fill"></i>
+                    </div>
+                    <span class="step-label">Content</span>
+                </div>
+                <div class="step-line @(currentStep >= 3 ? "active" : "")"></div>
+                <div class="step @(currentStep >= 3 ? "active" : "")">
+                    <div class="step-circle">
+                        <i class="bi bi-circle-fill"></i>
+                    </div>
+                    <span class="step-label">Audience</span>
+                </div>
+                <div class="step-line @(currentStep >= 4 ? "active" : "")"></div>
+                <div class="step @(currentStep >= 4 ? "active" : "")">
+                    <div class="step-circle">
+                        <i class="bi bi-circle-fill"></i>
+                    </div>
+                    <span class="step-label">Review</span>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="modal-content">
+                @if (currentStep == 1)
+                {
+                    <div class="form-section">
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>Campaign Name</label>
+                                <input type="text" class="form-input" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Campaign Type</label>
+                                <input type="text" class="form-input" />
+                            </div>
+                            <div class="form-group">
+                                <label>Start Date</label>
+                                <input type="text" class="form-input" />
+                            </div>
+                            <div class="form-group">
+                                <label>End Date</label>
+                                <input type="text" class="form-input" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group half-width">
+                                <label>Budget</label>
+                                <input type="text" class="form-input" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>Campaign Objectives</label>
+                                <textarea class="form-textarea" rows="4"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (currentStep == 2)
+                {
+                    <div class="form-section form-section-wide">
+                        <h3>Email Content</h3>
+
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>Subject Line *</label>
+                                <input type="text" class="form-input" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group full-width">
+                                <label>Email Body *</label>
+                                <textarea class="form-textarea" rows="8"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="preview-section">
+                            <label>Preview</label>
+                            <div class="preview-box"></div>
+                        </div>
+                    </div>
+                }
+                else if (currentStep == 3)
+                {
+                    <div class="form-section">
+                        <div class="audience-columns">
+                            <div class="audience-column">
+                                <h4>Target Audience</h4>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" />
+                                        <span>All Customers (1,344)</span>
+                                    </label>
+                                </div>
+
+                                <h4 style="margin-top: 2rem;">Filter by segment:</h4>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" />
+                                        <span>Premium Customers (544)</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" />
+                                        <span>Standard Customers (544)</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" />
+                                        <span>Basic Customers (544)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="audience-column">
+                                <h4>Filter by status:</h4>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" />
+                                        <span>Active (324)</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" />
+                                        <span>Lead (234)</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" />
+                                        <span>Inactive (excluded)</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="recipients-summary">
+                            <div>
+                                <strong>Total Recipients:</strong> <span class="highlight-text">1,405</span><br />
+                                <strong>Estimated Reach:</strong> <span class="highlight-text">504</span> opens ( 54% avg rate)
+                            </div>
+                        </div>
+
+                        <div class="test-email-section">
+                            <label class="checkbox-label">
+                                <input type="checkbox" />
+                                <span>Send test email to: sronoile@gmail.com</span>
+                            </label>
+                            <button class="btn-test">
+                                <i class="bi bi-send"></i> Send Test
+                            </button>
+                        </div>
+                    </div>
+                }
+                else if (currentStep == 4)
+                {
+                    <div class="form-section">
+                        <div class="review-section">
+                            <h3>Campaign Summary</h3>
+                            <div class="summary-box">
+                                <p><strong>Name:</strong></p>
+                                <p><strong>Type:</strong></p>
+                                <p><strong>Duration:</strong></p>
+                                <p><strong>Budget:</strong></p>
+                                <p><strong>Recipients:</strong></p>
+                            </div>
+                        </div>
+
+                        <div class="review-section">
+                            <h3>Email Preview</h3>
+                            <div class="summary-box">
+                                <p><strong>Subject:</strong></p>
+                            </div>
+                        </div>
+
+                        <div class="review-section">
+                            <h3>Send Options:</h3>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="sendOption" checked />
+                                    <span>Send Now</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="sendOption" />
+                                    <span>Schedule for:</span>
+                                    <i class="bi bi-calendar"></i>
+                                    <i class="bi bi-clock"></i>
+                                </label>
+                            </div>
+
+                            <div class="warning-box">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <span><strong>Warning:</strong> This will send emails to 1,048 recipients. This action cannot be undone.</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private string searchTerm = "";
+    private bool showNewCampaignModal = false;
+    private int currentStep = 1;
 
     private class Campaign
     {
@@ -187,7 +417,7 @@
         {
             Name = "Summer Sale 2025",
             Status = "Active",
-            StatusClass = "text-success",
+            StatusClass = "active",
             Budget = "Php 200k",
             Spent = "Php 100k",
             ROI = "203%",
@@ -201,40 +431,63 @@
         },
         new Campaign
         {
-            Name = "Email Blast Q3",
+            Name = "Summer Sale 2025",
             Status = "Completed",
-            StatusClass = "text-secondary",
-            Budget = "Php 180k",
-            Spent = "Php 160k",
-            ROI = "185%",
-            DateRange = "Sep 10 - Sep 20, 2025",
-            Sent = "1,503",
-            Opened = "620",
-            OpenRate = "58%",
-            Clicked = "310",
-            ClickRate = "51%",
-            Revenue = "Php 296,000.00"
+            StatusClass = "completed",
+            Budget = "Php 200k",
+            Spent = "Php 100k",
+            ROI = "203%",
+            DateRange = "Oct 25 - Nov 1, 2025",
+            Sent = "1,203",
+            Opened = "500",
+            OpenRate = "54%",
+            Clicked = "500",
+            ClickRate = "54%",
+            Revenue = "Php 200,324.00"
         },
         new Campaign
         {
-            Name = "Promo Giveaway",
-            Status = "Paused",
-            StatusClass = "text-warning",
-            Budget = "Php 120k",
-            Spent = "Php 80k",
-            ROI = "132%",
-            DateRange = "Nov 5 - Nov 10, 2025",
-            Sent = "800",
-            Opened = "430",
-            OpenRate = "62%",
-            Clicked = "220",
-            ClickRate = "51%",
-            Revenue = "Php 158,400.00"
+            Name = "Summer Sale 2025",
+            Status = "Active",
+            StatusClass = "active",
+            Budget = "Php 200k",
+            Spent = "Php 100k",
+            ROI = "203%",
+            DateRange = "Oct 25 - Nov 1, 2025",
+            Sent = "1,203",
+            Opened = "500",
+            OpenRate = "54%",
+            Clicked = "500",
+            ClickRate = "54%",
+            Revenue = "Php 200,324.00"
         }
     };
 
     private void NewCampaign()
     {
-        // Add new campaign logic here
+        showNewCampaignModal = true;
+        currentStep = 1;
+    }
+
+    private void CloseModal()
+    {
+        showNewCampaignModal = false;
+        currentStep = 1;
+    }
+
+    private void NextStep()
+    {
+        if (currentStep < 4)
+        {
+            currentStep++;
+        }
+    }
+
+    private void PreviousStep()
+    {
+        if (currentStep > 1)
+        {
+            currentStep--;
+        }
     }
 }

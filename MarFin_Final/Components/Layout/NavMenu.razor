@@ -24,13 +24,15 @@
         <div class="nav-divider"></div>
 
         <!-- Customers -->
-        <button class="nav-btn @(IsActive("customers") ? "active" : "")" @onclick="@(() => NavigateTo("customers"))">
+        <button class="nav-btn @(IsActive("customers", "customer-details") ? "active" : "")"
+                @onclick="@(() => NavigateTo("customers"))">
             <i class="bi bi-person-badge nav-icon"></i>
             @if (!IsCollapsed)
             {
                 <span class="nav-text">Customer</span>
             }
         </button>
+
 
         <!-- Sales Pipeline -->
         <button class="nav-btn @(IsActive("sales-pipeline") ? "active" : "")" @onclick="@(() => NavigateTo("sales-pipeline"))">
@@ -133,11 +135,22 @@
         StateHasChanged();
     }
 
-    private bool IsActive(string path)
+    // Updated IsActive to support multiple paths
+    private bool IsActive(params string[] paths)
     {
-        if (string.IsNullOrEmpty(path))
-            return string.IsNullOrEmpty(currentPath) || currentPath == "/";
-        return currentPath.Equals(path, StringComparison.OrdinalIgnoreCase);
+        foreach (var path in paths)
+        {
+            if (string.IsNullOrEmpty(path))
+            {
+                if (string.IsNullOrEmpty(currentPath))
+                    return true;
+            }
+            else if (currentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void NavigateTo(string path)

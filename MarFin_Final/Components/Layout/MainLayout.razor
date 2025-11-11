@@ -1,41 +1,249 @@
 ﻿@inherits LayoutComponentBase
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <div class="page">
-    <div class="sidebar @(sidebarCollapsed ? "collapsed" : "")">
-        <NavMenu IsCollapsed="@sidebarCollapsed" OnToggleSidebar="@ToggleSidebar" />
-    </div>
-
-    <main class="@(sidebarCollapsed ? "sidebar-collapsed" : "")">
-        <div class="top-row">
-            <div class="search-container">
-                <i class="bi bi-search search-icon"></i>
-                <input type="text" placeholder="Search here.." class="search-input" />
-            </div>
-            <div class="top-row-right">
-                <button class="icon-button">
-                    <i class="bi bi-gear"></i>
-                </button>
-                <button class="icon-button">
-                    <i class="bi bi-bell"></i>
-                </button>
-                <button class="admin-button">
-                    <i class="bi bi-person-circle admin-icon"></i>
-                    <span>Admin</span>
-                </button>
-            </div>
+    @if (AuthService.IsAuthenticated)
+    {
+        <div class="sidebar @(sidebarCollapsed ? "collapsed" : "")">
+            <NavMenu IsCollapsed="@sidebarCollapsed" OnToggleSidebar="@ToggleSidebar" />
         </div>
 
-        <article class="content">
-            @Body
-        </article>
-    </main>
+        <main class="@(sidebarCollapsed ? "sidebar-collapsed" : "")">
+            <div class="top-row">
+                <div class="search-container">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text" placeholder="Search here.." class="search-input" />
+                </div>
+                <div class="top-row-right">
+                    <button class="icon-button" @onclick="NavigateToSettings">
+                        <i class="bi bi-gear"></i>
+                    </button>
+
+                    <!-- Notifications Dropdown -->
+                    <div class="dropdown-container">
+                        <button class="icon-button" @onclick="ToggleNotifications">
+                            <i class="bi bi-bell"></i>
+                            @if (unreadNotifications > 0)
+                            {
+                                <span class="notification-badge">@unreadNotifications</span>
+                            }
+                        </button>
+                        @if (showNotifications)
+                        {
+                            <div class="dropdown-menu notifications-menu">
+                                <div class="dropdown-header">
+                                    <h4>Notifications</h4>
+                                    <button class="mark-read-btn" @onclick="MarkAllAsRead">Mark all as read</button>
+                                </div>
+                                <div class="notifications-list">
+                                    @foreach (var notification in notifications)
+                                    {
+                                        <div class="notification-item @(notification.IsRead ? "read" : "unread")">
+                                            <div class="notification-icon @notification.Type.ToLower()">
+                                                <i class="bi @GetNotificationIcon(notification.Type)"></i>
+                                            </div>
+                                            <div class="notification-content">
+                                                <p class="notification-title">@notification.Title</p>
+                                                <p class="notification-message">@notification.Message</p>
+                                                <span class="notification-time">@notification.TimeAgo</span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="dropdown-footer">
+                                    <a href="/notifications">View all notifications</a>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- User Profile Dropdown -->
+                    <div class="admin-dropdown">
+                        <button class="admin-button" @onclick="ToggleUserMenu">
+                            <i class="bi bi-person-circle admin-icon"></i>
+                            <span>@(AuthService.CurrentUser ?? "User")</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        @if (showUserMenu)
+                        {
+                            <div class="dropdown-menu user-menu">
+                                <div class="user-info">
+                                    <i class="bi bi-person-circle user-avatar"></i>
+                                    <div>
+                                        <p class="user-name">@(AuthService.CurrentUser ?? "User")</p>
+                                        <p class="user-role">Administrator</p>
+                                    </div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <button class="dropdown-item" @onclick="NavigateToProfile">
+                                    <i class="bi bi-person"></i>
+                                    <span>My Profile</span>
+                                </button>
+                                <button class="dropdown-item" @onclick="NavigateToAccountManagement">
+                                    <i class="bi bi-people"></i>
+                                    <span>Manage Accounts</span>
+                                </button>
+                                <button class="dropdown-item" @onclick="NavigateToSettings">
+                                    <i class="bi bi-gear"></i>
+                                    <span>Settings</span>
+                                </button>
+                                <div class="dropdown-divider"></div>
+                                <button class="dropdown-item logout" @onclick="Logout">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <article class="content">
+                @Body
+            </article>
+        </main>
+    }
+    else
+    {
+        @Body
+    }
 </div>
+
 
 @code {
     private bool sidebarCollapsed = false;
+    private bool showUserMenu = false;
+    private bool showNotifications = false;
+    private int unreadNotifications = 3;
 
-    private void ToggleSidebar()
+    private List<Notification> notifications = new();
+
+    protected override void OnInitialized()
     {
-        sidebarCollapsed = !sidebarCollapsed;
+        AuthService.OnAuthStateChanged += StateHasChanged;
+        LoadNotifications();
+    }
+
+    private void LoadNotifications()
+    {
+        notifications = new List<Notification>
+        {
+            new Notification
+            {
+                Type = "Success",
+                Title = "Payment Received",
+                Message = "Invoice INV-2025-025 has been paid by Tech Startup Inc.",
+                TimeAgo = "5 minutes ago",
+                IsRead = false
+            },
+            new Notification
+            {
+                Type = "Warning",
+                Title = "Invoice Overdue",
+                Message = "Invoice INV-2025-020 is now 3 days overdue.",
+                TimeAgo = "2 hours ago",
+                IsRead = false
+            },
+            new Notification
+            {
+                Type = "Info",
+                Title = "New Lead Assigned",
+                Message = "You have been assigned a new lead from Summer Sale campaign.",
+                TimeAgo = "5 hours ago",
+                IsRead = false
+            },
+            new Notification
+            {
+                Type = "Success",
+                Title = "Campaign Completed",
+                Message = "Summer Sale 2025 campaign has finished with 54% open rate.",
+                TimeAgo = "1 day ago",
+                IsRead = true
+            },
+            new Notification
+            {
+                Type = "Info",
+                Title = "Report Generated",
+                Message = "Your monthly financial report is ready to view.",
+                TimeAgo = "2 days ago",
+                IsRead = true
+            }
+        };
+    }
+
+    private string GetNotificationIcon(string type)
+    {
+        return type.ToLower() switch
+        {
+            "success" => "bi-check-circle-fill",
+            "warning" => "bi-exclamation-triangle-fill",
+            "info" => "bi-info-circle-fill",
+            "error" => "bi-x-circle-fill",
+            _ => "bi-bell-fill"
+        };
+    }
+
+    private void ToggleSidebar() => sidebarCollapsed = !sidebarCollapsed;
+
+    private void ToggleUserMenu()
+    {
+        showUserMenu = !showUserMenu;
+        if (showUserMenu) showNotifications = false;
+    }
+
+    private void ToggleNotifications()
+    {
+        showNotifications = !showNotifications;
+        if (showNotifications) showUserMenu = false;
+    }
+
+    private void MarkAllAsRead()
+    {
+        foreach (var notification in notifications)
+        {
+            notification.IsRead = true;
+        }
+        unreadNotifications = 0;
+        StateHasChanged();
+    }
+
+    private void NavigateToProfile()
+    {
+        showUserMenu = false;
+        Navigation.NavigateTo("/profile");
+    }
+
+    private void NavigateToAccountManagement()
+    {
+        showUserMenu = false;
+        Navigation.NavigateTo("/users");
+    }
+
+    private void NavigateToSettings()
+    {
+        showUserMenu = false;
+        Navigation.NavigateTo("/settings");
+    }
+
+    private void Logout()
+    {
+        showUserMenu = false;
+        AuthService.Logout();
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= StateHasChanged;
+    }
+
+    private class Notification
+    {
+        public string Type { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string TimeAgo { get; set; } = "";
+        public bool IsRead { get; set; }
     }
 }

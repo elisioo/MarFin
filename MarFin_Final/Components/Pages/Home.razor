@@ -1,5 +1,361 @@
 ﻿@page "/"
+@inject AuthService AuthService
+@inject NavigationManager Navigation
 
-<h1>Hello, world!</h1>
+@code {
+    private int tasksCompleted = 3;
+    private int totalTasks = 8;
+    private int progressPercentage => (tasksCompleted * 100) / totalTasks;
 
-Welcome to your new app.
+    private List<TaskCard> onboardingTasks = new();
+    private List<ActivityCard> recentActivities = new();
+    private DashboardStats stats = new();
+
+    protected override void OnInitialized()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        LoadOnboardingTasks();
+        LoadRecentActivities();
+        LoadDashboardStats();
+    }
+
+    private void LoadOnboardingTasks()
+    {
+        onboardingTasks = new List<TaskCard>
+        {
+            new TaskCard
+            {
+                Title = "Set up customer profiles",
+                Description = "Create and organize customer data for better relationship management and insights.",
+                Badge = "Customer Management",
+                Duration = "3 minutes",
+                BadgeColor = "#0066cc"
+            },
+            new TaskCard
+            {
+                Title = "Create your first sales pipeline",
+                Description = "Track opportunities from prospecting to closed deals with visual pipeline stages.",
+                Badge = "Sales Pipeline",
+                Duration = "4 minutes",
+                BadgeColor = "#10b981"
+            },
+            new TaskCard
+            {
+                Title = "Launch a marketing campaign",
+                Description = "Send professional email campaigns and track opens, clicks, and conversions.",
+                Badge = "Marketing Campaigns",
+                Duration = "5 minutes",
+                BadgeColor = "#8b5cf6"
+            },
+            new TaskCard
+            {
+                Title = "Generate your first invoice",
+                Description = "Create professional invoices with automatic calculations and PDF generation.",
+                Badge = "Financial Transactions",
+                Duration = "3 minutes",
+                BadgeColor = "#f59e0b"
+            },
+            new TaskCard
+            {
+                Title = "Connect your payment gateway",
+                Description = "Link your payment methods to track revenue and automate payment reminders.",
+                Badge = "Payment Tracking",
+                Duration = "2 minutes",
+                BadgeColor = "#06b6d4"
+            }
+        };
+    }
+
+    private void LoadRecentActivities()
+    {
+        recentActivities = new List<ActivityCard>
+        {
+            new ActivityCard
+            {
+                Type = "Campaign",
+                Title = "Summer Sale 2025",
+                Subtitle = "You created 5 days ago",
+                Icon = "bi-megaphone",
+                Stats = "1,250 emails sent • 54% open rate"
+            },
+            new ActivityCard
+            {
+                Type = "Customer",
+                Title = "Tech Startup Inc.",
+                Subtitle = "You added 10 days ago",
+                Icon = "bi-building",
+                IsBadged = true,
+                Stats = "₱150,000 opportunity value"
+            },
+            new ActivityCard
+            {
+                Type = "Invoice",
+                Title = "INV-2025-025",
+                Subtitle = "You created 12 days ago",
+                Icon = "bi-receipt",
+                IsBadged = true,
+                Stats = "₱168,000 • Due in 5 days"
+            }
+        };
+    }
+
+    private void LoadDashboardStats()
+    {
+        stats = new DashboardStats
+        {
+            TotalRevenue = 845000,
+            ActiveCustomers = 47,
+            OpenOpportunities = 12,
+            CampaignsThisMonth = 4,
+            RevenueGrowth = 23.5,
+            CustomerGrowth = 15.2
+        };
+    }
+
+    private class TaskCard
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Badge { get; set; } = "";
+        public string Duration { get; set; } = "";
+        public string BadgeColor { get; set; } = "";
+    }
+
+    private class ActivityCard
+    {
+        public string Type { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Subtitle { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public bool IsBadged { get; set; } = false;
+        public string Stats { get; set; } = "";
+    }
+
+    private class DashboardStats
+    {
+        public decimal TotalRevenue { get; set; }
+        public int ActiveCustomers { get; set; }
+        public int OpenOpportunities { get; set; }
+        public int CampaignsThisMonth { get; set; }
+        public double RevenueGrowth { get; set; }
+        public double CustomerGrowth { get; set; }
+    }
+}
+
+@if (AuthService.IsAuthenticated)
+{
+    <div class="home-dashboard">
+        <!-- Date & Welcome -->
+        <div class="welcome-section">
+            <p class="current-date">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</p>
+            <h1 class="welcome-title">Good morning, @AuthService.CurrentUser</h1>
+            <p class="welcome-subtitle">
+                <strong>Today</strong> your business is running smoothly. Time to grow even more?
+            </p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <i class="bi bi-currency-dollar stat-icon revenue"></i>
+                    <span class="stat-change positive">+@stats.RevenueGrowth.ToString("F1")%</span>
+                </div>
+                <h3 class="stat-value">₱@stats.TotalRevenue.ToString("N0")</h3>
+                <p class="stat-label">Total Revenue</p>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <i class="bi bi-people stat-icon customers"></i>
+                    <span class="stat-change positive">+@stats.CustomerGrowth.ToString("F1")%</span>
+                </div>
+                <h3 class="stat-value">@stats.ActiveCustomers</h3>
+                <p class="stat-label">Active Customers</p>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <i class="bi bi-briefcase stat-icon opportunities"></i>
+                </div>
+                <h3 class="stat-value">@stats.OpenOpportunities</h3>
+                <p class="stat-label">Open Opportunities</p>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <i class="bi bi-megaphone stat-icon campaigns"></i>
+                </div>
+                <h3 class="stat-value">@stats.CampaignsThisMonth</h3>
+                <p class="stat-label">Campaigns This Month</p>
+            </div>
+        </div>
+
+        <!-- System Flow Visualization -->
+        <div class="system-flow-section">
+            <h2 class="section-title">How MarFin Connects Your Business</h2>
+            <div class="flow-container">
+                <div class="flow-column">
+                    <div class="flow-header marketing">
+                        <i class="bi bi-megaphone"></i>
+                        <h3>Marketing</h3>
+                    </div>
+                    <div class="flow-steps">
+                        <div class="flow-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Send Campaign</h4>
+                                <p>Launch email campaigns to targeted segments</p>
+                            </div>
+                        </div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Track Opens</h4>
+                                <p>Monitor engagement and identify hot leads</p>
+                            </div>
+                        </div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Measure ROI</h4>
+                                <p>Calculate revenue generated from campaigns</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flow-connector">→</div>
+
+                <div class="flow-column">
+                    <div class="flow-header sales">
+                        <i class="bi bi-graph-up"></i>
+                        <h3>Sales</h3>
+                    </div>
+                    <div class="flow-steps">
+                        <div class="flow-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Generate Leads</h4>
+                                <p>Receive qualified leads from campaigns</p>
+                            </div>
+                        </div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Log Interactions</h4>
+                                <p>Track calls, meetings, and progress</p>
+                            </div>
+                        </div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Close Deal</h4>
+                                <p>Move opportunities through pipeline stages</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flow-connector">→</div>
+
+                <div class="flow-column">
+                    <div class="flow-header finance">
+                        <i class="bi bi-receipt"></i>
+                        <h3>Finance</h3>
+                    </div>
+                    <div class="flow-steps">
+                        <div class="flow-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Create Customer</h4>
+                                <p>Build complete customer profiles</p>
+                            </div>
+                        </div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Create Invoice</h4>
+                                <p>Generate professional invoices instantly</p>
+                            </div>
+                        </div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Collect Payment</h4>
+                                <p>Track payments and send reminders</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flow-benefits">
+                <div class="benefit-card traditional">
+                    <h4><i class="bi bi-x-circle"></i> Traditional Way (Disconnected)</h4>
+                    <p>Excel → Gmail → CRM → QuickBooks → Google Drive</p>
+                    <span class="benefit-note">Manual data entry, things get lost, no connection</span>
+                </div>
+                <div class="benefit-arrow">VS</div>
+                <div class="benefit-card marfin">
+                    <h4><i class="bi bi-check-circle"></i> MarFin Way (Connected)</h4>
+                    <p>All in ONE system → Data flows automatically → Everything connected</p>
+                    <span class="benefit-note">Enter data once, appears everywhere needed</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="recent-activity-section">
+            <h2>Recent activity</h2>
+
+            <div class="activity-cards-grid">
+                @foreach (var activity in recentActivities)
+                {
+                    <div class="activity-card">
+                        <div class="activity-type">
+                            @activity.Type
+                            @if (activity.IsBadged)
+                            {
+                                <span class="new-badge">New</span>
+                            }
+                        </div>
+
+                        <div class="activity-content">
+                            <h3 class="activity-title">@activity.Title</h3>
+                            <p class="activity-subtitle">@activity.Subtitle</p>
+                            @if (!string.IsNullOrEmpty(activity.Stats))
+                            {
+                                <p class="activity-stats">@activity.Stats</p>
+                            }
+                            <button class="btn-summarize">
+                                <i class="@activity.Icon"></i>
+                                View @activity.Type.ToLower()
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Feedback Section -->
+        <div class="feedback-section">
+            <div class="feedback-icon">
+                <i class="bi bi-chat-square-text"></i>
+            </div>
+            <div class="feedback-content">
+                <h3>Something missing?</h3>
+                <p>Let us know if there's anything else you'd like to see on your MarFin home page.</p>
+            </div>
+            <button class="btn btn-outline">Leave feedback</button>
+        </div>
+    </div>
+}
