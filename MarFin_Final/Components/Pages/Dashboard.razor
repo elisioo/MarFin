@@ -1,4 +1,4 @@
-@page "/dashboard"
+﻿@page "/dashboard"
 @inject NavigationManager Navigation
 @inject AuthService AuthService
 
@@ -13,146 +13,237 @@
 }
 
 <div class="dashboard-container">
+    <!-- Dashboard Header with Export -->
     <div class="dashboard-header">
         <div>
-            <h1>Dashboard</h1>
-            <p class="subtitle">Manage your dashboard efficiently</p>
+            <h1>Dashboard Overview</h1>
+            <p class="subtitle">Monitor your business performance</p>
+        </div>
+        <div class="header-actions">
+            <button class="export-btn">
+                <i class="bi bi-download"></i>
+                Export Report
+                <i class="bi bi-chevron-down"></i>
+            </button>
         </div>
     </div>
 
-    <div class="dashboard-grid">
-        <!-- Customer Stats Cards -->
-        <div class="stats-column">
-            <div class="stat-card">
-                <div class="stat-icon"><i class="bi bi-people"></i></div>
-                <div class="stat-content">
-                    <h2>1,903</h2>
-                    <p>Customers</p>
-                    <span class="stat-change positive"><i class="bi bi-arrow-up-right"></i> +12.5%</span>
-                </div>
-            </div>
+    <!-- Date Range Filters -->
+    <div class="date-filters">
+        <button class="filter-btn @(selectedFilter == "thisMonth" ? "active" : "")" @onclick='() => SetFilter("thisMonth")'>
+            This Month
+        </button>
+        <button class="filter-btn @(selectedFilter == "last3Months" ? "active" : "")" @onclick='() => SetFilter("last3Months")'>
+            Last 3 Months
+        </button>
+        <button class="filter-btn @(selectedFilter == "custom" ? "active" : "")" @onclick='() => SetFilter("custom")'>
+            Custom Range
+        </button>
+        <div class="date-inputs">
+            <input type="date" class="date-input" @bind="startDate" />
+            <span>-</span>
+            <input type="date" class="date-input" @bind="endDate" />
+        </div>
+    </div>
 
-            <div class="stat-card">
-                <div class="stat-icon"><i class="bi bi-people"></i></div>
-                <div class="stat-content">
-                    <h2>1,903</h2>
-                    <p>Customers</p>
-                    <span class="stat-change positive"><i class="bi bi-arrow-up-right"></i> +12.5%</span>
-                </div>
+    <!-- Stats Cards Row -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon customers">
+                <i class="bi bi-people-fill"></i>
             </div>
-
-            <div class="stat-card">
-                <div class="stat-icon"><i class="bi bi-people"></i></div>
-                <div class="stat-content">
-                    <h2>1,903</h2>
-                    <p>Customers</p>
-                    <span class="stat-change positive"><i class="bi bi-arrow-up-right"></i> +12.5%</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon"><i class="bi bi-people"></i></div>
-                <div class="stat-content">
-                    <h2>1,903</h2>
-                    <p>Customers</p>
-                    <span class="stat-change positive"><i class="bi bi-arrow-up-right"></i> +12.5%</span>
-                </div>
+            <div class="stat-content">
+                <p class="stat-label">Customers</p>
+                <h2>1,248</h2>
+                <span class="stat-change positive">
+                    <i class="bi bi-arrow-up"></i> +12%
+                </span>
             </div>
         </div>
 
-        <!-- Pipeline Chart -->
-        <div class="pipeline-card">
-            <h3>Pipeline</h3>
-            <div class="pipeline-chart">
-                @foreach (var item in pipelineData)
-                {
-                    <div class="pipeline-row">
-                        <span class="pipeline-label">@item.Name</span>
-                        <div class="pipeline-bars">
-                            <div class="pipeline-bar bar-2020" style="width:@item.Value2020%">
-                                <span class="bar-label">@item.Value2020</span>
-                            </div>
-                            <div class="pipeline-bar bar-2021" style="width:@item.Value2021%">
-                                <span class="bar-label">@item.Value2021</span>
-                            </div>
-                            <div class="pipeline-bar bar-2022" style="width:@item.Value2022%">
-                                <span class="bar-label">@item.Value2022</span>
-                            </div>
+        <div class="stat-card">
+            <div class="stat-icon revenue">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+            <div class="stat-content">
+                <p class="stat-label">Revenue</p>
+                <h2>₱2.4M</h2>
+                <span class="stat-change positive">
+                    <i class="bi bi-arrow-up"></i> +28%
+                </span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon campaigns">
+                <i class="bi bi-megaphone-fill"></i>
+            </div>
+            <div class="stat-content">
+                <p class="stat-label">Campaigns</p>
+                <h2>12</h2>
+                <span class="stat-change positive">
+                    <i class="bi bi-arrow-up"></i> +8%
+                </span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon conversion">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+            <div class="stat-content">
+                <p class="stat-label">Conversion</p>
+                <h2>24.5%</h2>
+                <span class="stat-change positive">
+                    <i class="bi bi-arrow-up"></i> +15%
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+        <!-- Revenue Trend Chart -->
+        <div class="chart-card revenue-chart">
+            <div class="card-header">
+                <h3>Revenue Trend</h3>
+                <div class="chart-filter">
+                    <button class="mini-filter-btn @(revenueFilter == "monthly" ? "active" : "")" @onclick='() => revenueFilter = "monthly"'>Monthly</button>
+                    <button class="mini-filter-btn @(revenueFilter == "quarterly" ? "active" : "")" @onclick='() => revenueFilter = "quarterly"'>Quarterly</button>
+                    <button class="mini-filter-btn @(revenueFilter == "yearly" ? "active" : "")" @onclick='() => revenueFilter = "yearly"'>Yearly</button>
+                </div>
+            </div>
+            <div class="chart-content">
+                <div class="bar-chart">
+                    @foreach (var month in revenueData)
+                    {
+                        <div class="bar-item">
+                            <div class="bar" style="height: @(month.Value * 2)px"></div>
+                            <span class="bar-label">@month.Month</span>
                         </div>
-                    </div>
-                }
-            </div>
-
-            <div class="pipeline-legend">
-                <span class="legend-item"><span class="legend-color bar-2020"></span> 2020</span>
-                <span class="legend-item"><span class="legend-color bar-2021"></span> 2021</span>
-                <span class="legend-item"><span class="legend-color bar-2022"></span> 2022</span>
-            </div>
-        </div>
-
-        <!-- Recent Transactions -->
-        <div class="transactions-card">
-            <h3>Recent Transactions</h3>
-            <div class="transaction-header">
-                <span>Invoice #</span>
-                <span>Customer</span>
-                <span>Amount</span>
-                <span>Status</span>
-            </div>
-            <div class="empty-state">
-                <p>No recent transactions</p>
+                    }
+                </div>
             </div>
         </div>
 
         <!-- Recent Activity -->
-        <div class="activity-card">
-            <div class="activity-header">
+        <div class="chart-card activity-card">
+            <div class="card-header">
                 <h3>Recent Activity</h3>
-                <button class="refresh-btn"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="refresh-icon"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
             <div class="activity-list">
-                <div class="activity-item">
-                    <span class="activity-icon"><i class="bi bi-clock"></i></span>
-                    <div class="activity-content">
-                        <p>New Customer added...</p>
-                        <span class="activity-time">30 min</span>
+                @foreach (var activity in recentActivities)
+                {
+                    <div class="activity-item">
+                        <div class="activity-icon-dot @activity.Type"></div>
+                        <div class="activity-details">
+                            <p class="activity-text">@activity.Text</p>
+                            <span class="activity-time">@activity.Time</span>
+                        </div>
                     </div>
-                </div>
-                <div class="activity-item">
-                    <span class="activity-icon"><i class="bi bi-clock"></i></span>
-                    <div class="activity-content">
-                        <p>Payment received</p>
-                        <span class="activity-time">1 hr</span>
-                    </div>
-                </div>
+                }
             </div>
         </div>
     </div>
 
-    <!-- Empty Cards Row -->
-    <div class="empty-cards-row">
-        <div class="empty-card"></div>
-        <div class="empty-card"></div>
-        <div class="empty-card"></div>
+    <!-- Recent Transactions -->
+    <div class="transactions-section">
+        <div class="section-header">
+            <h3>Recent Transactions</h3>
+            <a href="/financial" class="view-all-link">View All <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <div class="transactions-table">
+            <div class="table-header">
+                <span>Invoice</span>
+                <span>Customer</span>
+                <span>Amount</span>
+                <span>Date</span>
+                <span>Status</span>
+            </div>
+            @foreach (var transaction in recentTransactions)
+            {
+                <div class="table-row">
+                    <span class="transaction-invoice">@transaction.Invoice</span>
+                    <span class="transaction-customer">@transaction.Customer</span>
+                    <span class="transaction-amount">@transaction.Amount</span>
+                    <span class="transaction-date">@transaction.Date</span>
+                    <span class="transaction-status @transaction.Status.ToLower()">@transaction.Status</span>
+                </div>
+            }
+        </div>
     </div>
 </div>
 
 @code {
-    private class PipelineItem
+    private string selectedFilter = "thisMonth";
+    private string revenueFilter = "monthly";
+    private DateTime startDate = DateTime.Now.AddDays(-7);
+    private DateTime endDate = DateTime.Now;
+
+    private void SetFilter(string filter)
     {
-        public string Name { get; set; } = "";
-        public double Value2020 { get; set; }
-        public double Value2021 { get; set; }
-        public double Value2022 { get; set; }
+        selectedFilter = filter;
+
+        if (filter == "thisMonth")
+        {
+            startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            endDate = DateTime.Now;
+        }
+        else if (filter == "last3Months")
+        {
+            startDate = DateTime.Now.AddMonths(-3);
+            endDate = DateTime.Now;
+        }
     }
 
-    private List<PipelineItem> pipelineData = new()
+    private class RevenueMonth
     {
-        new PipelineItem { Name = "Figma", Value2020 = 79.19, Value2021 = 86.21, Value2022 = 89.6 },
-        new PipelineItem { Name = "Sketch", Value2020 = 75.14, Value2021 = 92.29, Value2022 = 95 },
-        new PipelineItem { Name = "XD", Value2020 = 12.39, Value2021 = 40.91, Value2022 = 53.35 },
-        new PipelineItem { Name = "PS", Value2020 = 12.5, Value2021 = 55.25, Value2022 = 43.04 },
-        new PipelineItem { Name = "AI", Value2020 = 35.35, Value2021 = 54.88, Value2022 = 55.69 },
-        new PipelineItem { Name = "CorelDRAW", Value2020 = 87.88, Value2021 = 90.35, Value2022 = 13.56 },
+        public string Month { get; set; } = "";
+        public int Value { get; set; }
+    }
+
+    private class Activity
+    {
+        public string Text { get; set; } = "";
+        public string Time { get; set; } = "";
+        public string Type { get; set; } = "";
+    }
+
+    private class Transaction
+    {
+        public string Invoice { get; set; } = "";
+        public string Customer { get; set; } = "";
+        public string Amount { get; set; } = "";
+        public string Date { get; set; } = "";
+        public string Status { get; set; } = "";
+    }
+
+    private List<RevenueMonth> revenueData = new()
+    {
+        new() { Month = "May", Value = 45 },
+        new() { Month = "Jun", Value = 65 },
+        new() { Month = "Jul", Value = 85 },
+        new() { Month = "Aug", Value = 100 },
+        new() { Month = "Sep", Value = 90 },
+        new() { Month = "Oct", Value = 75 }
+    };
+
+    private List<Activity> recentActivities = new()
+    {
+        new() { Text = "New customer registered", Time = "2 min ago", Type = "success" },
+        new() { Text = "Payment received from ABC Corp", Time = "15 min ago", Type = "success" },
+        new() { Text = "Campaign sent to 500 customers", Time = "1 hour ago", Type = "info" },
+        new() { Text = "New order placed - INV-003", Time = "2 hours ago", Type = "info" },
+        new() { Text = "Customer support ticket opened", Time = "3 hours ago", Type = "warning" }
+    };
+
+    private List<Transaction> recentTransactions = new()
+    {
+        new() { Invoice = "INV-001", Customer = "ABC Corp", Amount = "₱25,000", Date = "Oct 20", Status = "Paid" },
+        new() { Invoice = "INV-002", Customer = "XYZ Ltd", Amount = "₱18,500", Date = "Oct 19", Status = "Pending" },
+        new() { Invoice = "INV-003", Customer = "Design Co.", Amount = "₱32,000", Date = "Oct 18", Status = "Paid" },
+        new() { Invoice = "INV-004", Customer = "Tech Solutions", Amount = "₱15,750", Date = "Oct 17", Status = "Paid" },
+        new() { Invoice = "INV-005", Customer = "Marketing Plus", Amount = "₱22,300", Date = "Oct 16", Status = "Pending" }
     };
 }
