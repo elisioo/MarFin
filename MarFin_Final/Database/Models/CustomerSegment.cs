@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Ordering_Sorono_IT13.Models
+namespace MarFin_Final.Models
 {
     public class CustomerSegment
     {

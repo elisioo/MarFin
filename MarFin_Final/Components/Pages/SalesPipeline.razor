@@ -1,183 +1,308 @@
-@page "/sales-pipeline"
+﻿@page "/sales-pipeline"
+@using MarFin_Final.Models
+@using MarFin_Final.Data
 
 <div class="sales-pipeline-container">
     <!-- Header -->
     <div class="pipeline-header">
         <div class="header-title">
-            <h1>Sales Pipeline</h1>
-            <span class="header-subtitle">Track and manage your sales opportunities</span>
+            <h1>@(showArchived ? "Archived Opportunities" : "Sales Pipeline")</h1>
+            <span class="header-subtitle">
+                @if (showArchived)
+                {
+                    <span>@filteredOpportunities.Count archived opportunities</span>
+                }
+                else
+                {
+                    <span>Track and manage your sales opportunities</span>
+                }
+            </span>
         </div>
     </div>
 
-    <!-- Pipeline Metrics -->
-    <div class="pipeline-metrics">
-        <div class="metric-card">
-            <div class="metric-icon green">
-                <i class="bi bi-bullseye"></i>
+    @if (!showArchived)
+    {
+        <!-- Pipeline Metrics -->
+        <div class="pipeline-metrics">
+            <div class="metric-card">
+                <div class="metric-icon green">
+                    <i class="bi bi-bullseye"></i>
+                </div>
+                <div class="metric-content">
+                    <h2>₱@totalPipelineValue.ToString("N0")</h2>
+                    <p>Total Pipeline Value</p>
+                    <span class="metric-badge positive">
+                        <i class="bi bi-graph-up"></i> Active
+                    </span>
+                </div>
             </div>
-            <div class="metric-content">
-                <h2>Php 100K</h2>
-                <p>Total Pipeline Value</p>
-                <span class="metric-badge positive">
-                    <i class="bi bi-graph-up"></i> +12.5%
-                </span>
+
+            <div class="metric-card">
+                <div class="metric-icon blue">
+                    <i class="bi bi-bell"></i>
+                </div>
+                <div class="metric-content">
+                    <h2>@activeDealsCount</h2>
+                    <p>Active Deals</p>
+                    <span class="metric-badge positive">
+                        <i class="bi bi-graph-up"></i> Open
+                    </span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon red">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div class="metric-content">
+                    <h2>₱@avgDealSize.ToString("N0")</h2>
+                    <p>Avg. Deal Size</p>
+                    <span class="metric-badge positive">
+                        <i class="bi bi-calculator"></i> Average
+                    </span>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon teal">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="metric-content">
+                    <h2>@winRate.ToString("N1")%</h2>
+                    <p>Win Rate</p>
+                    <span class="metric-badge positive">
+                        <i class="bi bi-trophy"></i> Success
+                    </span>
+                </div>
             </div>
         </div>
 
-        <div class="metric-card">
-            <div class="metric-icon blue">
-                <i class="bi bi-bell"></i>
-            </div>
-            <div class="metric-content">
-                <h2>33</h2>
-                <p>Active Deals</p>
-                <span class="metric-badge positive">
-                    <i class="bi bi-graph-up"></i> +5
-                </span>
-            </div>
+        <!-- View Toggle -->
+        <div class="view-toggle">
+            <button class="toggle-btn @(isPipelineView ? "active" : "")" @onclick="@(() => SetView(true))">
+                Pipeline View
+            </button>
+            <button class="toggle-btn @(!isPipelineView ? "active" : "")" @onclick="@(() => SetView(false))">
+                List View
+            </button>
         </div>
-
-        <div class="metric-card">
-            <div class="metric-icon red">
-                <i class="bi bi-graph-up-arrow"></i>
-            </div>
-            <div class="metric-content">
-                <h2>Php 20K</h2>
-                <p>Avg. Deal Size</p>
-                <span class="metric-badge negative">
-                    <i class="bi bi-graph-down"></i> -2.5%
-                </span>
-            </div>
-        </div>
-
-        <div class="metric-card">
-            <div class="metric-icon teal">
-                <i class="bi bi-check-circle"></i>
-            </div>
-            <div class="metric-content">
-                <h2>75%</h2>
-                <p>Win Rate</p>
-                <span class="metric-badge positive">
-                    <i class="bi bi-graph-up"></i> +8.5%
-                </span>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Toggle -->
-    <div class="view-toggle">
-        <button class="toggle-btn @(isPipelineView ? "active" : "")" @onclick="@(() => SetView(true))">
-            Pipeline View
-        </button>
-        <button class="toggle-btn @(!isPipelineView ? "active" : "")" @onclick="@(() => SetView(false))">
-            List View
-        </button>
-    </div>
+    }
 
     <!-- Toolbar -->
-    <div class="pipeline-toolbar">
-        <button class="btn-primary" @onclick="ToggleModal">
-            <i class="bi bi-plus-lg"></i> New Opportunity
-        </button>
+    <div class="customers-toolbar">
+        @if (!showArchived)
+        {
+            <button class="btn-primary" @onclick="ToggleModal">
+                <i class="bi bi-plus-lg"></i> New Opportunity
+            </button>
+        }
+        else
+        {
+            <div></div>
+        }
 
-        <div class="toolbar-filters">
-            <div class="search-box">
-                <i class="bi bi-search search-icon"></i>
-                <input type="text" placeholder="Search here.." @bind="searchTerm" />
-            </div>
+        <div class="toolbar-right">
+            <button class="@(showArchived ? "btn-primary" : "btn-secondary")" @onclick="ToggleArchivedView">
+                <i class="bi bi-@(showArchived ? "arrow-left" : "archive")"></i>
+                @(showArchived ? "Back to Active Pipeline" : "View Archived")
+            </button>
 
-            <div class="dropdown-filter">
-                <button class="btn-filter">
-                    All Stages <i class="bi bi-chevron-down"></i>
+            @if (!showArchived && (!string.IsNullOrEmpty(searchTerm) || selectedStageFilter > 0))
+            {
+                <button class="btn-secondary" @onclick="ClearFilters" title="Clear all filters">
+                    <i class="bi bi-x-circle"></i>
+                    Clear Filters
                 </button>
+            }
+
+            @if (!showArchived)
+            {
+                <div class="dropdown-filter">
+                    <select class="btn-filter" @onchange="FilterByStage">
+                        <option value="0">All Stages</option>
+                        @foreach (var stage in allStages)
+                        {
+                            <option value="@stage.StageId">@stage.StageName</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            <div class="search-box">
+                <span class="search-icon"><i class="bi bi-search"></i></span>
+                <input type="text" placeholder="Search opportunities..." @bind="searchTerm" @bind:event="oninput" @onkeyup="PerformSearch" />
+                @if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <button class="search-clear" @onclick="ClearSearch">×</button>
+                }
             </div>
         </div>
     </div>
 
-    <!-- Pipeline Board -->
-    @if (isPipelineView)
+    <!-- Active Pipeline Views -->
+    @if (!showArchived)
     {
-        <div class="pipeline-board">
-            @foreach (var stage in pipelineStages)
+        @if (isPipelineView)
+        {
+            <div class="pipeline-board">
+                @foreach (var stage in pipelineStages)
+                {
+                    <div class="pipeline-column">
+                        <div class="column-header">
+                            <div class="stage-indicator" style="background-color: @stage.StageColor"></div>
+                            <span class="stage-name">@stage.StageName (@stage.Deals.Count)</span>
+                        </div>
+
+                        <div class="column-content">
+                            @foreach (var deal in stage.Deals)
+                            {
+                                <div class="deal-card" @onclick="@(() => EditOpportunity(deal.OpportunityId))">
+                                    <h4>@deal.OpportunityName</h4>
+                                    <p class="deal-company">@deal.CompanyName</p>
+                                    <div class="deal-value">₱@deal.DealValue.ToString("N2")</div>
+
+                                    <div class="deal-meta">
+                                        <span>
+                                            <i class="bi bi-calendar"></i>
+                                            @(deal.ExpectedCloseDate?.ToString("MMM dd") ?? "No date")
+                                        </span>
+                                        <span><i class="bi bi-person"></i> @deal.AssignedToName</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <!-- List View -->
+            <div class="list-view">
+                <div class="list-header">
+                    <span>Deal Name</span>
+                    <span>Company</span>
+                    <span>Value</span>
+                    <span>Stage</span>
+                    <span>Owner</span>
+                    <span>Date</span>
+                </div>
+
+                @foreach (var deal in filteredOpportunities)
+                {
+                    <div class="list-row" @onclick="@(() => EditOpportunity(deal.OpportunityId))">
+                        <span>@deal.OpportunityName</span>
+                        <span>@deal.CompanyName</span>
+                        <span>₱@deal.DealValue.ToString("N2")</span>
+                        <span>
+                            <span class="stage-badge" style="background-color: @deal.StageColor">
+                                @deal.StageName
+                            </span>
+                        </span>
+                        <span>@deal.AssignedToName</span>
+                        <span>@(deal.ExpectedCloseDate?.ToString("MMM dd, yyyy") ?? "No date")</span>
+                    </div>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <!-- Archived View (Customer-style) -->
+        @if (!filteredOpportunities.Any())
+        {
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>@(string.IsNullOrEmpty(searchTerm) ? "No archived opportunities found" : "No archived opportunities match your search")</p>
+                @if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <button class="btn-secondary" @onclick="ClearSearch">Clear Search</button>
+                }
+            </div>
+        }
+        else
+        {
+            @foreach (var group in GetGroupedOpportunities())
             {
-                <div class="pipeline-column">
-                    <div class="column-header">
-                        <div class="stage-indicator" style="background-color: @stage.Color"></div>
-                        <span class="stage-name">@stage.Name</span>
+                <div class="customer-card">
+                    <div class="customer-card-header">
+                        <span class="customer-name">@group.Key</span>
+                        <span class="customer-count">@group.Value.Count opportunity(s)</span>
                     </div>
 
-                    <div class="column-content">
-                        @foreach (var deal in stage.Deals)
-                        {
-                            <div class="deal-card">
-                                <h4>@deal.Title</h4>
-                                <p class="deal-company">@deal.Company</p>
-                                <div class="deal-value">@deal.Value</div>
+                    <div class="customer-table">
+                        <div class="table-header">
+                            <span>Opportunity Name</span>
+                            <span>Company</span>
+                            <span>Value</span>
+                            <span>Stage</span>
+                            <span>Archived Date</span>
+                            <span>Actions</span>
+                        </div>
 
-                                <div class="deal-meta">
-                                    <span><i class="bi bi-calendar"></i> @deal.Date</span>
-                                    <span><i class="bi bi-person"></i> @deal.Owner</span>
-                                </div>
+                        @foreach (var deal in group.Value)
+                        {
+                            <div class="table-row">
+                                <span>@deal.OpportunityName</span>
+                                <span>@deal.CompanyName</span>
+                                <span>₱@deal.DealValue.ToString("N2")</span>
+                                <span>
+                                    <span class="status-badge" style="background-color: @deal.StageColor; color: white;">
+                                        @deal.StageName
+                                    </span>
+                                </span>
+                                <span>@(deal.ArchivedDate?.ToString("MMM dd, yyyy") ?? "N/A")</span>
+                                <span class="action-buttons-cell">
+                                    <button class="btn-icon btn-icon-success" @onclick="() => ShowRestoreConfirmation(deal)" title="Restore">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                </span>
                             </div>
                         }
                     </div>
                 </div>
             }
-        </div>
-    }
-    else
-    {
-        <!-- List View -->
-        <div class="list-view">
-            <div class="list-header">
-                <span>Deal Name</span>
-                <span>Company</span>
-                <span>Value</span>
-                <span>Stage</span>
-                <span>Owner</span>
-                <span>Date</span>
-            </div>
-
-            @foreach (var stage in pipelineStages)
-            {
-                @foreach (var deal in stage.Deals)
-                {
-                    <div class="list-row">
-                        <span>@deal.Title</span>
-                        <span>@deal.Company</span>
-                        <span>@deal.Value</span>
-                        <span>
-                            <span class="stage-badge" style="background-color: @stage.Color">
-                                @stage.Name
-                            </span>
-                        </span>
-                        <span>@deal.Owner</span>
-                        <span>@deal.Date</span>
-                    </div>
-                }
-            }
-        </div>
+        }
     }
 </div>
 
-<!-- Modal -->
+<!-- Opportunity Modal -->
 @if (showModal)
 {
-    <div class="modal-overlay" @onclick="ToggleModal">
+    <div class="modal-overlay" @onclick="CloseModalOutside">
         <div class="modal-content" @onclick:stopPropagation>
             <div class="modal-header">
-                <h2>New Opportunity</h2>
-                <button class="btn-cancel" @onclick="ToggleModal">�</button>
+                <h2>@(isEditMode ? "Edit Opportunity" : "New Opportunity")</h2>
+                <button class="btn-cancel" @onclick="ToggleModal">×</button>
             </div>
             <div class="modal-body">
                 <div class="form-row">
-                    <div class="form-group">
+                    <div class="form-group full-width">
                         <label>Deal Name <span class="required">*</span></label>
-                        <input type="text" class="form-control" placeholder="Enter deal name" @bind="newOpportunity.Title" />
+                        <input type="text" class="form-control" placeholder="Enter deal name" @bind="newOpportunity.OpportunityName" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Customer <span class="required">*</span></label>
+                        <select class="form-control" @bind="newOpportunity.CustomerId">
+                            <option value="0">Select customer</option>
+                            @foreach (var customer in customers)
+                            {
+                                <option value="@customer.CustomerId">@customer.FullName - @customer.CompanyName</option>
+                            }
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Company <span class="required">*</span></label>
-                        <input type="text" class="form-control" placeholder="Enter company name" @bind="newOpportunity.Company" />
+                        <label>Pipeline Stage <span class="required">*</span></label>
+                        <select class="form-control" @bind="newOpportunity.StageId">
+                            <option value="0">Select stage</option>
+                            @foreach (var stage in allStages)
+                            {
+                                <option value="@stage.StageId">@stage.StageName</option>
+                            }
+                        </select>
                     </div>
                 </div>
 
@@ -185,8 +310,8 @@
                     <div class="form-group">
                         <label>Deal Value <span class="required">*</span></label>
                         <div class="input-with-prefix">
-                            <span class="input-prefix">Php</span>
-                            <input type="text" class="form-control with-prefix" placeholder="0.00" @bind="newOpportunity.Value" />
+                            <span class="input-prefix">₱</span>
+                            <input type="number" step="0.01" class="form-control with-prefix" placeholder="0.00" @bind="newOpportunity.DealValue" />
                         </div>
                     </div>
                     <div class="form-group">
@@ -197,19 +322,22 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Pipeline Stage <span class="required">*</span></label>
-                        <select class="form-control" @bind="newOpportunity.Stage">
-                            <option value="">Select stage</option>
-                            <option value="Prospect">Prospect</option>
-                            <option value="Qualified">Qualified</option>
-                            <option value="Proposal">Proposal</option>
-                            <option value="Negotiation">Negotiation</option>
-                            <option value="Closed Won">Closed Won</option>
-                        </select>
+                        <label>Expected Close Date</label>
+                        <input type="date" class="form-control" @bind="closeDate" />
                     </div>
                     <div class="form-group">
-                        <label>Expected Close Date</label>
-                        <input type="date" class="form-control" @bind="newOpportunity.CloseDate" />
+                        <label>Assigned To <span class="required">*</span></label>
+                        <select class="form-control" @bind="newOpportunity.AssignedTo">
+                            <option value="0">Select user</option>
+                            <option value="1">Current User</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group full-width">
+                        <label>Notes</label>
+                        <textarea class="form-control" rows="3" placeholder="Add notes..." @bind="newOpportunity.Notes"></textarea>
                     </div>
                 </div>
 
@@ -218,106 +346,326 @@
                     <span>Fields marked with <span class="required">*</span> are required</span>
                 </div>
 
-                <button class="btn-primary" @onclick="SaveOpportunity">Create Deal</button>
+                <div class="modal-actions">
+                    @if (isEditMode)
+                    {
+                        <button class="btn-danger" @onclick="ShowDeleteConfirmation">
+                            <i class="bi bi-trash"></i> Archive
+                        </button>
+                    }
+                    <button class="btn-primary" @onclick="SaveOpportunity">
+                        <i class="bi bi-check-lg"></i> @(isEditMode ? "Update Deal" : "Create Deal")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirmation Modal -->
+@if (showConfirmModal)
+{
+    <div class="modal-overlay">
+        <div class="confirm-modal">
+            <div class="confirm-icon">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <h3>@confirmTitle</h3>
+            <p>@confirmMessage</p>
+            <div class="confirm-actions">
+                <button class="btn-cancel-confirm" @onclick="CancelConfirmation">Cancel</button>
+                <button class="btn-confirm" @onclick="ConfirmAction">
+                    @confirmButtonText
+                </button>
             </div>
         </div>
     </div>
 }
 
 @code {
+    private readonly CustomerService customerService = new();
+    private readonly SalesPipelineService pipelineService = new();
+
     private string searchTerm = "";
     private bool isPipelineView = true;
     private bool showModal = false;
+    private bool isEditMode = false;
+    private bool showArchived = false;
+    private int selectedStageFilter = 0;
 
-    private void SetView(bool pipelineView)
+    private DateTime? closeDate { get; set; }
+
+    private List<SalesPipelineModel> allOpportunities = new();
+    private List<SalesPipelineModel> filteredOpportunities = new();
+    private List<Customer> customers = new();
+    private List<PipelineStageModel> allStages = new();
+
+    private decimal totalPipelineValue = 0;
+    private int activeDealsCount = 0;
+    private decimal avgDealSize = 0;
+    private decimal winRate = 0;
+
+    // Confirmation modal
+    private bool showConfirmModal = false;
+    private string confirmTitle = "";
+    private string confirmMessage = "";
+    private string confirmButtonText = "";
+    private Action? confirmCallback;
+
+    private class PipelineColumn
     {
-        isPipelineView = pipelineView;
+        public int StageId { get; set; }
+        public string StageName { get; set; } = "";
+        public string StageColor { get; set; } = "";
+        public int StageOrder { get; set; }
+        public List<SalesPipelineModel> Deals { get; set; } = new();
+    }
+
+    private List<PipelineColumn> pipelineStages = new();
+    private SalesPipelineModel newOpportunity = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        await Task.Run(() =>
+        {
+            allStages = pipelineService.GetAllStages();
+            allOpportunities = showArchived
+                ? pipelineService.GetArchivedOpportunities()
+                : pipelineService.GetAllOpportunities();
+            customers = customerService.GetAllCustomers();
+
+            var metrics = pipelineService.GetPipelineMetrics();
+            totalPipelineValue = Convert.ToDecimal(metrics["TotalValue"]);
+            activeDealsCount = Convert.ToInt32(metrics["ActiveDeals"]);
+            avgDealSize = Convert.ToDecimal(metrics["AvgDealSize"]);
+            winRate = Convert.ToDecimal(metrics["WinRate"]);
+
+            filteredOpportunities = new List<SalesPipelineModel>(allOpportunities);
+
+            if (!showArchived)
+            {
+                OrganizePipelineStages();
+            }
+        });
+    }
+
+    private void OrganizePipelineStages()
+    {
+        pipelineStages.Clear();
+
+        foreach (var stage in allStages.OrderBy(s => s.StageOrder))
+        {
+            pipelineStages.Add(new PipelineColumn
+            {
+                StageId = stage.StageId,
+                StageName = stage.StageName,
+                StageColor = stage.StageColor,
+                StageOrder = stage.StageOrder,
+                Deals = filteredOpportunities.Where(o => o.StageId == stage.StageId).ToList()
+            });
+        }
+    }
+
+    private Dictionary<string, List<SalesPipelineModel>> GetGroupedOpportunities()
+    {
+        return filteredOpportunities
+            .GroupBy(o => string.IsNullOrWhiteSpace(o.CompanyName) ? "Individual Customers" : o.CompanyName)
+            .OrderBy(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.OrderBy(o => o.OpportunityName).ToList());
+    }
+
+    private void SetView(bool pipelineView) => isPipelineView = pipelineView;
+
+    private async Task ToggleArchivedView()
+    {
+        showArchived = !showArchived;
+        searchTerm = "";
+        selectedStageFilter = 0;
+        await LoadData();
     }
 
     private void ToggleModal()
     {
         showModal = !showModal;
-        if (showModal)
+        if (showModal && !isEditMode)
         {
-            newOpportunity = new NewOpportunityModel();
+            newOpportunity = new SalesPipelineModel { AssignedTo = 1 };
+            closeDate = null;
+        }
+        else if (!showModal)
+        {
+            isEditMode = false;
         }
     }
 
-    private void SaveOpportunity()
+    private void CloseModalOutside()
     {
-        // Add save logic here
-        ToggleModal();
+        showModal = false;
+        isEditMode = false;
     }
 
-    private class NewOpportunityModel
+    private void EditOpportunity(int opportunityId)
     {
-        public string Title { get; set; } = "";
-        public string Company { get; set; } = "";
-        public string Value { get; set; } = "";
-        public int Probability { get; set; } = 50;
-        public string Stage { get; set; } = "";
-        public DateTime? CloseDate { get; set; }
+        var opp = allOpportunities.FirstOrDefault(o => o.OpportunityId == opportunityId);
+        if (opp != null)
+        {
+            newOpportunity = new SalesPipelineModel
+            {
+                OpportunityId = opp.OpportunityId,
+                OpportunityName = opp.OpportunityName,
+                CustomerId = opp.CustomerId,
+                StageId = opp.StageId,
+                DealValue = opp.DealValue,
+                Probability = opp.Probability,
+                ExpectedCloseDate = opp.ExpectedCloseDate,
+                AssignedTo = opp.AssignedTo,
+                Notes = opp.Notes
+            };
+            closeDate = opp.ExpectedCloseDate;
+            isEditMode = true;
+            showModal = true;
+        }
     }
 
-    private class Deal
+    private async Task SaveOpportunity()
     {
-        public string Title { get; set; } = "";
-        public string Company { get; set; } = "";
-        public string Value { get; set; } = "";
-        public string Date { get; set; } = "";
-        public string Owner { get; set; } = "";
+        if (string.IsNullOrWhiteSpace(newOpportunity.OpportunityName) ||
+            newOpportunity.CustomerId == 0 ||
+            newOpportunity.StageId == 0 ||
+            newOpportunity.AssignedTo == 0)
+            return;
+
+        newOpportunity.ExpectedCloseDate = closeDate;
+
+        bool success = isEditMode
+            ? await Task.Run(() => pipelineService.UpdateOpportunity(newOpportunity))
+            : await Task.Run(() => pipelineService.AddOpportunity(newOpportunity));
+
+        if (success)
+        {
+            await LoadData();
+            ToggleModal();
+        }
     }
 
-    private class PipelineStage
+    private void ShowDeleteConfirmation()
     {
-        public string Name { get; set; } = "";
-        public string Color { get; set; } = "";
-        public List<Deal> Deals { get; set; } = new();
+        confirmTitle = "Archive Opportunity";
+        confirmMessage = $"Are you sure you want to archive '{newOpportunity.OpportunityName}'? This opportunity will be moved to the archived list but can be restored later.";
+        confirmButtonText = "Archive";
+        confirmCallback = async () => await DeleteOpportunity();
+        showConfirmModal = true;
     }
 
-    private List<PipelineStage> pipelineStages = new()
+    private void ShowRestoreConfirmation(SalesPipelineModel opportunity)
     {
-        new PipelineStage
+        confirmTitle = "Restore Opportunity";
+        confirmMessage = $"Are you sure you want to restore '{opportunity.OpportunityName}'? This will move it back to the active pipeline.";
+        confirmButtonText = "Restore";
+        confirmCallback = async () => await RestoreOpportunity(opportunity.OpportunityId);
+        showConfirmModal = true;
+    }
+
+    private async Task DeleteOpportunity()
+    {
+        if (isEditMode && newOpportunity.OpportunityId > 0)
         {
-            Name = "Closed Won",
-            Color = "#10b981",
-            Deals = new()
+            bool success = await Task.Run(() => pipelineService.ArchiveOpportunity(newOpportunity.OpportunityId));
+            if (success)
             {
-                new() { Title = "Enterprise License", Company = "Tech Corp", Value = "Php 250K", Date = "Nov 15", Owner = "John D." },
-                new() { Title = "Annual Subscription", Company = "ABC Inc", Value = "Php 180K", Date = "Nov 12", Owner = "Jane S." }
-            }
-        },
-        new PipelineStage
-        {
-            Name = "Qualified",
-            Color = "#3b82f6",
-            Deals = new()
-            {
-                new() { Title = "Software Package", Company = "XYZ Ltd", Value = "Php 120K", Date = "Nov 18", Owner = "Mike R." },
-                new() { Title = "Consulting Project", Company = "Global Inc", Value = "Php 200K", Date = "Nov 20", Owner = "Sarah L." }
-            }
-        },
-        new PipelineStage
-        {
-            Name = "Proposal",
-            Color = "#6b7280",
-            Deals = new()
-            {
-                new() { Title = "Integration Service", Company = "Smart Co", Value = "Php 95K", Date = "Nov 22", Owner = "Tom B." },
-                new() { Title = "Platform License", Company = "Digital Corp", Value = "Php 310K", Date = "Nov 25", Owner = "Emma W." }
-            }
-        },
-        new PipelineStage
-        {
-            Name = "Negotiation",
-            Color = "#8b5cf6",
-            Deals = new()
-            {
-                new() { Title = "Custom Solution", Company = "Future Tech", Value = "Php 420K", Date = "Nov 28", Owner = "Alex P." },
-                new() { Title = "Partnership Deal", Company = "Innovation LLC", Value = "Php 550K", Date = "Dec 1", Owner = "Chris M." }
+                await LoadData();
+                ToggleModal();
             }
         }
-    };
+    }
 
-    private NewOpportunityModel newOpportunity = new();
+    private async Task RestoreOpportunity(int opportunityId)
+    {
+        bool success = await Task.Run(() => pipelineService.RestoreOpportunity(opportunityId));
+        if (success)
+        {
+            await LoadData();
+        }
+    }
+
+    private async void ConfirmAction()
+    {
+        showConfirmModal = false;
+        if (confirmCallback != null)
+        {
+            await Task.Run(confirmCallback);
+            confirmCallback = null;
+        }
+    }
+
+    private void CancelConfirmation()
+    {
+        showConfirmModal = false;
+        confirmCallback = null;
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        ApplyFilters();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = "";
+        selectedStageFilter = 0;
+        filteredOpportunities = new List<SalesPipelineModel>(allOpportunities);
+
+        if (!showArchived)
+        {
+            OrganizePipelineStages();
+        }
+
+        StateHasChanged();
+    }
+
+    private void PerformSearch()
+    {
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        filteredOpportunities = allOpportunities;
+
+        // Apply stage filter (only for active view)
+        if (!showArchived && selectedStageFilter > 0)
+        {
+            filteredOpportunities = filteredOpportunities.Where(o => o.StageId == selectedStageFilter).ToList();
+        }
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            filteredOpportunities = filteredOpportunities.Where(o =>
+                o.OpportunityName.ToLower().Contains(term) ||
+                o.CompanyName.ToLower().Contains(term) ||
+                o.CustomerName.ToLower().Contains(term))
+                .ToList();
+        }
+
+        if (!showArchived)
+        {
+            OrganizePipelineStages();
+        }
+
+        StateHasChanged();
+    }
+
+    private void FilterByStage(ChangeEventArgs e)
+    {
+        selectedStageFilter = Convert.ToInt32(e.Value);
+        ApplyFilters();
+    }
 }

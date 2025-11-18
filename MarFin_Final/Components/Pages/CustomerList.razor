@@ -1,91 +1,193 @@
 ﻿@page "/customers"
 @inject NavigationManager Navigation
 @inject AuthService AuthService
-@using Ordering_Sorono_IT13.Data
-@using Ordering_Sorono_IT13.Models
+@using MarFin_Final.Data
+@using MarFin_Final.Models
 
-<div class="customers-container">
+<div class="customers-container" @onclick="CloseDropdowns">
     <div class="customers-header">
         <div class="header-title">
-            <h1>Customers</h1>
-            <span class="record-count">@allCustomers.Count records</span>
+            <h1>@(showArchivedView ? "Archived Customers" : "Customers")</h1>
+            <span class="record-count">@filteredCustomers.Count records</span>
         </div>
     </div>
 
     @if (!string.IsNullOrEmpty(errorMessage) && !showModal)
     {
-        <div class="alert alert-danger">@errorMessage</div>
+        <div class="alert alert-danger">
+            @errorMessage
+            <button class="alert-close" @onclick="() => errorMessage = string.Empty">×</button>
+        </div>
     }
-
     @if (!string.IsNullOrEmpty(successMessage))
     {
-        <div class="alert alert-success">@successMessage</div>
+        <div class="alert alert-success">
+            @successMessage
+            <button class="alert-close" @onclick="() => successMessage = string.Empty">×</button>
+        </div>
     }
 
     <div class="customers-toolbar">
-        <button class="btn-primary" @onclick="ToggleModal">
-            <span><i class="bi bi-plus-lg"></i></span> New Customer
-        </button>
+        @if (!showArchivedView)
+        {
+            <button class="btn-primary" @onclick="OpenAddModal">
+                <span><i class="bi bi-plus-lg"></i></span> New Customer
+            </button>
+        }
+        else
+        {
+            <div></div>
+        }
         <div class="toolbar-right">
-            <button class="btn-secondary"><span><i class="bi bi-filter"></i></span> Filter by</button>
-            <button class="btn-secondary"><span><i class="bi bi-arrow-down-up"></i></span> Sort by</button>
+            <button class="@(showArchivedView ? "btn-primary" : "btn-secondary")" @onclick="ToggleArchivedView">
+                <span><i class="bi bi-@(showArchivedView ? "arrow-left" : "archive")"></i></span>
+                @(showArchivedView ? "Back to Active Customers" : "View Archived")
+            </button>
+
+            @if (!showArchivedView && (!string.IsNullOrEmpty(statusFilter) || !string.IsNullOrEmpty(searchTerm)))
+            {
+                <button class="btn-secondary" @onclick="ClearFilters" title="Clear all filters">
+                    <span><i class="bi bi-x-circle"></i></span>
+                    Clear Filters
+                </button>
+            }
+
+            @if (!showArchivedView)
+            {
+                <div class="filter-group">
+                    <button class="btn-secondary" @onclick="ToggleStatusFilter">
+                        <span><i class="bi bi-filter"></i></span>
+                        Filter by Status
+                        @if (!string.IsNullOrEmpty(statusFilter))
+                        {
+                            <span class="filter-badge">@statusFilter</span>
+                        }
+                    </button>
+                    @if (showStatusFilter)
+                    {
+                        <div class="dropdown-menu show">
+                            <button class="@(string.IsNullOrEmpty(statusFilter) ? "active" : "")"
+                                    @onclick="() => ApplyStatusFilter(string.Empty)">
+                                All Statuses
+                            </button>
+                            <button class="@(statusFilter == "Lead" ? "active" : "")"
+                                    @onclick='() => ApplyStatusFilter("Lead")'>
+                                <i class="bi bi-circle-fill status-dot-lead"></i> Lead
+                            </button>
+                            <button class="@(statusFilter == "Active" ? "active" : "")"
+                                    @onclick='() => ApplyStatusFilter("Active")'>
+                                <i class="bi bi-circle-fill status-dot-active"></i> Active
+                            </button>
+                            <button class="@(statusFilter == "Inactive" ? "active" : "")"
+                                    @onclick='() => ApplyStatusFilter("Inactive")'>
+                                <i class="bi bi-circle-fill status-dot-inactive"></i> Inactive
+                            </button>
+                            <button class="@(statusFilter == "Dormant" ? "active" : "")"
+                                    @onclick='() => ApplyStatusFilter("Dormant")'>
+                                <i class="bi bi-circle-fill status-dot-dormant"></i> Dormant
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+
             <div class="search-box">
                 <span class="search-icon"><i class="bi bi-search"></i></span>
                 <input type="text"
-                       placeholder="Search here.."
+                       placeholder="Search customers..."
                        @bind="searchTerm"
                        @bind:event="oninput"
                        @onkeyup="SearchCustomers" />
-            </div>
-            <button class="btn-secondary">Export</button>
-        </div>
-    </div>
-
-    @foreach (var group in GetGroupedCustomers())
-    {
-        <div class="customer-card">
-            <div class="customer-card-header">
-                <span class="customer-name">@group.Key</span>
-                <button class="menu-btn">⋮</button>
-            </div>
-
-            <div class="customer-table">
-                <div class="table-header">
-                    <span>First Name</span>
-                    <span>Last Name</span>
-                    <span>Email</span>
-                    <span>Status</span>
-                </div>
-
-                @foreach (var customer in group.Value)
+                @if (!string.IsNullOrEmpty(searchTerm))
                 {
-                    <div class="table-row" @onclick="() => NavigateToDetails(customer.CustomerId)">
-                        <span>@customer.FirstName</span>
-                        <span>@customer.LastName</span>
-                        <span>@customer.Email</span>
-                        <span>
-                            <span class="status-badge status-@customer.CustomerStatus.ToLower()">
-                                @customer.CustomerStatus
-                            </span>
-                        </span>
-                    </div>
+                    <button class="search-clear" @onclick="ClearSearch">×</button>
                 }
             </div>
         </div>
-    }
+    </div>
 
-    @if (!filteredCustomers.Any())
+    @if (isLoading)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading customers...</p>
+        </div>
+    }
+    else if (!filteredCustomers.Any())
     {
         <div class="empty-state">
             <i class="bi bi-inbox"></i>
-            <p>No customers found</p>
+            <p>@(string.IsNullOrEmpty(searchTerm) && string.IsNullOrEmpty(statusFilter) ? "No customers found" : $"No customers match your search criteria")</p>
+            @if (!string.IsNullOrEmpty(searchTerm) || !string.IsNullOrEmpty(statusFilter))
+            {
+                <button class="btn-secondary" @onclick="ClearFilters">Clear Filters</button>
+            }
         </div>
+    }
+    else
+    {
+        @foreach (var group in GetGroupedCustomers())
+        {
+            <div class="customer-card">
+                <div class="customer-card-header">
+                    <span class="customer-name">@group.Key</span>
+                    <span class="customer-count">@group.Value.Count customer(s)</span>
+                </div>
+
+                <div class="customer-table">
+                    <div class="table-header">
+                        <span>First Name</span>
+                        <span>Last Name</span>
+                        <span>Email</span>
+                        <span>Phone</span>
+                        <span>Status</span>
+                        <span>Actions</span>
+                    </div>
+
+                    @foreach (var customer in group.Value)
+                    {
+                        <div class="table-row">
+                            <span>@customer.FirstName</span>
+                            <span>@customer.LastName</span>
+                            <span>@customer.Email</span>
+                            <span>@(string.IsNullOrEmpty(customer.Phone) ? "N/A" : customer.Phone)</span>
+                            <span>
+                                <span class="status-badge status-@customer.CustomerStatus.ToLower()">
+                                    @customer.CustomerStatus
+                                </span>
+                            </span>
+                            <span class="action-buttons-cell">
+                                @if (showArchivedView)
+                                {
+                                    <button class="btn-icon btn-icon-success" @onclick="() => RestoreCustomer(customer)" title="Restore">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="btn-icon" @onclick="() => NavigateToDetails(customer.CustomerId)" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn-icon" @onclick="() => OpenEditModal(customer)" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn-icon btn-icon-danger" @onclick="() => ConfirmArchive(customer)" title="Archive">
+                                        <i class="bi bi-archive"></i>
+                                    </button>
+                                }
+                            </span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
     }
 </div>
 
+@* Add/Edit Customer Modal *@
 @if (showModal)
 {
-    <div class="modal-overlay" @onclick="ToggleModal">
+    <div class="modal-overlay" @onclick="CloseModal">
         <div class="modal-content" @onclick:stopPropagation>
             <div class="modal-header">
                 <div class="modal-title">
@@ -93,8 +195,14 @@
                     <h2>@(isEditMode ? "Edit Customer" : "New Customer")</h2>
                 </div>
                 <div class="modal-actions">
-                    <button class="btn-cancel" @onclick="ToggleModal">Cancel</button>
-                    <button class="btn-save" @onclick="SaveCustomer">Save</button>
+                    <button class="btn-cancel" @onclick="CloseModal">Cancel</button>
+                    <button class="btn-save" @onclick="SaveCustomer" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-small"></span>
+                        }
+                        Save
+                    </button>
                 </div>
             </div>
 
@@ -107,60 +215,102 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>First Name <span class="required">*</span></label>
-                        <input type="text" class="form-control" @bind="editingCustomer.FirstName" />
+                        <input type="text"
+                               class="form-control @(validationErrors.ContainsKey("FirstName") ? "is-invalid" : "")"
+                               @bind="editingCustomer.FirstName"
+                               placeholder="Enter first name" />
+                        @if (validationErrors.ContainsKey("FirstName"))
+                        {
+                            <span class="validation-error">@validationErrors["FirstName"]</span>
+                        }
                     </div>
                     <div class="form-group">
                         <label>Last Name <span class="required">*</span></label>
-                        <input type="text" class="form-control" @bind="editingCustomer.LastName" />
+                        <input type="text"
+                               class="form-control @(validationErrors.ContainsKey("LastName") ? "is-invalid" : "")"
+                               @bind="editingCustomer.LastName"
+                               placeholder="Enter last name" />
+                        @if (validationErrors.ContainsKey("LastName"))
+                        {
+                            <span class="validation-error">@validationErrors["LastName"]</span>
+                        }
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Email Address <span class="required">*</span></label>
-                    <input type="email" class="form-control" @bind="editingCustomer.Email" />
+                    <input type="email"
+                           class="form-control @(validationErrors.ContainsKey("Email") ? "is-invalid" : "")"
+                           @bind="editingCustomer.Email"
+                           placeholder="email@example.com" />
+                    @if (validationErrors.ContainsKey("Email"))
+                    {
+                        <span class="validation-error">@validationErrors["Email"]</span>
+                    }
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Phone</label>
-                        <input type="text" class="form-control" @bind="editingCustomer.Phone" />
+                        <input type="text"
+                               class="form-control"
+                               @bind="editingCustomer.Phone"
+                               placeholder="+63 912 345 6789" />
                     </div>
                     <div class="form-group">
                         <label>Company Name</label>
-                        <input type="text" class="form-control" @bind="editingCustomer.CompanyName" />
+                        <input type="text"
+                               class="form-control"
+                               @bind="editingCustomer.CompanyName"
+                               placeholder="Company name (optional)" />
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Address</label>
-                    <input type="text" class="form-control" @bind="editingCustomer.Address" />
+                    <input type="text"
+                           class="form-control"
+                           @bind="editingCustomer.Address"
+                           placeholder="Street address" />
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label>City</label>
-                        <input type="text" class="form-control" @bind="editingCustomer.City" />
+                        <input type="text"
+                               class="form-control"
+                               @bind="editingCustomer.City"
+                               placeholder="City" />
                     </div>
                     <div class="form-group">
                         <label>State/Province</label>
-                        <input type="text" class="form-control" @bind="editingCustomer.StateProvince" />
+                        <input type="text"
+                               class="form-control"
+                               @bind="editingCustomer.StateProvince"
+                               placeholder="State or Province" />
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Postal Code</label>
-                        <input type="text" class="form-control" @bind="editingCustomer.PostalCode" />
+                        <input type="text"
+                               class="form-control"
+                               @bind="editingCustomer.PostalCode"
+                               placeholder="Postal/ZIP code" />
                     </div>
                     <div class="form-group">
                         <label>Country</label>
-                        <input type="text" class="form-control" @bind="editingCustomer.Country" />
+                        <input type="text"
+                               class="form-control"
+                               @bind="editingCustomer.Country"
+                               placeholder="Country" />
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Customer Status</label>
+                        <label>Customer Status <span class="required">*</span></label>
                         <select class="form-control" @bind="editingCustomer.CustomerStatus">
                             <option value="Lead">Lead</option>
                             <option value="Active">Active</option>
@@ -170,48 +320,76 @@
                     </div>
                     <div class="form-group">
                         <label>Source</label>
-                        <input type="text" class="form-control" @bind="editingCustomer.Source" placeholder="e.g., Website, Referral, Cold Call" />
+                        <input type="text"
+                               class="form-control"
+                               @bind="editingCustomer.Source"
+                               placeholder="e.g., Website, Referral, Cold Call" />
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Notes</label>
-                    <textarea class="form-control" rows="3" @bind="editingCustomer.Notes"></textarea>
+                    <textarea class="form-control"
+                              rows="3"
+                              @bind="editingCustomer.Notes"
+                              placeholder="Additional notes about this customer..."></textarea>
                 </div>
             </div>
         </div>
     </div>
 }
 
-@if (showErrorModal)
+@* Archive Confirmation Modal *@
+@if (showArchiveModal && customerToArchive != null)
 {
-    <div class="modal-overlay" @onclick="CloseErrorModal">
-        <div class="modal-content error-modal" @onclick:stopPropagation>
+    <div class="modal-overlay" @onclick="CloseArchiveModal">
+        <div class="modal-content confirm-modal" @onclick:stopPropagation>
             <div class="modal-header">
-                <h2>Error</h2>
-                <button class="btn-cancel" @onclick="CloseErrorModal">Close</button>
+                <div class="modal-title">
+                    <span class="user-icon warning"><i class="bi bi-exclamation-triangle"></i></span>
+                    <h2>Archive Customer</h2>
+                </div>
             </div>
             <div class="modal-body">
-                <div class="alert alert-danger">@errorMessage</div>
+                <p>Are you sure you want to archive <strong>@customerToArchive.FullName</strong>?</p>
+                <p class="text-muted">This customer will be moved to the archived list but can be restored later.</p>
+
+                <div class="modal-footer">
+                    <button class="btn-cancel" @onclick="CloseArchiveModal">Cancel</button>
+                    <button class="btn-danger" @onclick="ArchiveCustomer" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-small"></span>
+                        }
+                        Archive Customer
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 }
 
 @code {
-   private readonly CustomerService customerService = new();
+    private readonly CustomerService customerService = new();
     private List<Customer> allCustomers = new();
     private List<Customer> filteredCustomers = new();
-    private string searchTerm = "";
+    private string searchTerm = string.Empty;
+    private string statusFilter = string.Empty;
+    private bool showStatusFilter = false;
     private bool showModal = false;
-    private bool showErrorModal = false;
+    private bool showArchiveModal = false;
     private bool isEditMode = false;
+    private bool isLoading = true;
+    private bool isSaving = false;
     private Customer editingCustomer = new();
-    private string errorMessage = "";
-    private string successMessage = "";
-    private int currentUserId = 1; // ← Make sure this matches a user_id in tbl_Users!
+    private Customer? customerToArchive = null;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private Dictionary<string, string> validationErrors = new();
+    private int currentUserId = 1;
+    private bool showArchivedView = false;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         if (!AuthService.IsAuthenticated)
         {
@@ -219,78 +397,122 @@
             return;
         }
 
-        // Add debugging
-        try
-        {
-            Console.WriteLine("Testing database connection...");
-            bool connected = DBConnection.TestConnection();
-            Console.WriteLine($"Connection test: {connected}");
-            
-            LoadCustomers();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Initialization error: {ex.Message}";
-            showErrorModal = true;
-            Console.WriteLine($"ERROR: {ex.Message}");
-            Console.WriteLine($"Stack: {ex.StackTrace}");
-        }
+        await LoadCustomers();
     }
-    private void LoadCustomers()
+
+    private async Task LoadCustomers()
     {
         try
         {
-            allCustomers = customerService.GetAllCustomers() ?? new List<Customer>();
+            isLoading = true;
+            StateHasChanged();
+
+            await Task.Run(() =>
+            {
+                if (showArchivedView)
+                {
+                    allCustomers = customerService.GetArchivedCustomers() ?? new List<Customer>();
+                }
+                else
+                {
+                    allCustomers = customerService.GetAllCustomers() ?? new List<Customer>();
+                }
+            });
+
             filteredCustomers = new List<Customer>(allCustomers);
-            errorMessage = "";
-            showErrorModal = false;
+            ApplyFilters();
+            errorMessage = string.Empty;
         }
         catch (Exception ex)
         {
-            errorMessage = "Error loading customers: " + ex.Message;
-            showErrorModal = true;
+            errorMessage = $"Error loading customers: {ex.Message}";
+            Console.WriteLine($"LoadCustomers Error: {ex.Message}\n{ex.StackTrace}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
     private void SearchCustomers()
     {
-        if (string.IsNullOrWhiteSpace(searchTerm))
-        {
-            filteredCustomers = new List<Customer>(allCustomers);
-        }
-        else
-        {
-            // assume service returns filtered list
-            filteredCustomers = customerService.SearchCustomers(searchTerm) ?? new List<Customer>();
-        }
+        ApplyFilters();
     }
 
-    private void ToggleModal()
+    private void ApplyFilters()
     {
-        // toggle modal, reset error when opening/closing modal
-        showModal = !showModal;
+        filteredCustomers = allCustomers;
 
-        if (showModal && !isEditMode)
+        // Apply status filter
+        if (!string.IsNullOrEmpty(statusFilter))
         {
-            editingCustomer = new Customer
-            {
-                SegmentId = 1,
-                CreatedBy = currentUserId,
-                Country = "Philippines",
-                CustomerStatus = "Lead",
-                IsActive = true
-            };
-            errorMessage = "";
-            showErrorModal = false;
+            filteredCustomers = filteredCustomers.Where(c => c.CustomerStatus == statusFilter).ToList();
         }
 
-        if (!showModal)
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            // closing modal: reset edit mode and validation errors
-            isEditMode = false;
-            errorMessage = "";
-            showErrorModal = false;
+            var term = searchTerm.ToLower();
+            filteredCustomers = filteredCustomers.Where(c =>
+                c.FirstName.ToLower().Contains(term) ||
+                c.LastName.ToLower().Contains(term) ||
+                c.Email.ToLower().Contains(term) ||
+                (!string.IsNullOrEmpty(c.CompanyName) && c.CompanyName.ToLower().Contains(term)) ||
+                (!string.IsNullOrEmpty(c.Phone) && c.Phone.Contains(term))
+            ).ToList();
         }
+
+        StateHasChanged();
+    }
+
+    private void ToggleStatusFilter()
+    {
+        showStatusFilter = !showStatusFilter;
+        StateHasChanged();
+    }
+
+    private void ApplyStatusFilter(string status)
+    {
+        statusFilter = status;
+        showStatusFilter = false;
+        ApplyFilters();
+    }
+
+    private void CloseDropdowns()
+    {
+        showStatusFilter = false;
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
+        ApplyFilters();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = string.Empty;
+        statusFilter = string.Empty;
+        filteredCustomers = new List<Customer>(allCustomers);
+        StateHasChanged();
+    }
+
+    private void OpenAddModal()
+    {
+        isEditMode = false;
+        editingCustomer = new Customer
+        {
+            SegmentId = 1,
+            CreatedBy = currentUserId,
+            Country = "Philippines",
+            CustomerStatus = "Lead",
+            IsActive = true
+        };
+        validationErrors.Clear();
+        errorMessage = string.Empty;
+        showModal = true;
     }
 
     private void OpenEditModal(Customer customer)
@@ -304,102 +526,176 @@
             SegmentId = customer.SegmentId,
             CreatedBy = customer.CreatedBy,
             ModifiedBy = currentUserId,
-            FirstName = customer.FirstName,
-            LastName = customer.LastName,
-            Email = customer.Email,
-            Phone = customer.Phone,
-            CompanyName = customer.CompanyName,
-            Address = customer.Address,
-            City = customer.City,
-            StateProvince = customer.StateProvince,
-            PostalCode = customer.PostalCode,
-            Country = customer.Country,
-            CustomerStatus = customer.CustomerStatus,
-            Source = customer.Source,
-            Notes = customer.Notes,
+            FirstName = customer.FirstName ?? string.Empty,
+            LastName = customer.LastName ?? string.Empty,
+            Email = customer.Email ?? string.Empty,
+            Phone = customer.Phone ?? string.Empty,
+            CompanyName = customer.CompanyName ?? string.Empty,
+            Address = customer.Address ?? string.Empty,
+            City = customer.City ?? string.Empty,
+            StateProvince = customer.StateProvince ?? string.Empty,
+            PostalCode = customer.PostalCode ?? string.Empty,
+            Country = customer.Country ?? string.Empty,
+            CustomerStatus = customer.CustomerStatus ?? "Lead",
+            TotalRevenue = customer.TotalRevenue,
+            Source = customer.Source ?? string.Empty,
+            Notes = customer.Notes ?? string.Empty,
             IsActive = customer.IsActive
         };
 
-        errorMessage = "";
-        showErrorModal = false;
+        validationErrors.Clear();
+        errorMessage = string.Empty;
         showModal = true;
     }
 
-    private void CloseErrorModal()
+    private void CloseModal()
     {
-        showErrorModal = false;
+        showModal = false;
+        isEditMode = false;
+        validationErrors.Clear();
+        errorMessage = string.Empty;
     }
 
-    private void SaveCustomer()
+    private bool ValidateCustomer()
     {
-        // reset messages
-        errorMessage = "";
-        successMessage = "";
-        showErrorModal = false;
+        validationErrors.Clear();
 
-        // simple client validation
         if (string.IsNullOrWhiteSpace(editingCustomer.FirstName))
         {
-            errorMessage = "First name is required.";
-            showErrorModal = true;
-            return;
+            validationErrors["FirstName"] = "First name is required";
         }
 
         if (string.IsNullOrWhiteSpace(editingCustomer.LastName))
         {
-            errorMessage = "Last name is required.";
-            showErrorModal = true;
-            return;
+            validationErrors["LastName"] = "Last name is required";
         }
 
         if (string.IsNullOrWhiteSpace(editingCustomer.Email))
         {
-            errorMessage = "Email is required.";
-            showErrorModal = true;
+            validationErrors["Email"] = "Email is required";
+        }
+        else if (!IsValidEmail(editingCustomer.Email))
+        {
+            validationErrors["Email"] = "Please enter a valid email address";
+        }
+
+        return !validationErrors.Any();
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task SaveCustomer()
+    {
+        if (!ValidateCustomer())
+        {
+            errorMessage = "Please correct the validation errors";
             return;
         }
 
         try
         {
-            bool success;
+            isSaving = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+            StateHasChanged();
 
-            if (isEditMode)
+            bool success = false;
+
+            await Task.Run(() =>
             {
-                // UpdateCustomer should return true/false and ideally set a descriptive error (see notes)
-                success = customerService.UpdateCustomer(editingCustomer);
-
-                if (!success)
+                if (isEditMode)
                 {
-                    errorMessage = "Failed to update customer. Possible causes: validation error, duplicate data, or server error.";
-                    showErrorModal = true;
-                    return;
+                    success = customerService.UpdateCustomer(editingCustomer);
                 }
+                else
+                {
+                    success = customerService.AddCustomer(editingCustomer);
+                }
+            });
 
-                successMessage = "Customer updated successfully!";
+            if (success)
+            {
+                successMessage = isEditMode ? "Customer updated successfully!" : "Customer added successfully!";
+                CloseModal();
+                await LoadCustomers();
             }
             else
             {
-                success = customerService.AddCustomer(editingCustomer);
-
-                if (!success)
-                {
-                    errorMessage = "Failed to add customer. Possible causes: duplicate email, invalid data, or server error.";
-                    showErrorModal = true;
-                    return;
-                }
-
-                successMessage = "Customer added successfully!";
+                errorMessage = isEditMode
+                    ? "Failed to update customer. Please check your data and try again."
+                    : "Failed to add customer. This email may already be in use.";
             }
-
-            // reload and close modal on success
-            LoadCustomers();
-            ToggleModal();
         }
         catch (Exception ex)
         {
-            // show the real cause (be careful with exposing sensitive DB messages in production)
-            errorMessage = "Error saving customer: " + ex.Message;
-            showErrorModal = true;
+            errorMessage = $"Error saving customer: {ex.Message}";
+            Console.WriteLine($"SaveCustomer Error: {ex.Message}\n{ex.StackTrace}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfirmArchive(Customer customer)
+    {
+        customerToArchive = customer;
+        showArchiveModal = true;
+    }
+
+    private void CloseArchiveModal()
+    {
+        showArchiveModal = false;
+        customerToArchive = null;
+    }
+
+    private async Task ArchiveCustomer()
+    {
+        if (customerToArchive == null) return;
+
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+
+            bool success = false;
+            await Task.Run(() =>
+            {
+                success = customerService.ArchiveCustomer(customerToArchive.CustomerId, currentUserId);
+            });
+
+            if (success)
+            {
+                successMessage = $"{customerToArchive.FullName} has been archived successfully";
+                CloseArchiveModal();
+                await LoadCustomers();
+            }
+            else
+            {
+                errorMessage = "Failed to archive customer";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error archiving customer: {ex.Message}";
+            Console.WriteLine($"ArchiveCustomer Error: {ex.Message}\n{ex.StackTrace}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
         }
     }
 
@@ -410,8 +706,53 @@
 
     private Dictionary<string, List<Customer>> GetGroupedCustomers()
     {
-        return (filteredCustomers ?? new List<Customer>())
-            .GroupBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? "Individual" : c.CompanyName)
-            .ToDictionary(g => g.Key, g => g.ToList());
+        return filteredCustomers
+            .GroupBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? "Individual Customers" : c.CompanyName)
+            .OrderBy(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.OrderBy(c => c.LastName).ThenBy(c => c.FirstName).ToList());
+    }
+
+    private async Task ToggleArchivedView()
+    {
+        showArchivedView = !showArchivedView;
+        searchTerm = string.Empty;
+        statusFilter = string.Empty;
+        showStatusFilter = false;
+        await LoadCustomers();
+    }
+
+    private async Task RestoreCustomer(Customer customer)
+    {
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+
+            bool success = false;
+            await Task.Run(() =>
+            {
+                success = customerService.RestoreCustomer(customer.CustomerId);
+            });
+
+            if (success)
+            {
+                successMessage = $"{customer.FullName} has been restored successfully";
+                await LoadCustomers();
+            }
+            else
+            {
+                errorMessage = "Failed to restore customer";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error restoring customer: {ex.Message}";
+            Console.WriteLine($"RestoreCustomer Error: {ex.Message}\n{ex.StackTrace}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
     }
 }

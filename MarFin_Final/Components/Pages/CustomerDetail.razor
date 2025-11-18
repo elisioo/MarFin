@@ -1,7 +1,7 @@
 ﻿@page "/customer-details/{CustomerId:int}"
 @inject NavigationManager Navigation
-@using Ordering_Sorono_IT13.Data
-@using Ordering_Sorono_IT13.Models
+@using MarFin_Final.Data
+@using MarFin_Final.Models
 
 <div class="customers-container">
     @if (isLoading)
@@ -27,92 +27,154 @@
         <div class="details-page">
             <div class="details-header">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h1>@customer.FullName</h1>
-                    <button class="btn-back" @onclick="NavigateBack">
-                        <i class="bi bi-arrow-left"></i> Back
-                    </button>
-                </div>
-
-                <div class="header-tabs">
-                    <button class="tab-btn active">Overview</button>
-                    <button class="tab-btn">Invoices</button>
-                    <button class="tab-btn">Transactions</button>
-                    <button class="tab-btn">Documents</button>
+                    <div>
+                        <button class="btn-back" @onclick="NavigateBack">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </button>
+                        <h1>@customer.FullName</h1>
+                        <div class="customer-meta">
+                            <span class="status-badge status-@customer.CustomerStatus.ToLower()">
+                                @customer.CustomerStatus
+                            </span>
+                            @if (!string.IsNullOrEmpty(customer.CompanyName))
+                            {
+                                <span class="company-badge">
+                                    <i class="bi bi-building"></i> @customer.CompanyName
+                                </span>
+                            }
+                        </div>
+                    </div>
                 </div>
             </div>
 
             @if (!string.IsNullOrEmpty(errorMessage))
             {
-                <div class="alert alert-danger">@errorMessage</div>
+                <div class="alert alert-danger">
+                    @errorMessage
+                    <button class="alert-close" @onclick="() => errorMessage = string.Empty">×</button>
+                </div>
             }
 
             @if (!string.IsNullOrEmpty(successMessage))
             {
-                <div class="alert alert-success">@successMessage</div>
+                <div class="alert alert-success">
+                    @successMessage
+                    <button class="alert-close" @onclick="() => successMessage = string.Empty">×</button>
+                </div>
             }
 
             <div class="details-grid">
+                @* Left Column - Customer Information *@
                 <div class="details-card">
                     <div class="card-header">
                         <h3>Customer Information</h3>
+                        @if (!isEditing)
+                        {
+                            <button class="btn-edit" @onclick="StartEdit">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                        }
                     </div>
-                    
+
                     <div class="form-group">
                         <label>First Name</label>
-                        <input type="text" 
-                               class="form-control" 
-                               @bind="customer.FirstName" 
+                        <input type="text"
+                               class="form-control @(validationErrors.ContainsKey("FirstName") ? "is-invalid" : "")"
+                               @bind="customer.FirstName"
                                disabled="@(!isEditing)" />
+                        @if (validationErrors.ContainsKey("FirstName"))
+                        {
+                            <span class="validation-error">@validationErrors["FirstName"]</span>
+                        }
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Last Name</label>
-                        <input type="text" 
-                               class="form-control" 
-                               @bind="customer.LastName" 
+                        <input type="text"
+                               class="form-control @(validationErrors.ContainsKey("LastName") ? "is-invalid" : "")"
+                               @bind="customer.LastName"
                                disabled="@(!isEditing)" />
+                        @if (validationErrors.ContainsKey("LastName"))
+                        {
+                            <span class="validation-error">@validationErrors["LastName"]</span>
+                        }
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Email</label>
-                        <input type="email" 
-                               class="form-control" 
-                               @bind="customer.Email" 
+                        <input type="email"
+                               class="form-control @(validationErrors.ContainsKey("Email") ? "is-invalid" : "")"
+                               @bind="customer.Email"
                                disabled="@(!isEditing)" />
+                        @if (validationErrors.ContainsKey("Email"))
+                        {
+                            <span class="validation-error">@validationErrors["Email"]</span>
+                        }
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Phone</label>
-                        <input type="text" 
-                               class="form-control" 
-                               @bind="customer.Phone" 
-                               disabled="@(!isEditing)" />
+                        <input type="text"
+                               class="form-control"
+                               @bind="customer.Phone"
+                               disabled="@(!isEditing)"
+                               placeholder="N/A" />
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Company Name</label>
-                        <input type="text" 
-                               class="form-control" 
-                               @bind="customer.CompanyName" 
-                               disabled="@(!isEditing)" />
+                        <input type="text"
+                               class="form-control"
+                               @bind="customer.CompanyName"
+                               disabled="@(!isEditing)"
+                               placeholder="N/A" />
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Address</label>
-                        <input type="text" 
-                               class="form-control" 
-                               @bind="customer.Address" 
-                               disabled="@(!isEditing)" />
+                        <input type="text"
+                               class="form-control"
+                               @bind="customer.Address"
+                               disabled="@(!isEditing)"
+                               placeholder="N/A" />
                     </div>
-                    
+
                     <div class="form-group">
                         <label>City</label>
-                        <input type="text" 
-                               class="form-control" 
-                               @bind="customer.City" 
+                        <input type="text"
+                               class="form-control"
+                               @bind="customer.City"
+                               disabled="@(!isEditing)"
+                               placeholder="N/A" />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>State/Province</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="customer.StateProvince"
+                                   disabled="@(!isEditing)"
+                                   placeholder="N/A" />
+                        </div>
+                        <div class="form-group">
+                            <label>Postal Code</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="customer.PostalCode"
+                                   disabled="@(!isEditing)"
+                                   placeholder="N/A" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Country</label>
+                        <input type="text"
+                               class="form-control"
+                               @bind="customer.Country"
                                disabled="@(!isEditing)" />
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Status</label>
                         @if (isEditing)
@@ -133,12 +195,30 @@
                             </div>
                         }
                     </div>
-                    
+
                     <div class="form-group">
-                        <label>Created at</label>
-                        <input type="text" 
-                               class="form-control" 
-                               value="@customer.CreatedDate.ToString("MMM dd, yyyy")" 
+                        <label>Source</label>
+                        <input type="text"
+                               class="form-control"
+                               @bind="customer.Source"
+                               disabled="@(!isEditing)"
+                               placeholder="N/A" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea class="form-control"
+                                  rows="3"
+                                  @bind="customer.Notes"
+                                  disabled="@(!isEditing)"
+                                  placeholder="No notes"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Member Since</label>
+                        <input type="text"
+                               class="form-control"
+                               value="@customer.CreatedDate.ToString("MMMM dd, yyyy")"
                                readonly />
                     </div>
 
@@ -146,68 +226,113 @@
                     {
                         <div class="form-actions">
                             <button class="btn-cancel" @onclick="CancelEdit">Cancel</button>
-                            <button class="btn-save" @onclick="SaveChanges">Save Changes</button>
+                            <button class="btn-save" @onclick="SaveChanges" disabled="@isSaving">
+                                @if (isSaving)
+                                {
+                                    <span class="spinner-small"></span>
+                                }
+                                Save Changes
+                            </button>
                         </div>
                     }
                 </div>
 
+                @* Middle Column - Activity Overview *@
                 <div class="details-card">
-                    <div class="activity-tabs">
-                        <button class="activity-tab active">Overview</button>
-                        <button class="activity-tab">Transactions</button>
-                        <button class="activity-tab">Interactions</button>
-                        <button class="activity-tab">Docs</button>
-                        <i class="bi bi-three-dots-vertical"></i>
+                    <div class="card-header">
+                        <h3>Overview</h3>
                     </div>
-                    
+
                     <div class="activity-content">
                         <div class="info-section">
                             <h4>Contact Details</h4>
                             <div class="info-item">
-                                <span class="info-label">Email:</span>
-                                <span class="info-value">@customer.Email</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Phone:</span>
-                                <span class="info-value">@(string.IsNullOrEmpty(customer.Phone) ? "N/A" : customer.Phone)</span>
-                            </div>
-                        </div>
-
-                        <div class="info-section">
-                            <h4>Address</h4>
-                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="bi bi-envelope"></i> Email:
+                                </span>
                                 <span class="info-value">
-                                    @if (!string.IsNullOrEmpty(customer.Address))
+                                    <a href="mailto:@customer.Email">@customer.Email</a>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="bi bi-telephone"></i> Phone:
+                                </span>
+                                <span class="info-value">
+                                    @if (!string.IsNullOrEmpty(customer.Phone))
                                     {
-                                        <text>@customer.Address<br /></text>
+                                        <a href="tel:@customer.Phone">@customer.Phone</a>
                                     }
-                                    @if (!string.IsNullOrEmpty(customer.City))
+                                    else
                                     {
-                                        <text>@customer.City, </text>
+                                        <text>N/A</text>
                                     }
-                                    @if (!string.IsNullOrEmpty(customer.StateProvince))
-                                    {
-                                        <text>@customer.StateProvince </text>
-                                    }
-                                    @if (!string.IsNullOrEmpty(customer.PostalCode))
-                                    {
-                                        <text>@customer.PostalCode<br /></text>
-                                    }
-                                    @customer.Country
                                 </span>
                             </div>
                         </div>
 
                         <div class="info-section">
-                            <h4>Additional Information</h4>
+                            <h4>Location</h4>
                             <div class="info-item">
-                                <span class="info-label">Segment:</span>
+                                <span class="info-label">
+                                    <i class="bi bi-geo-alt"></i> Address:
+                                </span>
+                                <span class="info-value">
+                                    @if (!string.IsNullOrEmpty(customer.Address) || !string.IsNullOrEmpty(customer.City))
+                                    {
+                                        @if (!string.IsNullOrEmpty(customer.Address))
+                                        {
+                                            <text>@customer.Address<br /></text>
+                                        }
+                                        @if (!string.IsNullOrEmpty(customer.City))
+                                        {
+                                            <text>@customer.City</text>
+                                        }
+                                        @if (!string.IsNullOrEmpty(customer.StateProvince))
+                                        {
+                                            <text>, @customer.StateProvince</text>
+                                        }
+                                        @if (!string.IsNullOrEmpty(customer.PostalCode))
+                                        {
+                                            <text> @customer.PostalCode</text>
+                                        }
+                                        <br />
+                                        <text>@customer.Country</text>
+                                    }
+                                    else
+                                    {
+                                        <text>N/A</text>
+                                    }
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="info-section">
+                            <h4>Business Information</h4>
+                            @if (!string.IsNullOrEmpty(customer.CompanyName))
+                            {
+                                <div class="info-item">
+                                    <span class="info-label">
+                                        <i class="bi bi-building"></i> Company:
+                                    </span>
+                                    <span class="info-value">@customer.CompanyName</span>
+                                </div>
+                            }
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="bi bi-tag"></i> Segment:
+                                </span>
                                 <span class="info-value">@customer.SegmentName</span>
                             </div>
-                            <div class="info-item">
-                                <span class="info-label">Source:</span>
-                                <span class="info-value">@(string.IsNullOrEmpty(customer.Source) ? "N/A" : customer.Source)</span>
-                            </div>
+                            @if (!string.IsNullOrEmpty(customer.Source))
+                            {
+                                <div class="info-item">
+                                    <span class="info-label">
+                                        <i class="bi bi-signpost"></i> Source:
+                                    </span>
+                                    <span class="info-value">@customer.Source</span>
+                                </div>
+                            }
                         </div>
 
                         @if (!string.IsNullOrEmpty(customer.Notes))
@@ -215,24 +340,48 @@
                             <div class="info-section">
                                 <h4>Notes</h4>
                                 <div class="info-item">
-                                    <span class="info-value">@customer.Notes</span>
+                                    <span class="info-value notes-text">@customer.Notes</span>
                                 </div>
                             </div>
                         }
+
+                        <div class="info-section">
+                            <h4>Timeline</h4>
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="bi bi-calendar-plus"></i> Created:
+                                </span>
+                                <span class="info-value">@customer.CreatedDate.ToString("MMM dd, yyyy 'at' h:mm tt")</span>
+                            </div>
+                            @if (customer.ModifiedDate > customer.CreatedDate)
+                            {
+                                <div class="info-item">
+                                    <span class="info-label">
+                                        <i class="bi bi-calendar-check"></i> Last Modified:
+                                    </span>
+                                    <span class="info-value">@customer.ModifiedDate.ToString("MMM dd, yyyy 'at' h:mm tt")</span>
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
 
+                @* Right Column - Revenue & Actions *@
                 <div class="details-card">
                     <div class="revenue-section">
                         <div class="revenue-icon">
-                            <i class="bi bi-receipt"></i>
+                            <i class="bi bi-cash-coin"></i>
                         </div>
                         <div class="revenue-info">
-                            <div class="revenue-amount">Php @customer.TotalRevenue.ToString("N2")</div>
+                            <div class="revenue-amount">₱@customer.TotalRevenue.ToString("N2")</div>
                             <div class="revenue-label">Total Revenue</div>
                         </div>
                     </div>
-                    
+
+                    <div class="card-header">
+                        <h3>Quick Actions</h3>
+                    </div>
+
                     <div class="action-buttons">
                         <button class="btn-action btn-action-primary" @onclick="StartEdit" disabled="@isEditing">
                             <i class="bi bi-pencil"></i> Edit Customer
@@ -240,14 +389,17 @@
                         <button class="btn-action">
                             <i class="bi bi-plus-lg"></i> Log Interaction
                         </button>
-                        <button class="btn-action">
+                        <button class="btn-action" @onclick="SendEmail">
                             <i class="bi bi-envelope"></i> Send Email
                         </button>
                         <button class="btn-action">
-                            <i class="bi bi-calendar"></i> Schedule Meeting
+                            <i class="bi bi-telephone"></i> Call Customer
                         </button>
                         <button class="btn-action">
                             <i class="bi bi-file-text"></i> Create Invoice
+                        </button>
+                        <button class="btn-action btn-action-danger" @onclick="ConfirmArchive">
+                            <i class="bi bi-archive"></i> Archive Customer
                         </button>
                     </div>
                 </div>
@@ -256,29 +408,69 @@
     }
 </div>
 
+@* Archive Confirmation Modal *@
+@if (showArchiveModal)
+{
+    <div class="modal-overlay" @onclick="CloseArchiveModal">
+        <div class="modal-content confirm-modal" @onclick:stopPropagation>
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="user-icon warning"><i class="bi bi-exclamation-triangle"></i></span>
+                    <h2>Archive Customer</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to archive <strong>@customer?.FullName</strong>?</p>
+                <p class="text-muted">This customer will be moved to the archived list but can be restored later.</p>
+
+                <div class="modal-footer">
+                    <button class="btn-cancel" @onclick="CloseArchiveModal">Cancel</button>
+                    <button class="btn-danger" @onclick="ArchiveCustomer" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-small"></span>
+                        }
+                        Archive Customer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public int CustomerId { get; set; }
 
     private readonly CustomerService customerService = new();
-    private Ordering_Sorono_IT13.Models.Customer? customer = null;
-    private Ordering_Sorono_IT13.Models.Customer? originalCustomer = null;
+    private Customer? customer = null;
+    private Customer? originalCustomer = null;
     private bool isLoading = true;
-    private string errorMessage = "";
-    private string successMessage = "";
+    private bool isSaving = false;
+    private bool showArchiveModal = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
     private bool isEditing = false;
+    private Dictionary<string, string> validationErrors = new();
+    private int currentUserId = 1;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LoadCustomerDetails();
+        await LoadCustomerDetails();
     }
 
-    private void LoadCustomerDetails()
+    private async Task LoadCustomerDetails()
     {
         try
         {
             isLoading = true;
-            customer = customerService.GetCustomerById(CustomerId);
+            StateHasChanged();
+
+            await Task.Run(() =>
+            {
+                customer = customerService.GetCustomerById(CustomerId);
+            });
+
             if (customer == null)
             {
                 errorMessage = "Customer not found";
@@ -287,12 +479,16 @@
             {
                 originalCustomer = CloneCustomer(customer);
             }
-            isLoading = false;
         }
         catch (Exception ex)
         {
-            errorMessage = "Error loading customer details: " + ex.Message;
+            errorMessage = $"Error loading customer details: {ex.Message}";
+            Console.WriteLine($"LoadCustomerDetails Error: {ex.Message}\n{ex.StackTrace}");
+        }
+        finally
+        {
             isLoading = false;
+            StateHasChanged();
         }
     }
 
@@ -303,40 +499,161 @@
         {
             originalCustomer = CloneCustomer(customer);
         }
+        validationErrors.Clear();
+        errorMessage = string.Empty;
     }
 
     private void CancelEdit()
     {
         isEditing = false;
-        if (originalCustomer != null)
+        if (originalCustomer != null && customer != null)
         {
             customer = CloneCustomer(originalCustomer);
         }
-        errorMessage = "";
+        validationErrors.Clear();
+        errorMessage = string.Empty;
     }
 
-    private void SaveChanges()
+    private bool ValidateCustomer()
+    {
+        validationErrors.Clear();
+
+        if (customer == null) return false;
+
+        if (string.IsNullOrWhiteSpace(customer.FirstName))
+        {
+            validationErrors["FirstName"] = "First name is required";
+        }
+
+        if (string.IsNullOrWhiteSpace(customer.LastName))
+        {
+            validationErrors["LastName"] = "Last name is required";
+        }
+
+        if (string.IsNullOrWhiteSpace(customer.Email))
+        {
+            validationErrors["Email"] = "Email is required";
+        }
+        else if (!IsValidEmail(customer.Email))
+        {
+            validationErrors["Email"] = "Please enter a valid email address";
+        }
+
+        return !validationErrors.Any();
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task SaveChanges()
     {
         if (customer == null) return;
 
+        if (!ValidateCustomer())
+        {
+            errorMessage = "Please correct the validation errors";
+            return;
+        }
+
         try
         {
-            bool success = customerService.UpdateCustomer(customer);
+            isSaving = true;
+            customer.ModifiedBy = currentUserId;
+            StateHasChanged();
+
+            bool success = false;
+            await Task.Run(() =>
+            {
+                success = customerService.UpdateCustomer(customer);
+            });
+
             if (success)
             {
                 successMessage = "Customer updated successfully!";
                 isEditing = false;
                 originalCustomer = CloneCustomer(customer);
-                errorMessage = "";
+                errorMessage = string.Empty;
             }
             else
             {
-                errorMessage = "Failed to update customer";
+                errorMessage = "Failed to update customer. Please try again.";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = "Error saving changes: " + ex.Message;
+            errorMessage = $"Error saving changes: {ex.Message}";
+            Console.WriteLine($"SaveChanges Error: {ex.Message}\n{ex.StackTrace}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SendEmail()
+    {
+        if (customer != null && !string.IsNullOrEmpty(customer.Email))
+        {
+            Navigation.NavigateTo($"mailto:{customer.Email}");
+        }
+    }
+
+    private void ConfirmArchive()
+    {
+        showArchiveModal = true;
+    }
+
+    private void CloseArchiveModal()
+    {
+        showArchiveModal = false;
+    }
+
+    private async Task ArchiveCustomer()
+    {
+        if (customer == null) return;
+
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+
+            bool success = false;
+            await Task.Run(() =>
+            {
+                success = customerService.ArchiveCustomer(customer.CustomerId, currentUserId);
+            });
+
+            if (success)
+            {
+                Navigation.NavigateTo("/customers");
+            }
+            else
+            {
+                errorMessage = "Failed to archive customer";
+                CloseArchiveModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error archiving customer: {ex.Message}";
+            Console.WriteLine($"ArchiveCustomer Error: {ex.Message}\n{ex.StackTrace}");
+            CloseArchiveModal();
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
         }
     }
 
@@ -345,9 +662,9 @@
         Navigation.NavigateTo("/customers");
     }
 
-    private Ordering_Sorono_IT13.Models.Customer CloneCustomer(Ordering_Sorono_IT13.Models.Customer source)
+    private Customer CloneCustomer(Customer source)
     {
-        return new Ordering_Sorono_IT13.Models.Customer
+        return new Customer
         {
             CustomerId = source.CustomerId,
             SegmentId = source.SegmentId,

@@ -12,6 +12,8 @@
     </div>
 
     <nav class="nav-menu">
+
+
         <!-- Home -->
         <button class="nav-btn @(IsActive("") ? "active" : "")" @onclick="@(() => NavigateTo(""))">
             <i class="bi bi-house-door nav-icon"></i>
@@ -23,6 +25,14 @@
 
         <div class="nav-divider"></div>
 
+        <!-- Dashboard -->
+        <button class="nav-btn @(IsActive("dashboard") ? "active" : "")" @onclick="@(() => NavigateTo("dashboard"))">
+            <i class="bi bi-grid nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Dashboard</span>
+            }
+        </button>
         <!-- Customers -->
         <button class="nav-btn @(IsActive("customers", "customer-details") ? "active" : "")"
                 @onclick="@(() => NavigateTo("customers"))">
@@ -70,15 +80,7 @@
             }
         </button>
 
-        <!-- Dashboard -->
-        <button class="nav-btn @(IsActive("dashboard") ? "active" : "")" @onclick="@(() => NavigateTo("dashboard"))">
-            <i class="bi bi-grid nav-icon"></i>
-            @if (!IsCollapsed)
-            {
-                <span class="nav-text">Dashboard</span>
-            }
-        </button>
-
+    
         <!-- Documents -->
         <button class="nav-btn @(IsActive("documents") ? "active" : "")" @onclick="@(() => NavigateTo("documents"))">
             <i class="bi bi-file-earmark-text nav-icon"></i>

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
-using Ordering_Sorono_IT13.Models;
+using MarFin_Final.Models;
 
-namespace Ordering_Sorono_IT13.Data
+namespace MarFin_Final.Data
 {
     public class CustomerSegmentService
     {

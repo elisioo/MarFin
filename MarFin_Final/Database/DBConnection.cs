@@ -1,7 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using System;
 
-namespace Ordering_Sorono_IT13.Data
+namespace MarFin_Final.Data
 {
     public class DBConnection
     {
