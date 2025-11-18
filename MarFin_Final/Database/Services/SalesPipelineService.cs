@@ -99,7 +99,6 @@ namespace MarFin_Final.Data
             return opportunities;
         }
 
-        // READ - Get all active opportunities with details
         public List<SalesPipelineModel> GetAllOpportunities()
         {
             List<SalesPipelineModel> opportunities = new List<SalesPipelineModel>();
@@ -110,21 +109,21 @@ namespace MarFin_Final.Data
                 {
                     conn.Open();
                     string query = @"SELECT 
-                                    sp.opportunity_id, sp.customer_id, sp.assigned_to, sp.stage_id,
-                                    sp.opportunity_name, sp.deal_value, sp.probability, 
-                                    sp.expected_close_date, sp.actual_close_date, sp.close_reason,
-                                    sp.notes, sp.is_archived, sp.archived_date, 
-                                    sp.created_date, sp.modified_date,
-                                    c.first_name + ' ' + c.last_name AS customer_name,
-                                    c.company_name,
-                                    ps.stage_name, ps.stage_order, ps.stage_color,
-                                    u.first_name + ' ' + u.last_name AS assigned_to_name
-                                   FROM tbl_Sales_Pipeline sp
-                                   INNER JOIN tbl_Customers c ON sp.customer_id = c.customer_id
-                                   INNER JOIN tbl_Pipeline_Stages ps ON sp.stage_id = ps.stage_id
-                                   INNER JOIN tbl_Users u ON sp.assigned_to = u.user_id
-                                   WHERE sp.is_archived = 0 AND ps.is_closed = 0
-                                   ORDER BY ps.stage_order, sp.created_date DESC";
+                            sp.opportunity_id, sp.customer_id, sp.assigned_to, sp.stage_id,
+                            sp.opportunity_name, sp.deal_value, sp.probability, 
+                            sp.expected_close_date, sp.actual_close_date, sp.close_reason,
+                            sp.notes, sp.is_archived, sp.archived_date, 
+                            sp.created_date, sp.modified_date,
+                            c.first_name + ' ' + c.last_name AS customer_name,
+                            c.company_name,
+                            ps.stage_name, ps.stage_order, ps.stage_color,
+                            u.first_name + ' ' + u.last_name AS assigned_to_name
+                           FROM tbl_Sales_Pipeline sp
+                           INNER JOIN tbl_Customers c ON sp.customer_id = c.customer_id
+                           INNER JOIN tbl_Pipeline_Stages ps ON sp.stage_id = ps.stage_id
+                           INNER JOIN tbl_Users u ON sp.assigned_to = u.user_id
+                           WHERE sp.is_archived = 0
+                           ORDER BY ps.stage_order, sp.created_date DESC";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {

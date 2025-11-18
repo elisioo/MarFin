@@ -643,7 +643,7 @@
         {
             filteredOpportunities = filteredOpportunities.Where(o => o.StageId == selectedStageFilter).ToList();
         }
-
+        
         // Apply search filter
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
