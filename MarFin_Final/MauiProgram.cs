@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using System.Reflection;
 using MarFin_Final.Services;
 
 namespace MarFin_Final
@@ -18,10 +20,27 @@ namespace MarFin_Final
             builder.Services.AddMauiBlazorWebView();
 
 #if DEBUG
-    		builder.Services.AddBlazorWebViewDeveloperTools();
-    		builder.Logging.AddDebug();
+            builder.Services.AddBlazorWebViewDeveloperTools();
+            builder.Logging.AddDebug();
 #endif
+
+            // Load configuration from embedded appsettings.json
+            var assembly = Assembly.GetExecutingAssembly();
+            using var stream = assembly.GetManifestResourceStream("MarFin_Final.appsettings.json");
+
+            if (stream != null)
+            {
+                var config = new ConfigurationBuilder()
+                    .AddJsonStream(stream)
+                    .Build();
+
+                builder.Configuration.AddConfiguration(config);
+            }
+
+            // Register AuthService AFTER configuration is loaded
             builder.Services.AddSingleton<AuthService>();
+            builder.Services.AddScoped<RoleService>();
+
             return builder.Build();
         }
     }

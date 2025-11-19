@@ -1,5 +1,6 @@
 @page "/login"
 @using MarFin_Final.Components.Layout
+@using MarFin_Final.Models
 @layout LoginLayout
 @inject NavigationManager Navigation
 @inject AuthService AuthService
@@ -24,14 +25,14 @@
 
         <form class="login-form" @onsubmit="HandleLogin">
             <div class="form-group">
-                <label for="username">Username</label>
+                <label for="email">Email Address</label>
                 <div class="input-wrapper">
-                    <i class="bi bi-person input-icon"></i>
-                    <input type="text"
-                           id="username"
+                    <i class="bi bi-envelope input-icon"></i>
+                    <input type="email"
+                           id="email"
                            class="form-input"
-                           placeholder="Enter your username"
-                           @bind="username"
+                           placeholder="Enter your email"
+                           @bind="loginRequest.Email"
                            required />
                 </div>
             </div>
@@ -44,7 +45,7 @@
                            id="password"
                            class="form-input"
                            placeholder="Enter your password"
-                           @bind="password"
+                           @bind="loginRequest.Password"
                            required />
                     <button type="button"
                             class="toggle-password"
@@ -56,7 +57,7 @@
 
             <div class="form-options">
                 <label class="remember-me">
-                    <input type="checkbox" @bind="rememberMe" />
+                    <input type="checkbox" @bind="loginRequest.RememberMe" />
                     <span>Remember me</span>
                 </label>
                 <a href="#" class="forgot-password">Forgot password?</a>
@@ -77,7 +78,7 @@
         </form>
 
         <div class="login-footer">
-            <p>Don't have an account? <a href="#">Contact Administrator</a></p>
+            <p>Don't have an account? <a href="/register">Sign up</a></p>
         </div>
     </div>
 
@@ -108,9 +109,7 @@
 </div>
 
 @code {
-    private string username = "";
-    private string password = "";
-    private bool rememberMe = false;
+    private LoginRequest loginRequest = new();
     private bool showPassword = false;
     private bool isLoading = false;
     private string errorMessage = "";
@@ -137,14 +136,16 @@
         // Simulate loading delay
         await Task.Delay(500);
 
-        if (AuthService.Login(username, password))
+        var result = await AuthService.LoginAsync(loginRequest);
+
+        if (result.Success)
         {
             // Successful login - navigate to home
             Navigation.NavigateTo("/", true);
         }
         else
         {
-            errorMessage = "Invalid username or password. Please try again.";
+            errorMessage = result.Message;
             isLoading = false;
         }
     }

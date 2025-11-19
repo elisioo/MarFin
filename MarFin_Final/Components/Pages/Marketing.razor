@@ -1,493 +1,747 @@
-@page "/marketing"
+﻿@page "/marketing"
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+@using MarFin_Final.Services
+@using MarFin_Final.Models
 
-<div class="marketing-container">
+<div class="marketing-container" @onclick="CloseDropdowns">
     <div class="marketing-header">
         <div class="header-title">
-            <h1>Marketing Campaign</h1>
-            <span class="campaign-count">32 campaigns</span>
+            <h1>@(showArchivedView ? "Archived Campaigns" : "Marketing Campaigns")</h1>
+            <span class="campaign-count">@filteredCampaigns.Count campaigns</span>
         </div>
     </div>
 
-    <!-- Campaign Performance Summary -->
-    <div class="campaign-summary">
-        <h3>Campaign Performance Summary</h3>
-        <div class="summary-cards">
-            <div class="summary-card">
-                <div class="card-icon blue">
-                    <i class="bi bi-send"></i>
-                </div>
-                <div class="card-content">
-                    <h2>1,903</h2>
-                    <p>Total Sent</p>
-                    <span class="card-badge positive">
-                        <i class="bi bi-graph-up"></i> +12.5%
-                    </span>
-                </div>
-            </div>
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+            <button class="alert-close" @onclick="() => errorMessage = string.Empty">×</button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success">
+            @successMessage
+            <button class="alert-close" @onclick="() => successMessage = string.Empty">×</button>
+        </div>
+    }
 
-            <div class="summary-card">
-                <div class="card-icon blue">
-                    <i class="bi bi-envelope-open"></i>
+    @if (!showArchivedView)
+    {
+        <div class="campaign-summary">
+            <h3>Campaign Performance Summary</h3>
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="card-icon blue">
+                        <i class="bi bi-send"></i>
+                    </div>
+                    <div class="card-content">
+                        <h2>@MetricAsString("TotalSent")</h2>
+                        <p>Total Sent</p>
+                    </div>
                 </div>
-                <div class="card-content">
-                    <h2>1,903</h2>
-                    <p>Avg Open</p>
-                    <span class="card-badge positive">
-                        <i class="bi bi-graph-up"></i> +12.5%
-                    </span>
-                </div>
-            </div>
 
-            <div class="summary-card">
-                <div class="card-icon blue">
-                    <i class="bi bi-hand-index"></i>
+                <div class="summary-card">
+                    <div class="card-icon blue">
+                        <i class="bi bi-envelope-open"></i>
+                    </div>
+                    <div class="card-content">
+                        <h2>@MetricAsString("AvgOpen")%</h2>
+                        <p>Avg Open Rate</p>
+                    </div>
                 </div>
-                <div class="card-content">
-                    <h2>1,903</h2>
-                    <p>Avg Click</p>
-                    <span class="card-badge positive">
-                        <i class="bi bi-graph-up"></i> +12.5%
-                    </span>
-                </div>
-            </div>
 
-            <div class="summary-card">
-                <div class="card-icon blue">
-                    <i class="bi bi-graph-up-arrow"></i>
+                <div class="summary-card">
+                    <div class="card-icon blue">
+                        <i class="bi bi-hand-index"></i>
+                    </div>
+                    <div class="card-content">
+                        <h2>@MetricAsString("AvgClick")%</h2>
+                        <p>Avg Click Rate</p>
+                    </div>
                 </div>
-                <div class="card-content">
-                    <h2>1,903</h2>
-                    <p>Total ROI</p>
-                    <span class="card-badge positive">
-                        <i class="bi bi-graph-up"></i> +12.5%
-                    </span>
+
+                <div class="summary-card">
+                    <div class="card-icon blue">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div class="card-content">
+                        <h2>₱@(Convert.ToDecimal(metrics["TotalROI"]).ToString("N0"))</h2>
+                        <p>Total Revenue</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    }
 
-    <!-- Toolbar -->
     <div class="marketing-toolbar">
-        <button class="btn-primary" @onclick="NewCampaign">
-            <i class="bi bi-plus-lg"></i> New Campaign
-        </button>
+        @if (!showArchivedView)
+        {
+            <button class="btn-primary" @onclick="OpenAddModal">
+                <i class="bi bi-plus-lg"></i> New Campaign
+            </button>
+        }
+        else
+        {
+            <div></div>
+        }
 
         <div class="toolbar-filters">
-            <button class="btn-filter">
-                <i class="bi bi-grid-3x3"></i> View
+            <button class="@(showArchivedView ? "btn-primary" : "btn-filter")" @onclick="ToggleArchivedView">
+                <i class="bi bi-@(showArchivedView ? "arrow-left" : "archive")"></i>
+                @(showArchivedView ? "Back to Active" : "View Archived")
             </button>
-            <button class="btn-filter">
-                <i class="bi bi-funnel"></i> Filter by
-            </button>
-            <button class="btn-filter">
-                <i class="bi bi-arrow-down-up"></i> Sort by
-            </button>
+
+            @if (!showArchivedView && (!string.IsNullOrEmpty(statusFilter) || !string.IsNullOrEmpty(typeFilter) || !string.IsNullOrEmpty(searchTerm)))
+            {
+                <button class="btn-filter" @onclick="ClearFilters">
+                    <i class="bi bi-x-circle"></i> Clear Filters
+                </button>
+            }
+
+            @if (!showArchivedView)
+            {
+                <div class="filter-dropdown">
+                    <button class="btn-filter" @onclick="() => showStatusDropdown = !showStatusDropdown">
+                        <i class="bi bi-funnel"></i> Status
+                        @if (!string.IsNullOrEmpty(statusFilter))
+                        {
+                            <span class="filter-badge">@statusFilter</span>
+                        }
+                    </button>
+                    @if (showStatusDropdown)
+                    {
+                        <div class="dropdown-menu show">
+                            <button @onclick='() => { statusFilter = ""; showStatusDropdown = false; ApplyFilters(); }'>All</button>
+                            <button @onclick='() => { statusFilter = "Draft"; showStatusDropdown = false; ApplyFilters(); }'>Draft</button>
+                            <button @onclick='() => { statusFilter = "Active"; showStatusDropdown = false; ApplyFilters(); }'>Active</button>
+                            <button @onclick='() => { statusFilter = "Completed"; showStatusDropdown = false; ApplyFilters(); }'>Completed</button>
+                            <button @onclick='() => { statusFilter = "Paused"; showStatusDropdown = false; ApplyFilters(); }'>Paused</button>
+                        </div>
+                    }
+                </div>
+
+                <div class="filter-dropdown">
+                    <button class="btn-filter" @onclick="() => showTypeDropdown = !showTypeDropdown">
+                        <i class="bi bi-tag"></i> Type
+                        @if (!string.IsNullOrEmpty(typeFilter))
+                        {
+                            <span class="filter-badge">@typeFilter</span>
+                        }
+                    </button>
+                    @if (showTypeDropdown)
+                    {
+                        <div class="dropdown-menu show">
+                            <button @onclick='() => { typeFilter = ""; showTypeDropdown = false; ApplyFilters(); }'>All</button>
+                            <button @onclick='() => { typeFilter = "Email"; showTypeDropdown = false; ApplyFilters(); }'>Email</button>
+                            <button @onclick='() => { typeFilter = "SMS"; showTypeDropdown = false; ApplyFilters(); }'>SMS</button>
+                            <button @onclick='() => { typeFilter = "Social"; showTypeDropdown = false; ApplyFilters(); }'>Social</button>
+                            <button @onclick='() => { typeFilter = "Other"; showTypeDropdown = false; ApplyFilters(); }'>Other</button>
+                        </div>
+                    }
+                </div>
+            }
+
             <div class="search-box">
                 <i class="bi bi-search search-icon"></i>
-                <input type="text" placeholder="Search here.." @bind="searchTerm" />
+                <input type="text" placeholder="Search campaigns..." @bind="searchTerm" @bind:event="oninput" @onkeyup="ApplyFilters" />
+                @if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <button class="search-clear" @onclick="ClearSearch">×</button>
+                }
             </div>
         </div>
     </div>
 
-    <!-- Campaign Cards -->
-    <div class="campaigns-grid">
-        @foreach (var campaign in campaigns)
-        {
-            <div class="campaign-card">
-                <div class="campaign-header">
-                    <div class="campaign-title">
-                        <i class="bi bi-tag"></i>
-                        <span>@campaign.Name</span>
+    @if (isLoading)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading campaigns...</p>
+        </div>
+    }
+    else if (!filteredCampaigns.Any())
+    {
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <p>No campaigns found</p>
+            @if (!string.IsNullOrEmpty(searchTerm) || !string.IsNullOrEmpty(statusFilter) || !string.IsNullOrEmpty(typeFilter))
+            {
+                <button class="btn-filter" @onclick="ClearFilters">Clear Filters</button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="campaigns-grid">
+            @foreach (var campaign in filteredCampaigns)
+            {
+                <div class="campaign-card">
+                    <div class="campaign-header">
+                        <div class="campaign-title">
+                            <i class="bi bi-tag"></i>
+                            <span>@campaign.CampaignName</span>
+                        </div>
+                        <span class="campaign-status status-@campaign.CampaignStatus.ToLower()">
+                            <i class="bi bi-circle-fill"></i> @campaign.CampaignStatus
+                        </span>
                     </div>
-                    <span class="campaign-status @campaign.StatusClass">
-                        <i class="bi bi-circle-fill"></i> @campaign.Status
-                    </span>
-                </div>
 
-                <div class="campaign-metrics">
-                    <div class="metric-row">
-                        <span class="metric-label">Budget:</span>
-                        <span class="metric-value">@campaign.Budget</span>
-                        <span class="metric-label">Spent:</span>
-                        <span class="metric-value">@campaign.Spent</span>
-                        <span class="metric-label">ROI:</span>
-                        <span class="metric-value">@campaign.ROI</span>
+                    <div class="campaign-metrics">
+                        <div class="metric-row">
+                            <span class="metric-label">Budget:</span>
+                            <span class="metric-value">₱@campaign.Budget.ToString("N0")</span>
+                            <span class="metric-label">Spent:</span>
+                            <span class="metric-value">₱@campaign.ActualSpend.ToString("N0")</span>
+                            <span class="metric-label">ROI:</span>
+                            <span class="metric-value">@campaign.ROI%</span>
+                        </div>
+                    </div>
+
+                    <div class="campaign-date">@campaign.DateRange</div>
+
+                    <div class="campaign-stats">
+                        <div class="stat-box">
+                            <span class="stat-label">Sent</span>
+                            <span class="stat-value">@campaign.TotalSent</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Opened</span>
+                            <span class="stat-value">@campaign.TotalOpened</span>
+                            <span class="stat-percent">@campaign.OpenRate%</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Clicked</span>
+                            <span class="stat-value">@campaign.TotalClicked</span>
+                            <span class="stat-percent">@campaign.ClickRate%</span>
+                        </div>
+                    </div>
+
+                    <div class="campaign-revenue">
+                        Revenue Generated: <strong>₱@campaign.RevenueGenerated.ToString("N2")</strong>
+                    </div>
+
+                    <div class="campaign-actions">
+                        @if (showArchivedView)
+                        {
+                            <button class="action-link restore" @onclick="() => RestoreCampaign(campaign)">
+                                <i class="bi bi-arrow-counterclockwise"></i> Restore
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="action-link" @onclick="() => OpenEditModal(campaign)">Edit</button>
+                            <button class="action-link" @onclick="() => DuplicateCampaign(campaign)">Duplicate</button>
+                            <button class="action-link danger" @onclick="() => ConfirmArchive(campaign)">Archive</button>
+                        }
                     </div>
                 </div>
-
-                <div class="campaign-date">
-                    @campaign.DateRange
-                </div>
-
-                <div class="campaign-stats">
-                    <div class="stat-box">
-                        <span class="stat-label">Sent</span>
-                        <span class="stat-value">@campaign.Sent</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Opened</span>
-                        <span class="stat-value">@campaign.Opened</span>
-                        <span class="stat-percent">@campaign.OpenRate</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-label">Clicked</span>
-                        <span class="stat-value">@campaign.Clicked</span>
-                        <span class="stat-percent">@campaign.ClickRate</span>
-                    </div>
-                </div>
-
-                <div class="campaign-revenue">
-                    Revenue Generated: <strong>@campaign.Revenue</strong>
-                </div>
-
-                <div class="campaign-actions">
-                    <button class="action-link">View Details</button>
-                    <button class="action-link">Edit</button>
-                    <button class="action-link">Duplicate</button>
-                    <button class="action-link">Pause</button>
-                </div>
-            </div>
-        }
-    </div>
+            }
+        </div>
+    }
 </div>
 
-@if (showNewCampaignModal)
+@* Add/Edit Modal *@
+@if (showModal)
 {
     <div class="modal-overlay" @onclick="CloseModal">
-        <div class="modal-container" @onclick:stopPropagation="true">
+        <div class="modal-content" @onclick:stopPropagation>
             <div class="modal-header">
-                <button class="back-button" @onclick="PreviousStep">
-                    <i class="bi bi-arrow-left"></i> Back
-                </button>
+                <div class="modal-title">
+                    <span class="user-icon"><i class="bi bi-megaphone"></i></span>
+                    <h2>@(isEditMode ? "Edit Campaign" : "New Campaign")</h2>
+                </div>
                 <div class="modal-actions">
-                    <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
-                    <button class="btn-secondary">Save Draft</button>
-                    <button class="btn-primary" @onclick="NextStep">
-                        @(currentStep == 4 ? "Send Campaign" : "Next")
-                        @if (currentStep < 4)
+                    <button class="btn-cancel" @onclick="CloseModal">Cancel</button>
+                    <button class="btn-save" @onclick="SaveCampaign" disabled="@isSaving">
+                        @if (isSaving)
                         {
-                            <i class="bi bi-arrow-right"></i>
+                            <span class="spinner-small"></span>
                         }
-                        @if (currentStep == 4)
-                        {
-                            <i class="bi bi-send"></i>
-                        }
+                        Save Campaign
                     </button>
                 </div>
             </div>
 
-            <!-- Progress Stepper -->
-            <div class="stepper">
-                <div class="step @(currentStep >= 1 ? "active" : "")">
-                    <div class="step-circle">
-                        <i class="bi bi-circle-fill"></i>
-                    </div>
-                    <span class="step-label">Details</span>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+
+                <div class="form-group">
+                    <label>Campaign Name <span class="required">*</span></label>
+                    <input type="text" class="form-control" @bind="editingCampaign.CampaignName" placeholder="Enter campaign name" />
                 </div>
-                <div class="step-line @(currentStep >= 2 ? "active" : "")"></div>
-                <div class="step @(currentStep >= 2 ? "active" : "")">
-                    <div class="step-circle">
-                        <i class="bi bi-circle-fill"></i>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Campaign Type</label>
+                        <select class="form-control" @bind="editingCampaign.CampaignType">
+                            <option value="Email">Email</option>
+                            <option value="SMS">SMS</option>
+                            <option value="Social">Social</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
-                    <span class="step-label">Content</span>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select class="form-control" @bind="editingCampaign.CampaignStatus">
+                            <option value="Draft">Draft</option>
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Active">Active</option>
+                            <option value="Paused">Paused</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="step-line @(currentStep >= 3 ? "active" : "")"></div>
-                <div class="step @(currentStep >= 3 ? "active" : "")">
-                    <div class="step-circle">
-                        <i class="bi bi-circle-fill"></i>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" class="form-control" @bind="editingCampaign.StartDate" />
                     </div>
-                    <span class="step-label">Audience</span>
+                    <div class="form-group">
+                        <label>End Date</label>
+                        <input type="date" class="form-control" @bind="editingCampaign.EndDate" />
+                    </div>
                 </div>
-                <div class="step-line @(currentStep >= 4 ? "active" : "")"></div>
-                <div class="step @(currentStep >= 4 ? "active" : "")">
-                    <div class="step-circle">
-                        <i class="bi bi-circle-fill"></i>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Budget (₱)</label>
+                        <input type="number" step="0.01" class="form-control" @bind="editingCampaign.Budget" placeholder="0.00" />
                     </div>
-                    <span class="step-label">Review</span>
+                    <div class="form-group">
+                        <label>Actual Spend (₱)</label>
+                        <input type="number" step="0.01" class="form-control" @bind="editingCampaign.ActualSpend" placeholder="0.00" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Subject Line</label>
+                    <input type="text" class="form-control" @bind="editingCampaign.SubjectLine" placeholder="Email subject line" />
+                </div>
+
+                <div class="form-group">
+                    <label>Email Content</label>
+                    <textarea class="form-control" rows="4" @bind="editingCampaign.EmailContent" placeholder="Campaign message..."></textarea>
+                </div>
+
+                <h4 class="section-title">Campaign Metrics</h4>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Total Sent</label>
+                        <input type="number" class="form-control" @bind="editingCampaign.TotalSent" placeholder="0" />
+                    </div>
+                    <div class="form-group">
+                        <label>Total Opened</label>
+                        <input type="number" class="form-control" @bind="editingCampaign.TotalOpened" placeholder="0" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Total Clicked</label>
+                        <input type="number" class="form-control" @bind="editingCampaign.TotalClicked" placeholder="0" />
+                    </div>
+                    <div class="form-group">
+                        <label>Total Converted</label>
+                        <input type="number" class="form-control" @bind="editingCampaign.TotalConverted" placeholder="0" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Revenue Generated (₱)</label>
+                    <input type="number" step="0.01" class="form-control" @bind="editingCampaign.RevenueGenerated" placeholder="0.00" />
                 </div>
             </div>
+        </div>
+    </div>
+}
 
-            <!-- Modal Content -->
-            <div class="modal-content">
-                @if (currentStep == 1)
-                {
-                    <div class="form-section">
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Campaign Name</label>
-                                <input type="text" class="form-input" />
-                            </div>
-                        </div>
+@* Archive Confirmation *@
+@if (showArchiveModal && campaignToArchive != null)
+{
+    <div class="modal-overlay" @onclick="CloseArchiveModal">
+        <div class="modal-content confirm-modal" @onclick:stopPropagation>
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="user-icon warning"><i class="bi bi-exclamation-triangle"></i></span>
+                    <h2>Archive Campaign</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to archive <strong>@campaignToArchive.CampaignName</strong>?</p>
+                <p class="text-muted">This campaign will be moved to the archived list but can be restored later.</p>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Campaign Type</label>
-                                <input type="text" class="form-input" />
-                            </div>
-                            <div class="form-group">
-                                <label>Start Date</label>
-                                <input type="text" class="form-input" />
-                            </div>
-                            <div class="form-group">
-                                <label>End Date</label>
-                                <input type="text" class="form-input" />
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group half-width">
-                                <label>Budget</label>
-                                <input type="text" class="form-input" />
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Campaign Objectives</label>
-                                <textarea class="form-textarea" rows="4"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                }
-                else if (currentStep == 2)
-                {
-                    <div class="form-section form-section-wide">
-                        <h3>Email Content</h3>
-
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Subject Line *</label>
-                                <input type="text" class="form-input" />
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label>Email Body *</label>
-                                <textarea class="form-textarea" rows="8"></textarea>
-                            </div>
-                        </div>
-
-                        <div class="preview-section">
-                            <label>Preview</label>
-                            <div class="preview-box"></div>
-                        </div>
-                    </div>
-                }
-                else if (currentStep == 3)
-                {
-                    <div class="form-section">
-                        <div class="audience-columns">
-                            <div class="audience-column">
-                                <h4>Target Audience</h4>
-                                <div class="checkbox-group">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" />
-                                        <span>All Customers (1,344)</span>
-                                    </label>
-                                </div>
-
-                                <h4 style="margin-top: 2rem;">Filter by segment:</h4>
-                                <div class="checkbox-group">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" />
-                                        <span>Premium Customers (544)</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" />
-                                        <span>Standard Customers (544)</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" />
-                                        <span>Basic Customers (544)</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div class="audience-column">
-                                <h4>Filter by status:</h4>
-                                <div class="checkbox-group">
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" />
-                                        <span>Active (324)</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" />
-                                        <span>Lead (234)</span>
-                                    </label>
-                                    <label class="checkbox-label">
-                                        <input type="checkbox" />
-                                        <span>Inactive (excluded)</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="recipients-summary">
-                            <div>
-                                <strong>Total Recipients:</strong> <span class="highlight-text">1,405</span><br />
-                                <strong>Estimated Reach:</strong> <span class="highlight-text">504</span> opens ( 54% avg rate)
-                            </div>
-                        </div>
-
-                        <div class="test-email-section">
-                            <label class="checkbox-label">
-                                <input type="checkbox" />
-                                <span>Send test email to: sronoile@gmail.com</span>
-                            </label>
-                            <button class="btn-test">
-                                <i class="bi bi-send"></i> Send Test
-                            </button>
-                        </div>
-                    </div>
-                }
-                else if (currentStep == 4)
-                {
-                    <div class="form-section">
-                        <div class="review-section">
-                            <h3>Campaign Summary</h3>
-                            <div class="summary-box">
-                                <p><strong>Name:</strong></p>
-                                <p><strong>Type:</strong></p>
-                                <p><strong>Duration:</strong></p>
-                                <p><strong>Budget:</strong></p>
-                                <p><strong>Recipients:</strong></p>
-                            </div>
-                        </div>
-
-                        <div class="review-section">
-                            <h3>Email Preview</h3>
-                            <div class="summary-box">
-                                <p><strong>Subject:</strong></p>
-                            </div>
-                        </div>
-
-                        <div class="review-section">
-                            <h3>Send Options:</h3>
-                            <div class="radio-group">
-                                <label class="radio-label">
-                                    <input type="radio" name="sendOption" checked />
-                                    <span>Send Now</span>
-                                </label>
-                                <label class="radio-label">
-                                    <input type="radio" name="sendOption" />
-                                    <span>Schedule for:</span>
-                                    <i class="bi bi-calendar"></i>
-                                    <i class="bi bi-clock"></i>
-                                </label>
-                            </div>
-
-                            <div class="warning-box">
-                                <i class="bi bi-exclamation-triangle"></i>
-                                <span><strong>Warning:</strong> This will send emails to 1,048 recipients. This action cannot be undone.</span>
-                            </div>
-                        </div>
-                    </div>
-                }
+                <div class="modal-footer">
+                    <button class="btn-cancel" @onclick="CloseArchiveModal">Cancel</button>
+                    <button class="btn-danger" @onclick="ArchiveCampaign" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-small"></span>
+                        }
+                        Archive Campaign
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 }
 
 @code {
-    private string searchTerm = "";
-    private bool showNewCampaignModal = false;
-    private int currentStep = 1;
-
-    private class Campaign
+    private readonly CampaignService campaignService = new();
+    private List<Campaign> allCampaigns = new();
+    private List<Campaign> filteredCampaigns = new();
+    private Dictionary<string, object> metrics = new()
     {
-        public string Name { get; set; } = "";
-        public string Status { get; set; } = "";
-        public string StatusClass { get; set; } = "";
-        public string Budget { get; set; } = "";
-        public string Spent { get; set; } = "";
-        public string ROI { get; set; } = "";
-        public string DateRange { get; set; } = "";
-        public string Sent { get; set; } = "";
-        public string Opened { get; set; } = "";
-        public string OpenRate { get; set; } = "";
-        public string Clicked { get; set; } = "";
-        public string ClickRate { get; set; } = "";
-        public string Revenue { get; set; } = "";
+        ["TotalSent"] = 0,
+        ["AvgOpen"] = 0.0,
+        ["AvgClick"] = 0.0,
+        ["TotalROI"] = 0
+    };
+    private string searchTerm = "";
+    private string statusFilter = "";
+    private string typeFilter = "";
+    private bool showStatusDropdown = false;
+    private bool showTypeDropdown = false;
+    private bool showModal = false;
+    private bool showArchiveModal = false;
+    private bool isEditMode = false;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool showArchivedView = false;
+    private Campaign editingCampaign = new();
+    private Campaign? campaignToArchive = null;
+    private string errorMessage = "";
+    private string successMessage = "";
+    private int currentUserId = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        currentUserId = AuthService.CurrentUser?.UserId ?? 1;
+        await LoadCampaigns();
+        await LoadMetrics();
     }
 
-    private List<Campaign> campaigns = new()
+    private async Task LoadCampaigns()
     {
-        new Campaign
+        try
         {
-            Name = "Summer Sale 2025",
-            Status = "Active",
-            StatusClass = "active",
-            Budget = "Php 200k",
-            Spent = "Php 100k",
-            ROI = "203%",
-            DateRange = "Oct 25 - Nov 1, 2025",
-            Sent = "1,203",
-            Opened = "500",
-            OpenRate = "54%",
-            Clicked = "500",
-            ClickRate = "54%",
-            Revenue = "Php 200,324.00"
-        },
-        new Campaign
-        {
-            Name = "Summer Sale 2025",
-            Status = "Completed",
-            StatusClass = "completed",
-            Budget = "Php 200k",
-            Spent = "Php 100k",
-            ROI = "203%",
-            DateRange = "Oct 25 - Nov 1, 2025",
-            Sent = "1,203",
-            Opened = "500",
-            OpenRate = "54%",
-            Clicked = "500",
-            ClickRate = "54%",
-            Revenue = "Php 200,324.00"
-        },
-        new Campaign
-        {
-            Name = "Summer Sale 2025",
-            Status = "Active",
-            StatusClass = "active",
-            Budget = "Php 200k",
-            Spent = "Php 100k",
-            ROI = "203%",
-            DateRange = "Oct 25 - Nov 1, 2025",
-            Sent = "1,203",
-            Opened = "500",
-            OpenRate = "54%",
-            Clicked = "500",
-            ClickRate = "54%",
-            Revenue = "Php 200,324.00"
-        }
-    };
+            isLoading = true;
+            StateHasChanged();
 
-    private void NewCampaign()
+            await Task.Run(() =>
+            {
+                if (showArchivedView)
+                {
+                    allCampaigns = campaignService.GetArchivedCampaigns() ?? new List<Campaign>();
+                }
+                else
+                {
+                    allCampaigns = campaignService.GetAllCampaigns() ?? new List<Campaign>();
+                }
+            });
+
+            filteredCampaigns = new List<Campaign>(allCampaigns);
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading campaigns: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMetrics()
     {
-        showNewCampaignModal = true;
-        currentStep = 1;
+        await Task.Run(() =>
+        {
+            metrics = campaignService.GetCampaignMetrics();
+        });
+        StateHasChanged();
+    }
+
+    private void ApplyFilters()
+    {
+        filteredCampaigns = allCampaigns;
+
+        if (!string.IsNullOrEmpty(statusFilter))
+        {
+            filteredCampaigns = filteredCampaigns.Where(c => c.CampaignStatus == statusFilter).ToList();
+        }
+
+        if (!string.IsNullOrEmpty(typeFilter))
+        {
+            filteredCampaigns = filteredCampaigns.Where(c => c.CampaignType == typeFilter).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            filteredCampaigns = filteredCampaigns.Where(c =>
+                c.CampaignName.ToLower().Contains(term) ||
+                (c.SubjectLine != null && c.SubjectLine.ToLower().Contains(term))
+            ).ToList();
+        }
+
+        StateHasChanged();
+    }
+
+    private void CloseDropdowns()
+    {
+        showStatusDropdown = false;
+        showTypeDropdown = false;
+        StateHasChanged();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = "";
+        statusFilter = "";
+        typeFilter = "";
+        filteredCampaigns = new List<Campaign>(allCampaigns);
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = "";
+        ApplyFilters();
+    }
+
+    private void OpenAddModal()
+    {
+        isEditMode = false;
+        editingCampaign = new Campaign
+        {
+            CreatedBy = currentUserId,
+            CampaignType = "Email",
+            CampaignStatus = "Draft",
+            StartDate = DateTime.Today,
+            EndDate = DateTime.Today.AddDays(7)
+        };
+        errorMessage = "";
+        showModal = true;
+    }
+
+    private void OpenEditModal(Campaign campaign)
+    {
+        isEditMode = true;
+        editingCampaign = new Campaign
+        {
+            CampaignId = campaign.CampaignId,
+            CreatedBy = campaign.CreatedBy,
+            CampaignName = campaign.CampaignName,
+            CampaignType = campaign.CampaignType,
+            StartDate = campaign.StartDate,
+            EndDate = campaign.EndDate,
+            Budget = campaign.Budget,
+            ActualSpend = campaign.ActualSpend,
+            SubjectLine = campaign.SubjectLine,
+            EmailContent = campaign.EmailContent,
+            CampaignStatus = campaign.CampaignStatus,
+            TotalSent = campaign.TotalSent,
+            TotalOpened = campaign.TotalOpened,
+            TotalClicked = campaign.TotalClicked,
+            TotalConverted = campaign.TotalConverted,
+            RevenueGenerated = campaign.RevenueGenerated
+        };
+        errorMessage = "";
+        showModal = true;
     }
 
     private void CloseModal()
     {
-        showNewCampaignModal = false;
-        currentStep = 1;
+        showModal = false;
+        errorMessage = "";
     }
 
-    private void NextStep()
+    private async Task SaveCampaign()
     {
-        if (currentStep < 4)
+        if (string.IsNullOrWhiteSpace(editingCampaign.CampaignName))
         {
-            currentStep++;
+            errorMessage = "Campaign name is required";
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+            errorMessage = "";
+            successMessage = "";
+            StateHasChanged();
+
+            bool success = false;
+            await Task.Run(() =>
+            {
+                if (isEditMode)
+                {
+                    success = campaignService.UpdateCampaign(editingCampaign);
+                }
+                else
+                {
+                    success = campaignService.AddCampaign(editingCampaign);
+                }
+            });
+
+            if (success)
+            {
+                successMessage = isEditMode ? "Campaign updated successfully!" : "Campaign created successfully!";
+                CloseModal();
+                await LoadCampaigns();
+                await LoadMetrics();
+            }
+            else
+            {
+                errorMessage = "Failed to save campaign";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
         }
     }
 
-    private void PreviousStep()
+    private void DuplicateCampaign(Campaign campaign)
     {
-        if (currentStep > 1)
+        isEditMode = false;
+        editingCampaign = new Campaign
         {
-            currentStep--;
+            CreatedBy = currentUserId,
+            CampaignName = campaign.CampaignName + " (Copy)",
+            CampaignType = campaign.CampaignType,
+            StartDate = DateTime.Today,
+            EndDate = DateTime.Today.AddDays(7),
+            Budget = campaign.Budget,
+            SubjectLine = campaign.SubjectLine,
+            EmailContent = campaign.EmailContent,
+            CampaignStatus = "Draft"
+        };
+        showModal = true;
+    }
+
+    private void ConfirmArchive(Campaign campaign)
+    {
+        campaignToArchive = campaign;
+        showArchiveModal = true;
+    }
+
+    private void CloseArchiveModal()
+    {
+        showArchiveModal = false;
+        campaignToArchive = null;
+    }
+
+    private async Task ArchiveCampaign()
+    {
+        if (campaignToArchive == null) return;
+
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+
+            bool success = false;
+            await Task.Run(() =>
+            {
+                success = campaignService.ArchiveCampaign(campaignToArchive.CampaignId);
+            });
+
+            if (success)
+            {
+                successMessage = $"{campaignToArchive.CampaignName} archived successfully";
+                CloseArchiveModal();
+                await LoadCampaigns();
+                await LoadMetrics();
+            }
+            else
+            {
+                errorMessage = "Failed to archive campaign";
+            }
         }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RestoreCampaign(Campaign campaign)
+    {
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+
+            bool success = false;
+            await Task.Run(() =>
+            {
+                success = campaignService.RestoreCampaign(campaign.CampaignId);
+            });
+
+            if (success)
+            {
+                successMessage = $"{campaign.CampaignName} restored successfully";
+                await LoadCampaigns();
+            }
+            else
+            {
+                errorMessage = "Failed to restore campaign";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleArchivedView()
+    {
+        showArchivedView = !showArchivedView;
+        searchTerm = "";
+        statusFilter = "";
+        typeFilter = "";
+        showStatusDropdown = false;
+        showTypeDropdown = false;
+        await LoadCampaigns();
+    }
+
+    private string MetricAsString(string key, string format = null)
+    {
+        if (metrics != null && metrics.TryGetValue(key, out var val) && val != null)
+        {
+            if (format == "N0") return Convert.ToDecimal(val).ToString("N0");
+            return val.ToString();
+        }
+        return "0";
     }
 }

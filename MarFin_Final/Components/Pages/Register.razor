@@ -1,0 +1,282 @@
+@page "/register"
+@using MarFin_Final.Components.Layout
+@using MarFin_Final.Models
+@layout LoginLayout
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+@inject RoleService RoleService
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="logo-section">
+                <img src="img/logo_only.png" alt="MarFin Logo" class="login-logo" />
+                <h1>MarFin</h1>
+            </div>
+            <p class="login-subtitle">Create your account</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="error-message">
+                <i class="bi bi-exclamation-circle"></i>
+                <span>@errorMessage</span>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="success-message">
+                <i class="bi bi-check-circle"></i>
+                <span>@successMessage</span>
+            </div>
+        }
+
+        <form class="login-form" @onsubmit="HandleRegister">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="firstName">First Name</label>
+                    <div class="input-wrapper">
+                        <i class="bi bi-person input-icon"></i>
+                        <input type="text"
+                               id="firstName"
+                               class="form-input"
+                               placeholder="Enter first name"
+                               @bind="registerRequest.FirstName"
+                               required />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="lastName">Last Name</label>
+                    <div class="input-wrapper">
+                        <i class="bi bi-person input-icon"></i>
+                        <input type="text"
+                               id="lastName"
+                               class="form-input"
+                               placeholder="Enter last name"
+                               @bind="registerRequest.LastName"
+                               required />
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <div class="input-wrapper">
+                    <i class="bi bi-envelope input-icon"></i>
+                    <input type="email"
+                           id="email"
+                           class="form-input"
+                           placeholder="Enter your email"
+                           @bind="registerRequest.Email"
+                           required />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number (Optional)</label>
+                <div class="input-wrapper">
+                    <i class="bi bi-telephone input-icon"></i>
+                    <input type="tel"
+                           id="phone"
+                           class="form-input"
+                           placeholder="Enter phone number"
+                           @bind="registerRequest.Phone" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="role">Role</label>
+                <div class="input-wrapper">
+                    <i class="bi bi-shield-check input-icon"></i>
+                    <select id="role"
+                            class="form-input form-select"
+                            @bind="registerRequest.RoleId"
+                            required>
+                        <option value="0">Select a role</option>
+                        @if (roles != null && roles.Any())
+                        {
+                            @foreach (var role in roles)
+                            {
+                                <option value="@role.RoleId">@role.RoleName</option>
+                            }
+                        }
+                        else
+                        {
+                            <option disabled>Loading roles...</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="department">Department (Optional)</label>
+                <div class="input-wrapper">
+                    <i class="bi bi-building input-icon"></i>
+                    <input type="text"
+                           id="department"
+                           class="form-input"
+                           placeholder="Enter department"
+                           @bind="registerRequest.Department" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <i class="bi bi-lock input-icon"></i>
+                    <input type="@(showPassword ? "text" : "password")"
+                           id="password"
+                           class="form-input"
+                           placeholder="Enter your password"
+                           @bind="registerRequest.Password"
+                           required />
+                    <button type="button"
+                            class="toggle-password"
+                            @onclick="TogglePasswordVisibility">
+                        <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                    </button>
+                </div>
+                <small class="password-hint">Must be at least 8 characters with uppercase, lowercase, number, and special character</small>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <div class="input-wrapper">
+                    <i class="bi bi-lock input-icon"></i>
+                    <input type="@(showConfirmPassword ? "text" : "password")"
+                           id="confirmPassword"
+                           class="form-input"
+                           placeholder="Confirm your password"
+                           @bind="registerRequest.ConfirmPassword"
+                           required />
+                    <button type="button"
+                            class="toggle-password"
+                            @onclick="ToggleConfirmPasswordVisibility">
+                        <i class="bi @(showConfirmPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner"></span>
+                    <span>Creating account...</span>
+                }
+                else
+                {
+                    <span>Create Account</span>
+                    <i class="bi bi-arrow-right"></i>
+                }
+            </button>
+        </form>
+
+        <div class="login-footer">
+            <p>Already have an account? <a href="/login">Sign in</a></p>
+        </div>
+    </div>
+
+    <div class="login-info">
+        <div class="info-content">
+            <h2>Join MarFin Today</h2>
+            <p>Create your account to access our comprehensive CRM solution for managing customers, sales, marketing campaigns, and financial transactions.</p>
+            <div class="features">
+                <div class="feature-item">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Easy Account Setup</span>
+                </div>
+                <div class="feature-item">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Secure & Encrypted</span>
+                </div>
+                <div class="feature-item">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Role-Based Access</span>
+                </div>
+                <div class="feature-item">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Instant Access</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterRequests registerRequest = new();
+    private bool showPassword = false;
+    private bool showConfirmPassword = false;
+    private bool isLoading = false;
+    private string errorMessage = "";
+    private string successMessage = "";
+    private List<Role> roles = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // If already authenticated, redirect to home
+        if (AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/", true);
+        }
+
+        // Load roles from database
+        await LoadRoles();
+    }
+
+    private async Task LoadRoles()
+    {
+        try
+        {
+            roles = await RoleService.GetActiveRolesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading roles: {ex.Message}";
+        }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+    }
+
+    private void ToggleConfirmPasswordVisibility()
+    {
+        showConfirmPassword = !showConfirmPassword;
+    }
+
+    private async Task HandleRegister()
+    {
+        errorMessage = "";
+        successMessage = "";
+        isLoading = true;
+
+        // Validate role selection
+        if (registerRequest.RoleId == 0)
+        {
+            errorMessage = "Please select a role";
+            isLoading = false;
+            return;
+        }
+
+        // Simulate loading delay
+        await Task.Delay(500);
+
+        var result = await AuthService.RegisterAsync(registerRequest);
+
+        if (result.Success)
+        {
+            successMessage = result.Message;
+            // Wait a moment to show success message, then redirect to login
+            await Task.Delay(2000);
+            Navigation.NavigateTo("/login", true);
+        }
+        else
+        {
+            errorMessage = result.Message;
+            isLoading = false;
+        }
+    }
+}

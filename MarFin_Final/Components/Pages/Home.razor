@@ -153,14 +153,14 @@
         <!-- Date & Welcome -->
         <div class="welcome-section">
             <p class="current-date">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</p>
-            <h1 class="welcome-title">Good morning, @AuthService.CurrentUser</h1>
+            <h1 class="welcome-title">Good morning, @AuthService.CurrentUserFirstName</h1>
             <p class="welcome-subtitle">
                 <strong>Today</strong> your business is running smoothly. Time to grow even more?
             </p>
         </div>
 
         <!-- Quick Stats -->
-        <div class="quick-stats-grid">
+        @* <div class="quick-stats-grid">
             <div class="stat-card">
                 <div class="stat-header">
                     <i class="bi bi-wallet2 stat-icon revenue"></i>
@@ -191,7 +191,7 @@
                 <h3 class="stat-value">@stats.CampaignsThisMonth</h3>
                 <p class="stat-label">Campaigns This Month</p>
             </div>
-        </div>
+        </div> *@
 
         <!-- System Flow Visualization -->
         <div class="system-flow-section">

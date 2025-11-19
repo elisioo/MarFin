@@ -66,7 +66,7 @@
                         <button class="btn d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" 
                                 style="border: none; background-color: transparent; border-radius: 8px; padding: 8px 15px;">
                             <i class="bi bi-person-circle" style="font-size: 20px; color: #0A1828;"></i>
-                            <span style="font-size: 14px; font-weight: 500;">@(AuthService.CurrentUser ?? "User")</span>
+                            <span style="font-size: 14px; font-weight: 500;">@AuthService.CurrentUserName</span>
                             <i class="bi bi-chevron-down"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end p-0" style="width: 260px;">
@@ -74,8 +74,8 @@
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="bi bi-person-circle" style="font-size: 2.5rem; color: #6c757d;"></i>
                                     <div>
-                                        <p class="mb-0 fw-semibold" style="font-size: 0.875rem;">@(AuthService.CurrentUser ?? "User")</p>
-                                        <p class="mb-0 text-muted" style="font-size: 0.75rem;">Administrator</p>
+                                        <p class="mb-0 fw-semibold" style="font-size: 0.875rem;">@AuthService.CurrentUserName</p>
+                                        <p class="mb-0 text-muted" style="font-size: 0.75rem;">@AuthService.CurrentUserRole</p>
                                     </div>
                                 </div>
                             </li>
@@ -247,6 +247,7 @@
     private void Logout()
     {
         AuthService.Logout();
+        Navigation.NavigateTo("/login", true);
     }
 
     public void Dispose()
