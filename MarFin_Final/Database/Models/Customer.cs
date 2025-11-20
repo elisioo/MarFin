@@ -44,6 +44,18 @@ namespace MarFin_Final.Models
 
         // Computed properties for display
         public string FullName => $"{FirstName} {LastName}".Trim();
-        public string SegmentName { get; set; } = "";
+
+        // This will be populated from JOIN with tbl_Customer_Segments
+        public string CustomerSegment { get; set; } = "";
+
+        // Alias for compatibility (maps to CustomerStatus)
+        public string Status => CustomerStatus;
+
+        // Legacy property name for backwards compatibility
+        public string SegmentName
+        {
+            get => CustomerSegment;
+            set => CustomerSegment = value;
+        }
     }
 }

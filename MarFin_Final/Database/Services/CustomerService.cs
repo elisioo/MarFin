@@ -1,7 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using MarFin_Final.Models;
 using Microsoft.Data.SqlClient;
-using MarFin_Final.Models;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections.Generic;
+using System.Data;
 
 namespace MarFin_Final.Data
 {
@@ -59,7 +61,96 @@ namespace MarFin_Final.Data
                 return false;
             }
         }
+        // Add this method to CustomerService
+        public async Task<List<Customer>> SearchCustomersAsync(string searchTerm, int maxResults = 50)
+        {
+            var customers = new List<Customer>();
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    await conn.OpenAsync();
+                    string query = @"
+                SELECT TOP (@MaxResults)
+                    customer_id, first_name, last_name, company_name, email
+                FROM tbl_Customers
+                WHERE is_active = 1 AND is_archived = 0
+                  AND (
+                        first_name LIKE '%' + @Search + '%'
+                     OR last_name LIKE '%' + @Search + '%'
+                     OR company_name LIKE '%' + @Search + '%'
+                     OR email LIKE '%' + @Search + '%'
+                     OR phone LIKE '%' + @Search + '%'
+                  )
+                ORDER BY 
+                    CASE 
+                        WHEN company_name LIKE @Search + '%' THEN 0
+                        WHEN company_name LIKE '%' + @Search + '%' THEN 1
+                        ELSE 2 
+                    END,
+                    company_name, last_name, first_name";
 
+                    using var cmd = new SqlCommand(query, conn);
+                    cmd.Parameters.AddWithValue("@Search", searchTerm ?? "");
+                    cmd.Parameters.AddWithValue("@MaxResults", maxResults);
+
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        customers.Add(new Customer
+                        {
+                            CustomerId = reader.GetInt32("customer_id"),
+                            FirstName = reader.GetString("first_name"),
+                            LastName = reader.GetString("last_name"),
+                            CompanyName = reader.GetString("company_name") == "" ? null : reader.GetString("company_name"),
+                            Email = reader.GetString("email")
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Search error: " + ex.Message);
+            }
+            return customers;
+        }
+        public async Task<List<Customer>> GetAllCustomerAsync()
+        {
+            var customers = new List<Customer>();
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    await conn.OpenAsync();
+                    string query = @"SELECT c.customer_id, c.segment_id, c.created_by, c.modified_by,
+                                    c.first_name, c.last_name, c.email, c.phone, c.company_name,
+                                    c.address, c.city, c.state_province, c.postal_code, c.country,
+                                    c.customer_status, c.total_revenue, c.source, c.notes,
+                                    c.is_active, c.is_archived, c.archived_date, c.archived_by,
+                                    c.created_date, c.modified_date,
+                                    s.segment_name
+                                   FROM tbl_Customers c
+                                   LEFT JOIN tbl_Customer_Segments s ON c.segment_id = s.segment_id
+                                   WHERE c.is_archived = 0 AND c.is_active = 1
+                                   ORDER BY c.company_name, c.last_name, c.first_name";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            customers.Add(MapCustomerFromReader(reader));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error fetching customers async: " + ex.Message);
+                // Optionally rethrow or handle
+            }
+            return customers;
+        }
         // READ - Get all active customers with segment info
         public List<Customer> GetAllCustomers()
         {
@@ -504,29 +595,29 @@ namespace MarFin_Final.Data
                 CustomerId = Convert.ToInt32(reader["customer_id"]),
                 SegmentId = Convert.ToInt32(reader["segment_id"]),
                 CreatedBy = Convert.ToInt32(reader["created_by"]),
-                ModifiedBy = reader["modified_by"] != DBNull.Value ? Convert.ToInt32(reader["modified_by"]) : (int?)null,
-                FirstName = reader["first_name"].ToString(),
-                LastName = reader["last_name"].ToString(),
-                Email = reader["email"].ToString(),
-                Phone = reader["phone"].ToString(),
-                CompanyName = reader["company_name"].ToString(),
-                Address = reader["address"].ToString(),
-                City = reader["city"].ToString(),
-                StateProvince = reader["state_province"].ToString(),
-                PostalCode = reader["postal_code"].ToString(),
-                Country = reader["country"].ToString(),
-                CustomerStatus = reader["customer_status"].ToString(),
-                TotalRevenue = Convert.ToDecimal(reader["total_revenue"]),
-                Source = reader["source"].ToString(),
-                Notes = reader["notes"].ToString(),
+                ModifiedBy = reader["modified_by"] != DBNull.Value ? Convert.ToInt32(reader["modified_by"]) : null,
+                FirstName = reader["first_name"]?.ToString() ?? "",
+                LastName = reader["last_name"]?.ToString() ?? "",
+                Email = reader["email"]?.ToString() ?? "",
+                Phone = reader["phone"]?.ToString() ?? "",
+                CompanyName = reader["company_name"]?.ToString() ?? "",
+                Address = reader["address"]?.ToString() ?? "",
+                City = reader["city"]?.ToString() ?? "",
+                StateProvince = reader["state_province"]?.ToString() ?? "",
+                PostalCode = reader["postal_code"]?.ToString() ?? "",
+                Country = reader["country"]?.ToString() ?? "Philippines",
+                CustomerStatus = reader["customer_status"]?.ToString() ?? "Lead",
+                TotalRevenue = reader["total_revenue"] != DBNull.Value ? Convert.ToDecimal(reader["total_revenue"]) : 0m,
+                Source = reader["source"]?.ToString() ?? "",
+                Notes = reader["notes"]?.ToString() ?? "",
                 IsActive = Convert.ToBoolean(reader["is_active"]),
                 IsArchived = Convert.ToBoolean(reader["is_archived"]),
-                ArchivedDate = reader["archived_date"] != DBNull.Value ? Convert.ToDateTime(reader["archived_date"]) : (DateTime?)null,
-                ArchivedBy = reader["archived_by"] != DBNull.Value ? Convert.ToInt32(reader["archived_by"]) : (int?)null,
+                ArchivedDate = reader["archived_date"] != DBNull.Value ? Convert.ToDateTime(reader["archived_date"]) : null,
+                ArchivedBy = reader["archived_by"] != DBNull.Value ? Convert.ToInt32(reader["archived_by"]) : null,
                 CreatedDate = Convert.ToDateTime(reader["created_date"]),
                 ModifiedDate = Convert.ToDateTime(reader["modified_date"]),
-                SegmentName = reader["segment_name"].ToString()
+                CustomerSegment = reader["segment_name"]?.ToString() ?? ""
             };
         }
     }
-}
+}   

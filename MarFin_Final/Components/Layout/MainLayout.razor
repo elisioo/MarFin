@@ -1,13 +1,16 @@
-﻿@inherits LayoutComponentBase
+﻿@using MarFin_Final.Database.Services
+@inherits LayoutComponentBase
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<div class="page">
+<div class="page @(isDarkTheme ? "dark-theme" : "light-theme")">
     @if (AuthService.IsAuthenticated)
     {
-        <div class="sidebar @(sidebarCollapsed ? "collapsed" : "")">
-            <NavMenu IsCollapsed="@sidebarCollapsed" OnToggleSidebar="@ToggleSidebar" />
+        <div class="sidebar @(sidebarCollapsed ? "collapsed" : "") @(isDarkTheme ? "" : "light-theme")">
+            <NavMenu IsCollapsed="@sidebarCollapsed" 
+                     OnToggleSidebar="@ToggleSidebar"
+                     OnThemeChanged="@HandleThemeChange" />
         </div>
 
         <main class="@(sidebarCollapsed ? "sidebar-collapsed" : "")">
@@ -124,6 +127,7 @@
 
 @code {
     private bool sidebarCollapsed = false;
+    private bool isDarkTheme = true;
     private int unreadNotifications = 3;
 
     private List<Notification> notifications = new();
@@ -218,6 +222,12 @@
     }
 
     private void ToggleSidebar() => sidebarCollapsed = !sidebarCollapsed;
+
+    private void HandleThemeChange(bool isDark)
+    {
+        isDarkTheme = isDark;
+        StateHasChanged();
+    }
 
     private void MarkAllAsRead()
     {

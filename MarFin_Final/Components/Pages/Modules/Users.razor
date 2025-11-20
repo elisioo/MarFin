@@ -1,0 +1,450 @@
+@page "/users"
+@inject NavigationManager Navigation
+@inject UserService UserService
+@using MarFin_Final.Services
+
+<div class="users-page">
+    <!-- Header with Back Button -->
+    <div class="page-header">
+        <button class="back-button" @onclick="NavigateToHome">
+            <i class="bi bi-arrow-left"></i>
+            <span>Back to Home</span>
+        </button>
+        <div class="header-title">
+            <h1>User Management</h1>
+            <p>Manage user accounts and permissions</p>
+        </div>
+        <button class="btn-primary" @onclick="OpenAddUserModal">
+            <i class="bi bi-plus-lg"></i>
+            Add User
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading users...</p>
+        </div>
+    }
+    else if (errorMessage != null)
+    {
+        <div class="error-alert">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>@errorMessage</span>
+        </div>
+    }
+    else
+    {
+        <!-- Users Table -->
+        <div class="content-card">
+            <div class="table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Department</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in users)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar">@user.Initials</div>
+                                        <span>@user.FullName</span>
+                                    </div>
+                                </td>
+                                <td>@user.Email</td>
+                                <td>@(user.Phone ?? "N/A")</td>
+                                <td>@(user.Department ?? "N/A")</td>
+                                <td>
+                                    <span class="role-badge @user.RoleName.ToLower()">@user.RoleName</span>
+                                </td>
+                                <td>
+                                    <span class="status-badge @(user.IsActive ? "active" : "inactive")">
+                                        @(user.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+                                <td>@(user.LastLogin?.ToString("MMM dd, yyyy h:mm tt") ?? "Never")</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn-icon" @onclick="() => EditUser(user)" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        @if (user.IsActive)
+                                        {
+                                            <button class="btn-icon deactivate" @onclick="() => ConfirmToggleStatus(user, false)" title="Deactivate">
+                                                <i class="bi bi-toggle-on"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn-icon activate" @onclick="() => ConfirmToggleStatus(user, true)" title="Activate">
+                                                <i class="bi bi-toggle-off"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Role Permissions Section -->
+        <div class="content-card permissions-card">
+            <h2>Role Permissions</h2>
+            <div class="role-selector">
+                <label>Select Role:</label>
+                <select class="form-select" @bind="selectedRole" @bind:after="LoadPermissions">
+                    @foreach (var role in roles)
+                    {
+                        <option value="@role.RoleName">@role.RoleName</option>
+                    }
+                </select>
+            </div>
+
+            <div class="permissions-grid">
+                @foreach (var permission in permissions)
+                {
+                    <div class="permission-item">
+                        <label class="permission-checkbox">
+                            <input type="checkbox" checked="@permission.IsGranted" disabled />
+                            <span class="checkmark"></span>
+                            <span class="permission-label">@permission.Name</span>
+                        </label>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Add/Edit User Modal -->
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(isEditMode ? "Edit User" : "Add New User")</h3>
+                <button class="close-button" @onclick="CloseModal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>First Name <span class="required">*</span></label>
+                        <input type="text" class="form-input" @bind="currentUser.FirstName" placeholder="Enter first name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name <span class="required">*</span></label>
+                        <input type="text" class="form-input" @bind="currentUser.LastName" placeholder="Enter last name" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email Address <span class="required">*</span></label>
+                    <input type="email" class="form-input" @bind="currentUser.Email" placeholder="Enter email address" />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" class="form-input" @bind="currentUser.Phone" placeholder="Enter phone number" />
+                    </div>
+                    <div class="form-group">
+                        <label>Department</label>
+                        <input type="text" class="form-input" @bind="currentUser.Department" placeholder="Enter department" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Role <span class="required">*</span></label>
+                    <select class="form-select" @bind="currentUser.RoleId">
+                        @foreach (var role in roles)
+                        {
+                            <option value="@role.RoleId">@role.RoleName</option>
+                        }
+                    </select>
+                </div>
+                @if (!isEditMode)
+                {
+                    <div class="form-group">
+                        <label>Password <span class="required">*</span></label>
+                        <input type="password" class="form-input" @bind="password" placeholder="Enter password" />
+                        <small class="form-hint">Min 8 characters with uppercase, lowercase, number & special character</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Password <span class="required">*</span></label>
+                        <input type="password" class="form-input" @bind="confirmPassword" placeholder="Confirm password" />
+                    </div>
+                }
+                @if (!isEditMode)
+                {
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" @bind="currentUser.IsActive" />
+                            <span>Active User</span>
+                        </label>
+                    </div>
+                }
+                @if (modalError != null)
+                {
+                    <div class="error-message">
+                        <i class="bi bi-exclamation-circle"></i>
+                        @modalError
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+                <button class="btn-primary" @onclick="SaveUser" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-small"></span>
+                    }
+                    @(isEditMode ? "Update User" : "Add User")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirmation Modal -->
+@if (showConfirmModal)
+{
+    <div class="modal-overlay" @onclick="() => showConfirmModal = false">
+        <div class="modal-content confirm-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@confirmTitle</h3>
+                <button class="close-button" @onclick="() => showConfirmModal = false">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>@confirmMessage</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="() => showConfirmModal = false">Cancel</button>
+                <button class="@(isActivating ? "btn-primary" : "btn-danger")" @onclick="ConfirmStatusChange">
+                    @(isActivating ? "Activate" : "Deactivate")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<UserDto> users = new();
+    private List<RoleDto> roles = new();
+    private List<PermissionDto> permissions = new();
+    private string selectedRole = "Admin";
+
+    private bool showModal = false;
+    private bool showConfirmModal = false;
+    private bool isEditMode = false;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool isActivating = false;
+
+    private string? errorMessage = null;
+    private string? modalError = null;
+    private string? confirmTitle = null;
+    private string? confirmMessage = null;
+
+    private UserDto? userToToggle = null;
+    private UserCreateDto currentUser = new();
+    private string password = "";
+    private string confirmPassword = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            users = await UserService.GetAllUsersAsync();
+            roles = await UserService.GetAllRolesAsync();
+
+            if (roles.Any())
+            {
+                selectedRole = roles.First().RoleName;
+                await LoadPermissions();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadPermissions()
+    {
+        permissions = await UserService.GetRolePermissionsAsync(selectedRole);
+    }
+
+    private void NavigateToHome() => Navigation.NavigateTo("/");
+
+    private void OpenAddUserModal()
+    {
+        isEditMode = false;
+        currentUser = new UserCreateDto { IsActive = true, RoleId = roles.FirstOrDefault()?.RoleId ?? 0 };
+        password = "";
+        confirmPassword = "";
+        modalError = null;
+        showModal = true;
+    }
+
+    private void EditUser(UserDto user)
+    {
+        isEditMode = true;
+        currentUser = new UserCreateDto
+        {
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Phone = user.Phone,
+            Department = user.Department,
+            RoleId = user.RoleId,
+            IsActive = user.IsActive
+        };
+        // Store UserId in a way that won't be lost
+        password = user.UserId.ToString(); // Temporary storage
+        modalError = null;
+        showModal = true;
+    }
+
+    private void ConfirmToggleStatus(UserDto user, bool activate)
+    {
+        userToToggle = user;
+        isActivating = activate;
+        confirmTitle = activate ? "Activate User" : "Deactivate User";
+        confirmMessage = activate
+            ? $"Are you sure you want to activate {user.FullName}? They will be able to log in and access the system."
+            : $"Are you sure you want to deactivate {user.FullName}? They will no longer be able to log in or access the system.";
+        showConfirmModal = true;
+    }
+
+    private async Task ConfirmStatusChange()
+    {
+        if (userToToggle == null) return;
+
+        var response = await UserService.ToggleUserStatusAsync(userToToggle.UserId, isActivating);
+
+        if (response.Success)
+        {
+            await LoadData();
+        }
+        else
+        {
+            errorMessage = response.Message;
+        }
+
+        showConfirmModal = false;
+        userToToggle = null;
+    }
+
+    private async Task SaveUser()
+    {
+        modalError = null;
+
+        // Validation
+        if (string.IsNullOrWhiteSpace(currentUser.FirstName) ||
+            string.IsNullOrWhiteSpace(currentUser.LastName) ||
+            string.IsNullOrWhiteSpace(currentUser.Email))
+        {
+            modalError = "Please fill in all required fields";
+            return;
+        }
+
+        if (!isEditMode)
+        {
+            if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(confirmPassword))
+            {
+                modalError = "Please enter and confirm password";
+                return;
+            }
+
+            if (password != confirmPassword)
+            {
+                modalError = "Passwords do not match";
+                return;
+            }
+
+            if (password.Length < 8)
+            {
+                modalError = "Password must be at least 8 characters";
+                return;
+            }
+        }
+
+        isSaving = true;
+        ServiceResponse response;
+
+        try
+        {
+            if (isEditMode)
+            {
+                var updateDto = new UserUpdateDto
+                {
+                    UserId = int.Parse(password), // Retrieved from temporary storage
+                    FirstName = currentUser.FirstName,
+                    LastName = currentUser.LastName,
+                    Email = currentUser.Email,
+                    Phone = currentUser.Phone,
+                    Department = currentUser.Department,
+                    RoleId = currentUser.RoleId
+                };
+                response = await UserService.UpdateUserAsync(updateDto);
+            }
+            else
+            {
+                response = await UserService.AddUserAsync(currentUser, password);
+            }
+
+            if (response.Success)
+            {
+                await LoadData();
+                CloseModal();
+            }
+            else
+            {
+                modalError = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            modalError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentUser = new();
+        password = "";
+        confirmPassword = "";
+        modalError = null;
+    }
+}

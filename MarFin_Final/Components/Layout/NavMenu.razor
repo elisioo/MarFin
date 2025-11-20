@@ -1,18 +1,18 @@
-﻿<div class="nav-container">
+﻿<div class="nav-container @(isDarkMode ? "" : "light-theme")">
     <div class="nav-header">
         <div class="logo-container">
             <NavLink href="/">
                 <img src="img/marfin_logo.png" alt="MarFin Logo" class="logo" />
             </NavLink>
-            @if (!IsCollapsed)
-            {
-                <span class="brand-name">MarFin</span>
-            }
         </div>
     </div>
 
     <nav class="nav-menu">
-
+        <!-- MAIN Section -->
+        @if (!IsCollapsed)
+        {
+            <div class="nav-section-title">MAIN</div>
+        }
 
         <!-- Home -->
         <button class="nav-btn @(IsActive("") ? "active" : "")" @onclick="@(() => NavigateTo(""))">
@@ -23,8 +23,6 @@
             }
         </button>
 
-        <div class="nav-divider"></div>
-
         <!-- Dashboard -->
         <button class="nav-btn @(IsActive("dashboard") ? "active" : "")" @onclick="@(() => NavigateTo("dashboard"))">
             <i class="bi bi-grid nav-icon"></i>
@@ -33,6 +31,7 @@
                 <span class="nav-text">Dashboard</span>
             }
         </button>
+
         <!-- Customers -->
         <button class="nav-btn @(IsActive("customers", "customer-details") ? "active" : "")"
                 @onclick="@(() => NavigateTo("customers"))">
@@ -42,7 +41,6 @@
                 <span class="nav-text">Customer</span>
             }
         </button>
-
 
         <!-- Sales Pipeline -->
         <button class="nav-btn @(IsActive("sales-pipeline") ? "active" : "")" @onclick="@(() => NavigateTo("sales-pipeline"))">
@@ -64,12 +62,20 @@
 
         <!-- Financial -->
         <button class="nav-btn @(IsActive("financial") ? "active" : "")" @onclick="@(() => NavigateTo("financial"))">
-            <i class="bi bi-headset nav-icon"></i>
+            <i class="bi bi-bank nav-icon"></i>
             @if (!IsCollapsed)
             {
                 <span class="nav-text">Financial</span>
             }
         </button>
+
+        <div class="nav-divider"></div>
+
+        <!-- REPORTS Section -->
+        @if (!IsCollapsed)
+        {
+            <div class="nav-section-title">REPORTS</div>
+        }
 
         <!-- Reports -->
         <button class="nav-btn @(IsActive("reports") ? "active" : "")" @onclick="@(() => NavigateTo("reports"))">
@@ -80,7 +86,6 @@
             }
         </button>
 
-    
         <!-- Documents -->
         <button class="nav-btn @(IsActive("documents") ? "active" : "")" @onclick="@(() => NavigateTo("documents"))">
             <i class="bi bi-file-earmark-text nav-icon"></i>
@@ -91,23 +96,38 @@
         </button>
 
         <div class="nav-divider"></div>
+
+        <!-- SETTINGS Section -->
+        @if (!IsCollapsed)
+        {
+            <div class="nav-section-title">SETTINGS</div>
+        }
+
+        <!-- Settings -->
+        <button class="nav-btn @(IsActive("settings") ? "active" : "")" @onclick="@(() => NavigateTo("settings"))">
+            <i class="bi bi-gear nav-icon"></i>
+            @if (!IsCollapsed)
+            {
+                <span class="nav-text">Settings</span>
+            }
+        </button>
     </nav>
 
     <!-- Footer -->
     <div class="nav-footer">
-        <button class="collapse-btn" @onclick="OnToggleSidebar">
-            <i class="bi bi-list nav-icon"></i>
+        <button class="theme-btn" @onclick="ToggleTheme">
+            <i class="bi bi-@(isDarkMode ? "moon" : "sun") nav-icon"></i>
             @if (!IsCollapsed)
             {
-                <span class="nav-text">Collapse</span>
+                <span class="nav-text">@(isDarkMode ? "Dark" : "Light")</span>
             }
         </button>
 
-        <button class="theme-btn">
-            <i class="bi bi-sun nav-icon"></i>
+        <button class="collapse-btn" @onclick="OnToggleSidebar">
+            <i class="bi bi-@(IsCollapsed ? "chevron-right" : "chevron-left") nav-icon"></i>
             @if (!IsCollapsed)
             {
-                <span class="nav-text">Light</span>
+                <span class="nav-text">Collapse</span>
             }
         </button>
     </div>
@@ -120,10 +140,14 @@
     [Parameter]
     public EventCallback OnToggleSidebar { get; set; }
 
+    [Parameter]
+    public EventCallback<bool> OnThemeChanged { get; set; }
+
     [Inject]
     private NavigationManager NavigationManager { get; set; } = default!;
 
     private string currentPath = "";
+    private bool isDarkMode = true;
 
     protected override void OnInitialized()
     {
@@ -137,7 +161,6 @@
         StateHasChanged();
     }
 
-    // Updated IsActive to support multiple paths
     private bool IsActive(params string[] paths)
     {
         foreach (var path in paths)
@@ -158,6 +181,12 @@
     private void NavigateTo(string path)
     {
         NavigationManager.NavigateTo(path);
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkMode = !isDarkMode;
+        await OnThemeChanged.InvokeAsync(isDarkMode);
     }
 
     public void Dispose()

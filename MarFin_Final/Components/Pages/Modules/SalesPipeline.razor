@@ -288,6 +288,7 @@
                         <label>Customer <span class="required">*</span></label>
                         <select class="form-control" @bind="newOpportunity.CustomerId">
                             <option value="0">Select customer</option>
+
                             @foreach (var customer in customers)
                             {
                                 <option value="@customer.CustomerId">@customer.FullName - @customer.CompanyName</option>
@@ -350,7 +351,7 @@
                     @if (isEditMode)
                     {
                         <button class="btn-danger" @onclick="ShowDeleteConfirmation">
-                            <i class="bi bi-trash"></i> Archive
+                            <i class="bi bi-archive"></i> Archive
                         </button>
                     }
                     <button class="btn-primary" @onclick="SaveOpportunity">

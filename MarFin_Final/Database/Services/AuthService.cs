@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using MarFin_Final.Models;
 using RoleModel = MarFin_Final.Models.Role;
 
-namespace MarFin_Final.Services
+namespace MarFin_Final.Database.Services
 {
 
     public class AuthService

@@ -2,6 +2,9 @@
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
 using MarFin_Final.Services;
+using MarFin_Final.Database.Services;
+using MarFin.Services;
+using MarFin_Final.Data;
 
 namespace MarFin_Final
 {
@@ -36,10 +39,14 @@ namespace MarFin_Final
 
                 builder.Configuration.AddConfiguration(config);
             }
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-            // Register AuthService AFTER configuration is loaded
+            //Service Registration
             builder.Services.AddSingleton<AuthService>();
             builder.Services.AddScoped<RoleService>();
+            builder.Services.AddScoped<UserService>();
+            builder.Services.AddScoped<CustomerService>();
+            builder.Services.AddScoped<InvoiceService>(provider => new InvoiceService(connectionString));
 
             return builder.Build();
         }
