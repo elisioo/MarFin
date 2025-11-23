@@ -1,648 +1,621 @@
-﻿// Services/InvoiceService.cs
+﻿using MarFin_Final.Models;
+using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using Microsoft.Data.SqlClient;
-using System.Linq;
 using System.Threading.Tasks;
-using MarFin.Models;
 
-namespace MarFin.Services
+namespace MarFin_Final.Data
 {
-    public class ServiceException : Exception
+    public class InvoiceService
     {
-        public string ErrorCode { get; set; }
-        public string UserFriendlyMessage { get; set; }
-
-        public ServiceException(string message, string userFriendlyMessage, string errorCode = "GENERAL_ERROR")
-            : base(message)
-        {
-            UserFriendlyMessage = userFriendlyMessage;
-            ErrorCode = errorCode;
-        }
-
-        public ServiceException(string message, Exception innerException, string userFriendlyMessage, string errorCode = "GENERAL_ERROR")
-            : base(message, innerException)
-        {
-            UserFriendlyMessage = userFriendlyMessage;
-            ErrorCode = errorCode;
-        }
-    }
-
-    public interface IInvoiceService
-    {
-        Task<InvoiceListResponse> GetInvoicesAsync(InvoiceFilterRequest filter);
-        Task<Invoice?> GetInvoiceByIdAsync(int invoiceId);
-        Task<int> CreateInvoiceAsync(CreateInvoiceRequest request, int userId);
-        Task<bool> UpdateInvoiceStatusAsync(UpdateInvoiceStatusRequest request);
-        Task<bool> DeleteInvoiceAsync(int invoiceId, int userId);
-        Task<FinancialSummary> GetFinancialSummaryAsync(DateTime? startDate = null, DateTime? endDate = null);
-        Task<string> GenerateInvoiceNumberAsync();
-        Task<bool> TestConnectionAsync();
-    }
-
-    public class InvoiceService : IInvoiceService
-    {
-        private readonly string _connectionString;
-
-        public InvoiceService(string connectionString)
-        {
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                throw new ArgumentException("Connection string cannot be null or empty", nameof(connectionString));
-            }
-            _connectionString = connectionString;
-        }
-
-        public async Task<bool> TestConnectionAsync()
+        // CREATE - Add new invoice with line items
+        public bool AddInvoice(Invoice invoice)
         {
             try
             {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                throw new ServiceException(
-                    $"Database connection failed: {ex.Message}",
-                    "Unable to connect to the database. Please check your connection settings.",
-                    "DB_CONNECTION_ERROR"
-                );
-            }
-        }
-
-        public async Task<InvoiceListResponse> GetInvoicesAsync(InvoiceFilterRequest filter)
-        {
-            var response = new InvoiceListResponse
-            {
-                CurrentPage = filter.Page,
-                PageSize = filter.PageSize
-            };
-
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                // Get total count first
-                var countQuery = @"
-                    SELECT COUNT(*)
-                    FROM tbl_Invoices i
-                    INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
-                    WHERE i.is_archived = 0
-                        AND (@SearchTerm IS NULL OR 
-                             i.invoice_number LIKE '%' + @SearchTerm + '%' OR
-                             c.first_name LIKE '%' + @SearchTerm + '%' OR
-                             c.last_name LIKE '%' + @SearchTerm + '%' OR
-                             c.company_name LIKE '%' + @SearchTerm + '%')
-                        AND (@PaymentStatus IS NULL OR i.payment_status = @PaymentStatus)
-                        AND (@StartDate IS NULL OR i.invoice_date >= @StartDate)
-                        AND (@EndDate IS NULL OR i.invoice_date <= @EndDate)";
-
-                using (var countCmd = new SqlCommand(countQuery, connection))
+                using (SqlConnection conn = DBConnection.GetConnection())
                 {
-                    countCmd.Parameters.AddWithValue("@SearchTerm", (object?)filter.SearchTerm ?? DBNull.Value);
-                    countCmd.Parameters.AddWithValue("@PaymentStatus", (object?)filter.PaymentStatus ?? DBNull.Value);
-                    countCmd.Parameters.AddWithValue("@StartDate", (object?)filter.StartDate ?? DBNull.Value);
-                    countCmd.Parameters.AddWithValue("@EndDate", (object?)filter.EndDate ?? DBNull.Value);
-
-                    response.TotalCount = (int)await countCmd.ExecuteScalarAsync();
-                }
-
-                // Apply max records limit
-                var maxRecords = filter.MaxRecords ?? 200;
-                var actualMaxRecords = Math.Min(response.TotalCount, maxRecords);
-                response.HasMore = response.TotalCount > maxRecords;
-
-                // Calculate pages based on limited records
-                response.TotalPages = (int)Math.Ceiling((double)actualMaxRecords / filter.PageSize);
-
-                // Get paginated data
-                var sortColumn = filter.SortBy?.ToLower() switch
-                {
-                    "invoice_number" => "i.invoice_number",
-                    "customer" => "c.company_name",
-                    "amount" => "i.total_amount",
-                    "invoice_date" => "i.invoice_date",
-                    _ => "i.invoice_date"
-                };
-
-                var sortOrder = filter.SortOrder?.ToLower() == "asc" ? "ASC" : "DESC";
-                var offset = (filter.Page - 1) * filter.PageSize;
-
-                var query = $@"
-                    SELECT 
-                        i.invoice_id,
-                        i.invoice_number,
-                        c.first_name + ' ' + c.last_name AS customer_name,
-                        ISNULL(c.company_name, '') AS customer_company,
-                        i.total_amount,
-                        i.invoice_date,
-                        i.due_date,
-                        i.payment_status,
-                        CASE 
-                            WHEN i.payment_status IN ('Issued', 'Partial') AND i.due_date < GETDATE() 
-                            THEN 1 
-                            ELSE 0 
-                        END AS is_overdue
-                    FROM (
-                        SELECT TOP {maxRecords} *
-                        FROM tbl_Invoices
-                        WHERE is_archived = 0
-                            AND (@SearchTerm IS NULL OR invoice_number LIKE '%' + @SearchTerm + '%')
-                            AND (@PaymentStatus IS NULL OR payment_status = @PaymentStatus)
-                            AND (@StartDate IS NULL OR invoice_date >= @StartDate)
-                            AND (@EndDate IS NULL OR invoice_date <= @EndDate)
-                    ) i
-                    INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
-                    WHERE (@SearchTerm IS NULL OR 
-                           c.first_name LIKE '%' + @SearchTerm + '%' OR
-                           c.last_name LIKE '%' + @SearchTerm + '%' OR
-                           c.company_name LIKE '%' + @SearchTerm + '%')
-                    ORDER BY {sortColumn} {sortOrder}
-                    OFFSET @Offset ROWS
-                    FETCH NEXT @PageSize ROWS ONLY";
-
-                using (var cmd = new SqlCommand(query, connection))
-                {
-                    cmd.Parameters.AddWithValue("@SearchTerm", (object?)filter.SearchTerm ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@PaymentStatus", (object?)filter.PaymentStatus ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@StartDate", (object?)filter.StartDate ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@EndDate", (object?)filter.EndDate ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Offset", offset);
-                    cmd.Parameters.AddWithValue("@PageSize", filter.PageSize);
-
-                    using var reader = await cmd.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
+                    conn.Open();
+                    using (SqlTransaction transaction = conn.BeginTransaction())
                     {
-                        response.Invoices.Add(new InvoiceListItem
+                        try
                         {
-                            InvoiceId = reader.GetInt32(0),
-                            InvoiceNumber = reader.GetString(1),
-                            CustomerName = reader.GetString(2),
-                            CustomerCompany = reader.GetString(3),
-                            TotalAmount = reader.GetDecimal(4),
-                            InvoiceDate = reader.GetDateTime(5),
-                            DueDate = reader.GetDateTime(6),
-                            PaymentStatus = reader.GetString(7),
-                            IsOverdue = reader.GetInt32(8) == 1
-                        });
-                    }
-                }
+                            // Insert invoice
+                            string invoiceQuery = @"INSERT INTO tbl_Invoices 
+                                (customer_id, created_by, invoice_number, invoice_date, due_date, 
+                                 payment_terms, subtotal, tax_rate, tax_amount, discount_amount, 
+                                 total_amount, payment_status, notes, pdf_path, is_archived, 
+                                 created_date, modified_date) 
+                                OUTPUT INSERTED.invoice_id
+                                VALUES 
+                                (@CustomerId, @CreatedBy, @InvoiceNumber, @InvoiceDate, @DueDate, 
+                                 @PaymentTerms, @Subtotal, @TaxRate, @TaxAmount, @DiscountAmount, 
+                                 @TotalAmount, @PaymentStatus, @Notes, @PdfPath, @IsArchived, 
+                                 @CreatedDate, @ModifiedDate)";
 
-                // Get summary
-                response.Summary = await GetFinancialSummaryAsync(filter.StartDate, filter.EndDate);
+                            int invoiceId;
+                            using (SqlCommand cmd = new SqlCommand(invoiceQuery, conn, transaction))
+                            {
+                                AddInvoiceParameters(cmd, invoice);
+                                invoiceId = (int)cmd.ExecuteScalar();
+                            }
 
-                return response;
-            }
-            catch (SqlException ex)
-            {
-                throw new ServiceException(
-                    $"Database error while retrieving invoices: {ex.Message}",
-                    "An error occurred while loading invoices. Please try again.",
-                    "DB_QUERY_ERROR"
-                );
-            }
-            catch (Exception ex)
-            {
-                throw new ServiceException(
-                    $"Error retrieving invoices: {ex.Message}",
-                    "An unexpected error occurred. Please try again.",
-                    "GENERAL_ERROR"
-                );
-            }
-        }
+                            // Insert line items
+                            if (invoice.LineItems != null && invoice.LineItems.Count > 0)
+                            {
+                                string itemQuery = @"INSERT INTO tbl_Invoice_Items 
+                                    (invoice_id, item_order, description, quantity, unit_price, amount)
+                                    VALUES (@InvoiceId, @ItemOrder, @Description, @Quantity, @UnitPrice, @Amount)";
 
-        public async Task<Invoice?> GetInvoiceByIdAsync(int invoiceId)
-        {
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
+                                foreach (var item in invoice.LineItems)
+                                {
+                                    using (SqlCommand cmd = new SqlCommand(itemQuery, conn, transaction))
+                                    {
+                                        cmd.Parameters.AddWithValue("@InvoiceId", invoiceId);
+                                        cmd.Parameters.AddWithValue("@ItemOrder", item.ItemOrder);
+                                        cmd.Parameters.AddWithValue("@Description", item.Description ?? "");
+                                        cmd.Parameters.AddWithValue("@Quantity", item.Quantity);
+                                        cmd.Parameters.AddWithValue("@UnitPrice", item.UnitPrice);
+                                        cmd.Parameters.AddWithValue("@Amount", item.Amount);
+                                        cmd.ExecuteNonQuery();
+                                    }
+                                }
+                            }
 
-                var query = @"
-                    SELECT 
-                        i.*,
-                        c.first_name + ' ' + c.last_name AS customer_name,
-                        ISNULL(c.company_name, '') AS customer_company
-                    FROM tbl_Invoices i
-                    INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
-                    WHERE i.invoice_id = @InvoiceId AND i.is_archived = 0";
-
-                Invoice? invoice = null;
-
-                using (var cmd = new SqlCommand(query, connection))
-                {
-                    cmd.Parameters.AddWithValue("@InvoiceId", invoiceId);
-
-                    using var reader = await cmd.ExecuteReaderAsync();
-                    if (await reader.ReadAsync())
-                    {
-                        invoice = new Invoice
+                            transaction.Commit();
+                            return true;
+                        }
+                        catch
                         {
-                            InvoiceId = reader.GetInt32(reader.GetOrdinal("invoice_id")),
-                            CustomerId = reader.GetInt32(reader.GetOrdinal("customer_id")),
-                            CreatedBy = reader.GetInt32(reader.GetOrdinal("created_by")),
-                            InvoiceNumber = reader.GetString(reader.GetOrdinal("invoice_number")),
-                            InvoiceDate = reader.GetDateTime(reader.GetOrdinal("invoice_date")),
-                            DueDate = reader.GetDateTime(reader.GetOrdinal("due_date")),
-                            PaymentTerms = reader.IsDBNull(reader.GetOrdinal("payment_terms")) ? null : reader.GetString(reader.GetOrdinal("payment_terms")),
-                            Subtotal = reader.GetDecimal(reader.GetOrdinal("subtotal")),
-                            TaxRate = reader.GetDecimal(reader.GetOrdinal("tax_rate")),
-                            TaxAmount = reader.GetDecimal(reader.GetOrdinal("tax_amount")),
-                            DiscountAmount = reader.IsDBNull(reader.GetOrdinal("discount_amount")) ? null : reader.GetDecimal(reader.GetOrdinal("discount_amount")),
-                            TotalAmount = reader.GetDecimal(reader.GetOrdinal("total_amount")),
-                            PaymentStatus = reader.IsDBNull(reader.GetOrdinal("payment_status")) ? null : reader.GetString(reader.GetOrdinal("payment_status")),
-                            Notes = reader.IsDBNull(reader.GetOrdinal("notes")) ? null : reader.GetString(reader.GetOrdinal("notes")),
-                            CustomerName = reader.GetString(reader.GetOrdinal("customer_name")),
-                            CustomerCompany = reader.GetString(reader.GetOrdinal("customer_company"))
-                        };
+                            transaction.Rollback();
+                            throw;
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error adding invoice: " + ex.Message);
+                return false;
+            }
+        }
 
-                if (invoice != null)
+        // READ - Get all active invoices
+        public List<Invoice> GetAllInvoices()
+        {
+            List<Invoice> invoices = new List<Invoice>();
+
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
                 {
-                    // Get invoice items
-                    var itemsQuery = @"
-                        SELECT * FROM tbl_Invoice_Items
-                        WHERE invoice_id = @InvoiceId
-                        ORDER BY item_order";
+                    conn.Open();
+                    string query = @"SELECT i.invoice_id, i.customer_id, i.created_by, i.invoice_number,
+                                    i.invoice_date, i.due_date, i.payment_terms, i.subtotal, i.tax_rate,
+                                    i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
+                                    i.notes, i.pdf_path, i.is_archived, i.archived_date,
+                                    i.created_date, i.modified_date,
+                                    c.first_name + ' ' + c.last_name AS customer_name,
+                                    c.email AS customer_email,
+                                    c.company_name AS customer_company,
+                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                FROM tbl_Invoices i
+                                INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                WHERE i.is_archived = 0
+                                ORDER BY i.invoice_date DESC, i.invoice_number DESC";
 
-                    using var itemsCmd = new SqlCommand(itemsQuery, connection);
-                    itemsCmd.Parameters.AddWithValue("@InvoiceId", invoiceId);
-
-                    using var itemsReader = await itemsCmd.ExecuteReaderAsync();
-                    while (await itemsReader.ReadAsync())
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqlDataReader reader = cmd.ExecuteReader())
                     {
-                        invoice.Items.Add(new InvoiceItem
+                        while (reader.Read())
                         {
-                            ItemId = itemsReader.GetInt32(0),
-                            InvoiceId = itemsReader.GetInt32(1),
-                            ItemOrder = itemsReader.GetInt32(2),
-                            Description = itemsReader.GetString(3),
-                            Quantity = itemsReader.GetDecimal(4),
-                            UnitPrice = itemsReader.GetDecimal(5),
-                            Amount = itemsReader.GetDecimal(6)
-                        });
+                            invoices.Add(MapInvoiceFromReader(reader));
+                        }
                     }
                 }
-
-                return invoice;
-            }
-            catch (SqlException ex)
-            {
-                throw new ServiceException(
-                    $"Database error while retrieving invoice: {ex.Message}",
-                    $"Unable to load invoice #{invoiceId}. Please try again.",
-                    "DB_QUERY_ERROR"
-                );
             }
             catch (Exception ex)
             {
-                throw new ServiceException(
-                    $"Error retrieving invoice: {ex.Message}",
-                    "An unexpected error occurred while loading the invoice.",
-                    "GENERAL_ERROR"
-                );
+                Console.WriteLine("Error getting invoices: " + ex.Message);
             }
+
+            return invoices;
         }
 
-        public async Task<int> CreateInvoiceAsync(CreateInvoiceRequest request, int userId)
+        // READ - Get invoice by ID with line items
+        public Invoice GetInvoiceById(int invoiceId)
         {
-            // === VALIDATION ===
-            if (request.CustomerId <= 0)
-                throw new ServiceException("Invalid customer", "Please select a customer.", "VALIDATION_ERROR");
-
-            if (request.Items?.Any() != true || request.Items.All(i => string.IsNullOrWhiteSpace(i.Description)))
-                throw new ServiceException("No valid items", "Please add at least one item with a description.", "VALIDATION_ERROR");
-
-            if (request.DueDate < request.InvoiceDate)
-                throw new ServiceException("Invalid dates", "Due date must be on or after invoice date.", "VALIDATION_ERROR");
-
-            SqlConnection? connection = null;
-            SqlTransaction? transaction = null;
+            Invoice invoice = null;
 
             try
             {
-                connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-                transaction = await connection.BeginTransactionAsync();
-
-                // Generate invoice number
-                var invoiceNumber = await GenerateInvoiceNumberAsync();
-
-                // === SAFE CALCULATIONS (NO NULLS EVER) ===
-                var subtotal = request.Items.Sum(i => i.Quantity * i.UnitPrice);
-                var taxAmount = subtotal * (request.TaxRate / 100m);
-                var discount = request.DiscountAmount; // Already 0m from model default
-                var totalAmount = subtotal + taxAmount - discount;
-
-                // === INSERT MAIN INVOICE ===
-                var invoiceQuery = @"
-            INSERT INTO tbl_Invoices (
-                customer_id, created_by, invoice_number, invoice_date, due_date,
-                payment_terms, subtotal, tax_rate, tax_amount, discount_amount,
-                total_amount, payment_status, notes, created_date, modified_date
-            ) VALUES (
-                @CustomerId, @CreatedBy, @InvoiceNumber, @InvoiceDate, @DueDate,
-                @PaymentTerms, @Subtotal, @TaxRate, @TaxAmount, @DiscountAmount,
-                @TotalAmount, 'Draft', @Notes, GETDATE(), GETDATE()
-            );
-            SELECT CAST(SCOPE_IDENTITY() AS int);";
-
-                int invoiceId;
-                using (var cmd = new SqlCommand(invoiceQuery, connection, transaction))
+                using (SqlConnection conn = DBConnection.GetConnection())
                 {
-                    cmd.Parameters.AddWithValue("@CustomerId", request.CustomerId);
-                    cmd.Parameters.AddWithValue("@CreatedBy", userId);
-                    cmd.Parameters.AddWithValue("@InvoiceNumber", invoiceNumber);
-                    cmd.Parameters.AddWithValue("@InvoiceDate", request.InvoiceDate.Date);
-                    cmd.Parameters.AddWithValue("@DueDate", request.DueDate.Date);
-                    cmd.Parameters.AddWithValue("@PaymentTerms", (object?)request.PaymentTerms ?? DBNull.Value);
-                    cmd.Parameters.AddWithValue("@Subtotal", subtotal);
-                    cmd.Parameters.AddWithValue("@TaxRate", request.TaxRate);
-                    cmd.Parameters.AddWithValue("@TaxAmount", taxAmount);
-                    cmd.Parameters.AddWithValue("@DiscountAmount", discount);
-                    cmd.Parameters.AddWithValue("@TotalAmount", totalAmount);
-                    cmd.Parameters.AddWithValue("@Notes", (object?)request.Notes ?? DBNull.Value);
+                    conn.Open();
 
-                    var result = await cmd.ExecuteScalarAsync();
-                    invoiceId = result is DBNull or null
-                        ? throw new ServiceException("No ID returned", "Failed to create invoice.", "DB_INSERT_ERROR")
-                        : Convert.ToInt32(result);
-                }
+                    // Get invoice
+                    string invoiceQuery = @"SELECT i.invoice_id, i.customer_id, i.created_by, i.invoice_number,
+                                    i.invoice_date, i.due_date, i.payment_terms, i.subtotal, i.tax_rate,
+                                    i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
+                                    i.notes, i.pdf_path, i.is_archived, i.archived_date,
+                                    i.created_date, i.modified_date,
+                                    c.first_name + ' ' + c.last_name AS customer_name,
+                                    c.email AS customer_email,
+                                    c.company_name AS customer_company,
+                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                FROM tbl_Invoices i
+                                INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                WHERE i.invoice_id = @InvoiceId";
 
-                // === INSERT LINE ITEMS ===
-                for (int i = 0; i < request.Items.Count; i++)
-                {
-                    var item = request.Items[i];
-                    if (string.IsNullOrWhiteSpace(item.Description))
-                        throw new ServiceException("Empty description", $"Item #{i + 1} has no description.", "VALIDATION_ERROR");
-
-                    var itemAmount = item.Quantity * item.UnitPrice;
-
-                    var itemQuery = @"
-                INSERT INTO tbl_Invoice_Items (invoice_id, item_order, description, quantity, unit_price, amount)
-                VALUES (@InvoiceId, @ItemOrder, @Description, @Quantity, @UnitPrice, @Amount);";
-
-                    using var itemCmd = new SqlCommand(itemQuery, connection, transaction);
-                    itemCmd.Parameters.AddWithValue("@InvoiceId", invoiceId);
-                    itemCmd.Parameters.AddWithValue("@ItemOrder", i + 1);
-                    itemCmd.Parameters.AddWithValue("@Description", item.Description.Trim());
-                    itemCmd.Parameters.AddWithValue("@Quantity", item.Quantity);
-                    itemCmd.Parameters.AddWithValue("@UnitPrice", item.UnitPrice);
-                    itemCmd.Parameters.AddWithValue("@Amount", itemAmount);
-
-                    await itemCmd.ExecuteNonQueryAsync();
-                }
-
-                await transaction.CommitAsync();
-                return invoiceId;
-            }
-            catch (Exception)
-            {
-                if (transaction != null) await transaction.RollbackAsync();
-                throw;
-            }
-            finally
-            {
-                transaction?.Dispose();
-                connection?.Dispose();
-            }
-        }
-        public async Task<bool> UpdateInvoiceStatusAsync(UpdateInvoiceStatusRequest request)
-        {
-            if (request.InvoiceId <= 0)
-            {
-                throw new ServiceException(
-                    "Invalid invoice ID",
-                    "Invalid invoice ID provided.",
-                    "VALIDATION_ERROR"
-                );
-            }
-
-            if (string.IsNullOrWhiteSpace(request.PaymentStatus))
-            {
-                throw new ServiceException(
-                    "Payment status is required",
-                    "Please provide a valid payment status.",
-                    "VALIDATION_ERROR"
-                );
-            }
-
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                var query = @"
-                    UPDATE tbl_Invoices
-                    SET payment_status = @PaymentStatus,
-                        modified_date = GETDATE()
-                    WHERE invoice_id = @InvoiceId AND is_archived = 0";
-
-                using var cmd = new SqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@InvoiceId", request.InvoiceId);
-                cmd.Parameters.AddWithValue("@PaymentStatus", request.PaymentStatus);
-
-                var rowsAffected = await cmd.ExecuteNonQueryAsync();
-
-                if (rowsAffected == 0)
-                {
-                    throw new ServiceException(
-                        $"No invoice found with ID {request.InvoiceId}",
-                        "Invoice not found or already archived.",
-                        "NOT_FOUND"
-                    );
-                }
-
-                return rowsAffected > 0;
-            }
-            catch (SqlException ex)
-            {
-                throw new ServiceException(
-                    $"Database error while updating invoice status: {ex.Message}",
-                    "Failed to update invoice status. Please try again.",
-                    "DB_UPDATE_ERROR"
-                );
-            }
-            catch (ServiceException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                throw new ServiceException(
-                    $"Error updating invoice status: {ex.Message}",
-                    "An unexpected error occurred while updating the invoice.",
-                    "GENERAL_ERROR"
-                );
-            }
-        }
-
-        public async Task<bool> DeleteInvoiceAsync(int invoiceId, int userId)
-        {
-            if (invoiceId <= 0)
-            {
-                throw new ServiceException(
-                    "Invalid invoice ID",
-                    "Invalid invoice ID provided.",
-                    "VALIDATION_ERROR"
-                );
-            }
-
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                var query = @"
-                    UPDATE tbl_Invoices
-                    SET is_archived = 1,
-                        archived_date = GETDATE(),
-                        modified_date = GETDATE()
-                    WHERE invoice_id = @InvoiceId AND is_archived = 0";
-
-                using var cmd = new SqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@InvoiceId", invoiceId);
-
-                var rowsAffected = await cmd.ExecuteNonQueryAsync();
-
-                if (rowsAffected == 0)
-                {
-                    throw new ServiceException(
-                        $"No invoice found with ID {invoiceId}",
-                        "Invoice not found or already archived.",
-                        "NOT_FOUND"
-                    );
-                }
-
-                return rowsAffected > 0;
-            }
-            catch (SqlException ex)
-            {
-                throw new ServiceException(
-                    $"Database error while deleting invoice: {ex.Message}",
-                    "Failed to delete invoice. Please try again.",
-                    "DB_DELETE_ERROR"
-                );
-            }
-            catch (ServiceException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                throw new ServiceException(
-                    $"Error deleting invoice: {ex.Message}",
-                    "An unexpected error occurred while deleting the invoice.",
-                    "GENERAL_ERROR"
-                );
-            }
-        }
-
-        public async Task<FinancialSummary> GetFinancialSummaryAsync(DateTime? startDate = null, DateTime? endDate = null)
-        {
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                var query = @"
-                    SELECT 
-                        SUM(CASE WHEN payment_status = 'Paid' THEN total_amount ELSE 0 END) AS total_revenue,
-                        SUM(CASE WHEN payment_status IN ('Issued', 'Partial') THEN total_amount ELSE 0 END) AS total_pending,
-                        SUM(CASE WHEN payment_status IN ('Issued', 'Partial') AND due_date < GETDATE() THEN total_amount ELSE 0 END) AS total_overdue,
-                        COUNT(CASE WHEN payment_status IN ('Issued', 'Partial') THEN 1 END) AS pending_count,
-                        COUNT(CASE WHEN payment_status IN ('Issued', 'Partial') AND due_date < GETDATE() THEN 1 END) AS overdue_count
-                    FROM tbl_Invoices
-                    WHERE is_archived = 0
-                        AND (@StartDate IS NULL OR invoice_date >= @StartDate)
-                        AND (@EndDate IS NULL OR invoice_date <= @EndDate)";
-
-                using var cmd = new SqlCommand(query, connection);
-                cmd.Parameters.AddWithValue("@StartDate", (object?)startDate ?? DBNull.Value);
-                cmd.Parameters.AddWithValue("@EndDate", (object?)endDate ?? DBNull.Value);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
-                {
-                    return new FinancialSummary
+                    using (SqlCommand cmd = new SqlCommand(invoiceQuery, conn))
                     {
-                        TotalRevenue = reader.IsDBNull(0) ? 0 : reader.GetDecimal(0),
-                        TotalPending = reader.IsDBNull(1) ? 0 : reader.GetDecimal(1),
-                        TotalOverdue = reader.IsDBNull(2) ? 0 : reader.GetDecimal(2),
-                        PendingInvoicesCount = reader.IsDBNull(3) ? 0 : reader.GetInt32(3),
-                        OverdueInvoicesCount = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
-                        RevenueChangePercent = 12.5m // Calculate from previous period
-                    };
-                }
+                        cmd.Parameters.AddWithValue("@InvoiceId", invoiceId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                invoice = MapInvoiceFromReader(reader);
+                            }
+                        }
+                    }
 
-                return new FinancialSummary();
-            }
-            catch (SqlException ex)
-            {
-                throw new ServiceException(
-                    $"Database error while retrieving financial summary: {ex.Message}",
-                    "Failed to load financial summary. Please try again.",
-                    "DB_QUERY_ERROR"
-                );
-            }
-            catch (Exception ex)
-            {
-                throw new ServiceException(
-                    $"Error retrieving financial summary: {ex.Message}",
-                    "An unexpected error occurred while loading the summary.",
-                    "GENERAL_ERROR"
-                );
-            }
-        }
-
-        public async Task<string> GenerateInvoiceNumberAsync()
-        {
-            try
-            {
-                using var connection = new SqlConnection(_connectionString);
-                await connection.OpenAsync();
-
-                var query = @"
-                    SELECT TOP 1 invoice_number
-                    FROM tbl_Invoices
-                    WHERE invoice_number LIKE 'INV-' + CAST(YEAR(GETDATE()) AS VARCHAR(4)) + '-%'
-                    ORDER BY invoice_id DESC";
-
-                using var cmd = new SqlCommand(query, connection);
-                var result = await cmd.ExecuteScalarAsync();
-
-                if (result != null)
-                {
-                    var lastNumber = result.ToString()!;
-                    var parts = lastNumber.Split('-');
-                    if (parts.Length == 3 && int.TryParse(parts[2], out int num))
+                    // Get line items
+                    if (invoice != null)
                     {
-                        return $"INV-{DateTime.Now.Year}-{(num + 1):D3}";
+                        string itemsQuery = @"SELECT item_id, invoice_id, item_order, description, 
+                                             quantity, unit_price, amount
+                                             FROM tbl_Invoice_Items
+                                             WHERE invoice_id = @InvoiceId
+                                             ORDER BY item_order";
+
+                        using (SqlCommand cmd = new SqlCommand(itemsQuery, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@InvoiceId", invoiceId);
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    invoice.LineItems.Add(MapInvoiceItemFromReader(reader));
+                                }
+                            }
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error getting invoice: " + ex.Message);
+            }
 
+            return invoice;
+        }
+
+        // UPDATE - Update existing invoice
+        public bool UpdateInvoice(Invoice invoice)
+        {
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    using (SqlTransaction transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Update invoice
+                            string invoiceQuery = @"UPDATE tbl_Invoices 
+                                SET customer_id = @CustomerId,
+                                    invoice_number = @InvoiceNumber,
+                                    invoice_date = @InvoiceDate,
+                                    due_date = @DueDate,
+                                    payment_terms = @PaymentTerms,
+                                    subtotal = @Subtotal,
+                                    tax_rate = @TaxRate,
+                                    tax_amount = @TaxAmount,
+                                    discount_amount = @DiscountAmount,
+                                    total_amount = @TotalAmount,
+                                    payment_status = @PaymentStatus,
+                                    notes = @Notes,
+                                    pdf_path = @PdfPath,
+                                    modified_date = @ModifiedDate
+                                WHERE invoice_id = @InvoiceId";
+
+                            using (SqlCommand cmd = new SqlCommand(invoiceQuery, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@InvoiceId", invoice.InvoiceId);
+                                AddInvoiceParameters(cmd, invoice);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            // Delete existing line items
+                            string deleteItemsQuery = "DELETE FROM tbl_Invoice_Items WHERE invoice_id = @InvoiceId";
+                            using (SqlCommand cmd = new SqlCommand(deleteItemsQuery, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@InvoiceId", invoice.InvoiceId);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            // Insert updated line items
+                            if (invoice.LineItems != null && invoice.LineItems.Count > 0)
+                            {
+                                string itemQuery = @"INSERT INTO tbl_Invoice_Items 
+                                    (invoice_id, item_order, description, quantity, unit_price, amount)
+                                    VALUES (@InvoiceId, @ItemOrder, @Description, @Quantity, @UnitPrice, @Amount)";
+
+                                foreach (var item in invoice.LineItems)
+                                {
+                                    using (SqlCommand cmd = new SqlCommand(itemQuery, conn, transaction))
+                                    {
+                                        cmd.Parameters.AddWithValue("@InvoiceId", invoice.InvoiceId);
+                                        cmd.Parameters.AddWithValue("@ItemOrder", item.ItemOrder);
+                                        cmd.Parameters.AddWithValue("@Description", item.Description ?? "");
+                                        cmd.Parameters.AddWithValue("@Quantity", item.Quantity);
+                                        cmd.Parameters.AddWithValue("@UnitPrice", item.UnitPrice);
+                                        cmd.Parameters.AddWithValue("@Amount", item.Amount);
+                                        cmd.ExecuteNonQuery();
+                                    }
+                                }
+                            }
+
+                            transaction.Commit();
+                            return true;
+                        }
+                        catch
+                        {
+                            transaction.Rollback();
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error updating invoice: " + ex.Message);
+                return false;
+            }
+        }
+
+        // ARCHIVE - Archive invoice
+        public bool ArchiveInvoice(int invoiceId)
+        {
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    string query = @"UPDATE tbl_Invoices 
+                                   SET is_archived = 1, 
+                                       archived_date = @ArchivedDate
+                                   WHERE invoice_id = @InvoiceId";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@InvoiceId", invoiceId);
+                        cmd.Parameters.AddWithValue("@ArchivedDate", DateTime.Now);
+                        int result = cmd.ExecuteNonQuery();
+                        return result > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error archiving invoice: " + ex.Message);
+                return false;
+            }
+        }
+
+        // GET ARCHIVED - Get archived invoices
+        public List<Invoice> GetArchivedInvoices()
+        {
+            List<Invoice> invoices = new List<Invoice>();
+
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    string query = @"SELECT i.invoice_id, i.customer_id, i.created_by, i.invoice_number,
+                                    i.invoice_date, i.due_date, i.payment_terms, i.subtotal, i.tax_rate,
+                                    i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
+                                    i.notes, i.pdf_path, i.is_archived, i.archived_date,
+                                    i.created_date, i.modified_date,
+                                    c.first_name + ' ' + c.last_name AS customer_name,
+                                    c.email AS customer_email,
+                                    c.company_name AS customer_company,
+                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                FROM tbl_Invoices i
+                                INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                WHERE i.is_archived = 1
+                                ORDER BY i.archived_date DESC";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            invoices.Add(MapInvoiceFromReader(reader));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error getting archived invoices: " + ex.Message);
+            }
+
+            return invoices;
+        }
+
+        // SEARCH - Search invoices
+        public List<Invoice> SearchInvoices(string searchTerm)
+        {
+            List<Invoice> invoices = new List<Invoice>();
+
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    string query = @"SELECT i.invoice_id, i.customer_id, i.created_by, i.invoice_number,
+                                    i.invoice_date, i.due_date, i.payment_terms, i.subtotal, i.tax_rate,
+                                    i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
+                                    i.notes, i.pdf_path, i.is_archived, i.archived_date,
+                                    i.created_date, i.modified_date,
+                                    c.first_name + ' ' + c.last_name AS customer_name,
+                                    c.email AS customer_email,
+                                    c.company_name AS customer_company,
+                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                FROM tbl_Invoices i
+                                INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                WHERE i.is_archived = 0
+                                AND (i.invoice_number LIKE @SearchTerm 
+                                     OR c.first_name LIKE @SearchTerm 
+                                     OR c.last_name LIKE @SearchTerm 
+                                     OR c.company_name LIKE @SearchTerm)
+                                ORDER BY i.invoice_date DESC";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@SearchTerm", "%" + searchTerm + "%");
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                invoices.Add(MapInvoiceFromReader(reader));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error searching invoices: " + ex.Message);
+            }
+
+            return invoices;
+        }
+
+        // Get invoices by payment status
+        public List<Invoice> GetInvoicesByStatus(string status)
+        {
+            List<Invoice> invoices = new List<Invoice>();
+
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    string query = @"SELECT i.invoice_id, i.customer_id, i.created_by, i.invoice_number,
+                                    i.invoice_date, i.due_date, i.payment_terms, i.subtotal, i.tax_rate,
+                                    i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
+                                    i.notes, i.pdf_path, i.is_archived, i.archived_date,
+                                    i.created_date, i.modified_date,
+                                    c.first_name + ' ' + c.last_name AS customer_name,
+                                    c.email AS customer_email,
+                                    c.company_name AS customer_company,
+                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                FROM tbl_Invoices i
+                                INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                WHERE i.is_archived = 0 AND i.payment_status = @Status
+                                ORDER BY i.invoice_date DESC";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@Status", status);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                invoices.Add(MapInvoiceFromReader(reader));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error getting invoices by status: " + ex.Message);
+            }
+
+            return invoices;
+        }
+
+        // Get overdue invoices
+        public List<Invoice> GetOverdueInvoices()
+        {
+            List<Invoice> invoices = new List<Invoice>();
+
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    string query = @"SELECT i.invoice_id, i.customer_id, i.created_by, i.invoice_number,
+                                    i.invoice_date, i.due_date, i.payment_terms, i.subtotal, i.tax_rate,
+                                    i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
+                                    i.notes, i.pdf_path, i.is_archived, i.archived_date,
+                                    i.created_date, i.modified_date,
+                                    c.first_name + ' ' + c.last_name AS customer_name,
+                                    c.email AS customer_email,
+                                    c.company_name AS customer_company,
+                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                FROM tbl_Invoices i
+                                INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                WHERE i.is_archived = 0 
+                                AND i.payment_status != 'Paid' 
+                                AND i.payment_status != 'Void'
+                                AND i.due_date < GETDATE()
+                                ORDER BY i.due_date ASC";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            invoices.Add(MapInvoiceFromReader(reader));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error getting overdue invoices: " + ex.Message);
+            }
+
+            return invoices;
+        }
+
+        // Get invoice count
+        public int GetInvoiceCount()
+        {
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    string query = "SELECT COUNT(*) FROM tbl_Invoices WHERE is_archived = 0";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        return (int)cmd.ExecuteScalar();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error getting invoice count: " + ex.Message);
+                return 0;
+            }
+        }
+
+        // Generate next invoice number
+        public string GenerateInvoiceNumber()
+        {
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    string query = @"SELECT TOP 1 invoice_number 
+                                   FROM tbl_Invoices 
+                                   ORDER BY invoice_id DESC";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        var result = cmd.ExecuteScalar();
+                        if (result != null)
+                        {
+                            string lastNumber = result.ToString();
+                            // Extract number part (e.g., "INV-2025-006" -> 6)
+                            var parts = lastNumber.Split('-');
+                            if (parts.Length >= 3 && int.TryParse(parts[2], out int num))
+                            {
+                                return $"INV-{DateTime.Now.Year}-{(num + 1):D3}";
+                            }
+                        }
+                        return $"INV-{DateTime.Now.Year}-001";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error generating invoice number: " + ex.Message);
                 return $"INV-{DateTime.Now.Year}-001";
             }
-            catch (SqlException ex)
+        }
+
+        // Helper method to add invoice parameters
+        private void AddInvoiceParameters(SqlCommand cmd, Invoice invoice)
+        {
+            cmd.Parameters.AddWithValue("@CustomerId", invoice.CustomerId);
+            cmd.Parameters.AddWithValue("@CreatedBy", invoice.CreatedBy);
+            cmd.Parameters.AddWithValue("@InvoiceNumber", invoice.InvoiceNumber);
+            cmd.Parameters.AddWithValue("@InvoiceDate", invoice.InvoiceDate);
+            cmd.Parameters.AddWithValue("@DueDate", invoice.DueDate);
+            cmd.Parameters.AddWithValue("@PaymentTerms", invoice.PaymentTerms ?? "Net 30");
+            cmd.Parameters.AddWithValue("@Subtotal", invoice.Subtotal);
+            cmd.Parameters.AddWithValue("@TaxRate", invoice.TaxRate);
+            cmd.Parameters.AddWithValue("@TaxAmount", invoice.TaxAmount);
+            cmd.Parameters.AddWithValue("@DiscountAmount", invoice.DiscountAmount);
+            cmd.Parameters.AddWithValue("@TotalAmount", invoice.TotalAmount);
+            cmd.Parameters.AddWithValue("@PaymentStatus", invoice.PaymentStatus ?? "Draft");
+            cmd.Parameters.AddWithValue("@Notes", invoice.Notes ?? "");
+            cmd.Parameters.AddWithValue("@PdfPath", invoice.PdfPath ?? "");
+            cmd.Parameters.AddWithValue("@IsArchived", invoice.IsArchived);
+            cmd.Parameters.AddWithValue("@CreatedDate", DateTime.Now);
+            cmd.Parameters.AddWithValue("@ModifiedDate", DateTime.Now);
+        }
+
+        // Helper method to map data reader to Invoice object
+        private Invoice MapInvoiceFromReader(SqlDataReader reader)
+        {
+            return new Invoice
             {
-                throw new ServiceException(
-                    $"Database error while generating invoice number: {ex.Message}",
-                    "Failed to generate invoice number. Please try again.",
-                    "DB_QUERY_ERROR"
-                );
-            }
-            catch (Exception ex)
+                InvoiceId = Convert.ToInt32(reader["invoice_id"]),
+                CustomerId = Convert.ToInt32(reader["customer_id"]),
+                CreatedBy = Convert.ToInt32(reader["created_by"]),
+                InvoiceNumber = reader["invoice_number"]?.ToString() ?? "",
+                InvoiceDate = Convert.ToDateTime(reader["invoice_date"]),
+                DueDate = Convert.ToDateTime(reader["due_date"]),
+                PaymentTerms = reader["payment_terms"]?.ToString() ?? "Net 30",
+                Subtotal = Convert.ToDecimal(reader["subtotal"]),
+                TaxRate = Convert.ToDecimal(reader["tax_rate"]),
+                TaxAmount = Convert.ToDecimal(reader["tax_amount"]),
+                DiscountAmount = Convert.ToDecimal(reader["discount_amount"]),
+                TotalAmount = Convert.ToDecimal(reader["total_amount"]),
+                PaymentStatus = reader["payment_status"]?.ToString() ?? "Draft",
+                Notes = reader["notes"]?.ToString() ?? "",
+                PdfPath = reader["pdf_path"]?.ToString() ?? "",
+                IsArchived = Convert.ToBoolean(reader["is_archived"]),
+                ArchivedDate = reader["archived_date"] != DBNull.Value ? Convert.ToDateTime(reader["archived_date"]) : null,
+                CreatedDate = Convert.ToDateTime(reader["created_date"]),
+                ModifiedDate = Convert.ToDateTime(reader["modified_date"]),
+                CustomerName = reader["customer_name"]?.ToString() ?? "",
+                CustomerEmail = reader["customer_email"]?.ToString() ?? "",
+                CustomerCompany = reader["customer_company"]?.ToString() ?? "",
+                CreatedByName = reader["created_by_name"]?.ToString() ?? ""
+            };
+        }
+
+        // Helper method to map data reader to InvoiceItem object
+        private InvoiceItem MapInvoiceItemFromReader(SqlDataReader reader)
+        {
+            return new InvoiceItem
             {
-                throw new ServiceException(
-                    $"Error generating invoice number: {ex.Message}",
-                    "An unexpected error occurred while generating the invoice number.",
-                    "GENERAL_ERROR"
-                );
-            }
+                ItemId = Convert.ToInt32(reader["item_id"]),
+                InvoiceId = Convert.ToInt32(reader["invoice_id"]),
+                ItemOrder = Convert.ToInt32(reader["item_order"]),
+                Description = reader["description"]?.ToString() ?? "",
+                Quantity = Convert.ToDecimal(reader["quantity"]),
+                UnitPrice = Convert.ToDecimal(reader["unit_price"]),
+                Amount = Convert.ToDecimal(reader["amount"])
+            };
         }
     }
 }

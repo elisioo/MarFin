@@ -39,14 +39,20 @@ namespace MarFin_Final
 
                 builder.Configuration.AddConfiguration(config);
             }
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            //var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
             //Service Registration
+
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+          
             builder.Services.AddSingleton<AuthService>();
             builder.Services.AddScoped<RoleService>();
             builder.Services.AddScoped<UserService>();
             builder.Services.AddScoped<CustomerService>();
-            builder.Services.AddScoped<InvoiceService>(provider => new InvoiceService(connectionString));
+       
 
             return builder.Build();
         }

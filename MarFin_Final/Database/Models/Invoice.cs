@@ -1,122 +1,80 @@
-﻿// Models/Invoice.cs
-using System;
-using System.Collections.Generic;
+﻿    using System;
+    using System.Collections.Generic;
 
-namespace MarFin.Models
-{
-    public class Invoice
+    namespace MarFin_Final.Models
     {
-        public int InvoiceId { get; set; }
-        public int CustomerId { get; set; }
-        public int CreatedBy { get; set; }
-        public string InvoiceNumber { get; set; } = string.Empty;
-        public DateTime InvoiceDate { get; set; }
-        public DateTime DueDate { get; set; }
-        public string? PaymentTerms { get; set; }
-        public decimal Subtotal { get; set; }
-        public decimal TaxRate { get; set; }
-        public decimal TaxAmount { get; set; }
-        public decimal? DiscountAmount { get; set; }
-        public decimal TotalAmount { get; set; }
-        public string? PaymentStatus { get; set; }
-        public string? Notes { get; set; }
-        public string? PdfPath { get; set; }
-        public bool IsArchived { get; set; }
-        public DateTime? ArchivedDate { get; set; }
-        public DateTime CreatedDate { get; set; }
-        public DateTime ModifiedDate { get; set; }
+        public class Invoice
+        {
+            // Primary Key
+            public int InvoiceId { get; set; }
 
-        // Navigation properties
-        public string CustomerName { get; set; } = string.Empty;
-        public string CustomerCompany { get; set; } = string.Empty;
-        public List<InvoiceItem> Items { get; set; } = new();
+            // Foreign Keys
+            public int CustomerId { get; set; }
+            public int CreatedBy { get; set; }
+
+            // Invoice Information
+            public string InvoiceNumber { get; set; } = "";
+            public DateTime InvoiceDate { get; set; } = DateTime.Now;
+            public DateTime DueDate { get; set; } = DateTime.Now.AddDays(30);
+            public string PaymentTerms { get; set; } = "Net 30";
+
+            // Financial Information
+            public decimal Subtotal { get; set; } = 0.00m;
+            public decimal TaxRate { get; set; } = 12.00m;
+            public decimal TaxAmount { get; set; } = 0.00m;
+            public decimal DiscountAmount { get; set; } = 0.00m;
+            public decimal TotalAmount { get; set; } = 0.00m;
+
+            // Status and Additional Information
+            public string PaymentStatus { get; set; } = "Draft";
+            public string Notes { get; set; } = "";
+            public string PdfPath { get; set; } = "";
+
+            // System Fields
+            public bool IsArchived { get; set; } = false;
+            public DateTime? ArchivedDate { get; set; }
+            public DateTime CreatedDate { get; set; } = DateTime.Now;
+            public DateTime ModifiedDate { get; set; } = DateTime.Now;
+
+            // Navigation/Display Properties (populated from JOINs)
+            public string CustomerName { get; set; } = "";
+            public string CustomerEmail { get; set; } = "";
+            public string CustomerCompany { get; set; } = "";
+            public string CreatedByName { get; set; } = "";
+
+            // Line Items
+            public List<InvoiceItem> LineItems { get; set; } = new();
+
+            // Computed Properties
+            public bool IsOverdue => PaymentStatus != "Paid" && PaymentStatus != "Void" && DueDate < DateTime.Now;
+            public int DaysUntilDue => (DueDate - DateTime.Now).Days;
+            public string StatusBadgeClass => PaymentStatus?.ToLower() switch
+            {
+                "paid" => "status-paid",
+                "issued" => "status-issued",
+                "partial" => "status-partial",
+                "overdue" => "status-overdue",
+                "void" => "status-void",
+                _ => "status-draft"
+            };
+        }
+
+        public class InvoiceItem
+        {
+            // Primary Key
+            public int ItemId { get; set; }
+
+            // Foreign Key
+            public int InvoiceId { get; set; }
+
+            // Item Information
+            public int ItemOrder { get; set; } = 1;
+            public string Description { get; set; } = "";
+            public decimal Quantity { get; set; } = 1.00m;
+            public decimal UnitPrice { get; set; } = 0.00m;
+            public decimal Amount { get; set; } = 0.00m;
+
+            // Computed Property
+            public decimal CalculatedAmount => Quantity * UnitPrice;
+        }
     }
-
-    public class InvoiceItem
-    {
-        public int ItemId { get; set; }
-        public int InvoiceId { get; set; }
-        public int ItemOrder { get; set; }
-        public string Description { get; set; } = string.Empty;
-        public decimal Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public decimal Amount { get; set; }
-    }
-
-    public class InvoiceFilterRequest
-    {
-        public string? SearchTerm { get; set; }
-        public string? PaymentStatus { get; set; }
-        public DateTime? StartDate { get; set; }
-        public DateTime? EndDate { get; set; }
-        public string? SortBy { get; set; } = "invoice_date";
-        public string? SortOrder { get; set; } = "desc";
-        public int Page { get; set; } = 1;
-        public int PageSize { get; set; } = 10;
-        public int? MaxRecords { get; set; } = 200;
-    }
-
-    public class InvoiceListResponse
-    {
-        public List<InvoiceListItem> Invoices { get; set; } = new();
-        public int TotalCount { get; set; }
-        public int TotalPages { get; set; }
-        public int CurrentPage { get; set; }
-        public int PageSize { get; set; }
-        public bool HasMore { get; set; }
-        public FinancialSummary Summary { get; set; } = new();
-    }
-
-    public class InvoiceListItem
-    {
-        public int InvoiceId { get; set; }
-        public string InvoiceNumber { get; set; } = string.Empty;
-        public string CustomerName { get; set; } = string.Empty;
-        public string CustomerCompany { get; set; } = string.Empty;
-        public decimal TotalAmount { get; set; }
-        public DateTime InvoiceDate { get; set; }
-        public DateTime DueDate { get; set; }
-        public string PaymentStatus { get; set; } = string.Empty;
-        public bool IsOverdue { get; set; }
-    }
-
-    public class FinancialSummary
-    {
-        public decimal TotalRevenue { get; set; }
-        public decimal TotalPending { get; set; }
-        public decimal TotalOverdue { get; set; }
-        public int PendingInvoicesCount { get; set; }
-        public int OverdueInvoicesCount { get; set; }
-        public decimal RevenueChangePercent { get; set; }
-    }
-
-    public class CreateInvoiceRequest
-    {
-        public int CustomerId { get; set; }
-        public DateTime InvoiceDate { get; set; }
-        public DateTime DueDate { get; set; }
-        public string? PaymentTerms { get; set; }
-        public string? Notes { get; set; }
-        public decimal TaxRate { get; set; } = 12.00m;
-
-        // FIX: This is now NON-NULLABLE and defaults to 0
-        public decimal DiscountAmount { get; set; } = 0m;
-
-        public List<InvoiceItemRequest> Items { get; set; } = new()
-    {
-        new InvoiceItemRequest { Description = "", Quantity = 1, UnitPrice = 0 }
-    };
-    }
-    public class InvoiceItemRequest
-    {
-        public string Description { get; set; } = string.Empty;
-        public decimal Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-    }
-
-    public class UpdateInvoiceStatusRequest
-    {
-        public int InvoiceId { get; set; }
-        public string PaymentStatus { get; set; } = string.Empty;
-    }
-}

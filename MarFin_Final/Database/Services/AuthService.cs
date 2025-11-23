@@ -10,7 +10,6 @@ namespace MarFin_Final.Database.Services
 
     public class AuthService
     {
-
         private readonly string _connectionString;
         private User? _currentUser;
 
@@ -62,6 +61,9 @@ namespace MarFin_Final.Database.Services
                 var storedHash = reader["password_hash"].ToString() ?? "";
                 var salt = reader["salt"].ToString() ?? "";
 
+
+                reader.Close();
+
                 // Check if account is locked
                 if (user.LockedUntil.HasValue && user.LockedUntil > DateTime.Now)
                 {
@@ -96,6 +98,7 @@ namespace MarFin_Final.Database.Services
                     Message = "Login successful",
                     User = user
                 };
+
             }
             catch (Exception ex)
             {
