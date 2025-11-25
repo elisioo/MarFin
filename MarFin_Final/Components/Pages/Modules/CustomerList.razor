@@ -5,370 +5,394 @@
 @using MarFin_Final.Database.Services
 @using MarFin_Final.Models
 
-<div class="customers-container" @onclick="CloseDropdowns">
-    <div class="customers-header">
-        <div class="header-title">
-            <h1>@(showArchivedView ? "Archived Customers" : "Customers")</h1>
-            <span class="record-count">@filteredCustomers.Count records</span>
+<AuthorizeRoute RequiredPermission="@RolePermissions.Permissions.ViewCustomers">
+    <div class="customers-container" @onclick="CloseDropdowns">
+        <div class="customers-header">
+            <div class="header-title">
+                <h1>@(showArchivedView ? "Archived Customers" : "Customers")</h1>
+                <span class="record-count">@filteredCustomers.Count records</span>
+            </div>
         </div>
-    </div>
 
-    @if (!string.IsNullOrEmpty(errorMessage) && !showModal)
-    {
-        <div class="alert alert-danger">
-            @errorMessage
-            <button class="alert-close" @onclick="() => errorMessage = string.Empty">×</button>
-        </div>
-    }
-    @if (!string.IsNullOrEmpty(successMessage))
-    {
-        <div class="alert alert-success">
-            @successMessage
-            <button class="alert-close" @onclick="() => successMessage = string.Empty">×</button>
-        </div>
-    }
-
-    <div class="customers-toolbar">
-        @if (!showArchivedView)
+        @if (!string.IsNullOrEmpty(errorMessage) && !showModal)
         {
-            <button class="btn-primary" @onclick="OpenAddModal">
-                <span><i class="bi bi-plus-lg"></i></span> New Customer
-            </button>
+            <div class="alert alert-danger">
+                @errorMessage
+                <button class="alert-close" @onclick="() => errorMessage = string.Empty">×</button>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success">
+                @successMessage
+                <button class="alert-close" @onclick="() => successMessage = string.Empty">×</button>
+            </div>
+        }
+
+        <div class="customers-toolbar">
+            @if (!showArchivedView)
+            {
+                @* Only Admin and Marketing can add new customers *@
+                @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+                {
+                    <button class="btn-primary" @onclick="OpenAddModal">
+                        <span><i class="bi bi-plus-lg"></i></span> New Customer
+                    </button>
+                }
+                else
+                {
+                    <div></div>
+                }
+            }
+            else
+            {
+                <div></div>
+            }
+            <div class="toolbar-right">
+                @* Only Admin and Marketing can view archived customers *@
+                @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+                {
+                    <button class="@(showArchivedView ? "btn-primary" : "btn-secondary")" @onclick="ToggleArchivedView">
+                        <span><i class="bi bi-@(showArchivedView ? "arrow-left" : "archive")"></i></span>
+                        @(showArchivedView ? "Back to Active Customers" : "View Archived")
+                    </button>
+                }
+
+                @if (!showArchivedView && (!string.IsNullOrEmpty(statusFilter) || !string.IsNullOrEmpty(searchTerm)))
+                {
+                    <button class="btn-secondary" @onclick="ClearFilters" title="Clear all filters">
+                        <span><i class="bi bi-x-circle"></i></span>
+                        Clear Filters
+                    </button>
+                }
+
+                @if (!showArchivedView)
+                {
+                    <div class="filter-group">
+                        <button class="btn-secondary" @onclick="ToggleStatusFilter">
+                            <span><i class="bi bi-filter"></i></span>
+                            Filter by Status
+                            @if (!string.IsNullOrEmpty(statusFilter))
+                            {
+                                <span class="filter-badge">@statusFilter</span>
+                            }
+                        </button>
+                        @if (showStatusFilter)
+                        {
+                            <div class="dropdown-menu show">
+                                <button class="@(string.IsNullOrEmpty(statusFilter) ? "active" : "")"
+                                        @onclick="() => ApplyStatusFilter(string.Empty)">
+                                    All Statuses
+                                </button>
+                                <button class="@(statusFilter == "Lead" ? "active" : "")"
+                                        @onclick='() => ApplyStatusFilter("Lead")'>
+                                    <i class="bi bi-circle-fill status-dot-lead"></i> Lead
+                                </button>
+                                <button class="@(statusFilter == "Active" ? "active" : "")"
+                                        @onclick='() => ApplyStatusFilter("Active")'>
+                                    <i class="bi bi-circle-fill status-dot-active"></i> Active
+                                </button>
+                                <button class="@(statusFilter == "Inactive" ? "active" : "")"
+                                        @onclick='() => ApplyStatusFilter("Inactive")'>
+                                    <i class="bi bi-circle-fill status-dot-inactive"></i> Inactive
+                                </button>
+                                <button class="@(statusFilter == "Dormant" ? "active" : "")"
+                                        @onclick='() => ApplyStatusFilter("Dormant")'>
+                                    <i class="bi bi-circle-fill status-dot-dormant"></i> Dormant
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="search-box">
+                    <span class="search-icon"><i class="bi bi-search"></i></span>
+                    <input type="text"
+                           placeholder="Search customers..."
+                           @bind="searchTerm"
+                           @bind:event="oninput"
+                           @onkeyup="SearchCustomers" />
+                    @if (!string.IsNullOrEmpty(searchTerm))
+                    {
+                        <button class="search-clear" @onclick="ClearSearch">×</button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading customers...</p>
+            </div>
+        }
+        else if (!filteredCustomers.Any())
+        {
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>@(string.IsNullOrEmpty(searchTerm) && string.IsNullOrEmpty(statusFilter) ? "No customers found" : $"No customers match your search criteria")</p>
+                @if (!string.IsNullOrEmpty(searchTerm) || !string.IsNullOrEmpty(statusFilter))
+                {
+                    <button class="btn-secondary" @onclick="ClearFilters">Clear Filters</button>
+                }
+            </div>
         }
         else
         {
-            <div></div>
-        }
-        <div class="toolbar-right">
-            <button class="@(showArchivedView ? "btn-primary" : "btn-secondary")" @onclick="ToggleArchivedView">
-                <span><i class="bi bi-@(showArchivedView ? "arrow-left" : "archive")"></i></span>
-                @(showArchivedView ? "Back to Active Customers" : "View Archived")
-            </button>
-
-            @if (!showArchivedView && (!string.IsNullOrEmpty(statusFilter) || !string.IsNullOrEmpty(searchTerm)))
+            @foreach (var group in GetGroupedCustomers())
             {
-                <button class="btn-secondary" @onclick="ClearFilters" title="Clear all filters">
-                    <span><i class="bi bi-x-circle"></i></span>
-                    Clear Filters
-                </button>
-            }
-
-            @if (!showArchivedView)
-            {
-                <div class="filter-group">
-                    <button class="btn-secondary" @onclick="ToggleStatusFilter">
-                        <span><i class="bi bi-filter"></i></span>
-                        Filter by Status
-                        @if (!string.IsNullOrEmpty(statusFilter))
-                        {
-                            <span class="filter-badge">@statusFilter</span>
-                        }
-                    </button>
-                    @if (showStatusFilter)
-                    {
-                        <div class="dropdown-menu show">
-                            <button class="@(string.IsNullOrEmpty(statusFilter) ? "active" : "")"
-                                    @onclick="() => ApplyStatusFilter(string.Empty)">
-                                All Statuses
-                            </button>
-                            <button class="@(statusFilter == "Lead" ? "active" : "")"
-                                    @onclick='() => ApplyStatusFilter("Lead")'>
-                                <i class="bi bi-circle-fill status-dot-lead"></i> Lead
-                            </button>
-                            <button class="@(statusFilter == "Active" ? "active" : "")"
-                                    @onclick='() => ApplyStatusFilter("Active")'>
-                                <i class="bi bi-circle-fill status-dot-active"></i> Active
-                            </button>
-                            <button class="@(statusFilter == "Inactive" ? "active" : "")"
-                                    @onclick='() => ApplyStatusFilter("Inactive")'>
-                                <i class="bi bi-circle-fill status-dot-inactive"></i> Inactive
-                            </button>
-                            <button class="@(statusFilter == "Dormant" ? "active" : "")"
-                                    @onclick='() => ApplyStatusFilter("Dormant")'>
-                                <i class="bi bi-circle-fill status-dot-dormant"></i> Dormant
-                            </button>
-                        </div>
-                    }
-                </div>
-            }
-
-            <div class="search-box">
-                <span class="search-icon"><i class="bi bi-search"></i></span>
-                <input type="text"
-                       placeholder="Search customers..."
-                       @bind="searchTerm"
-                       @bind:event="oninput"
-                       @onkeyup="SearchCustomers" />
-                @if (!string.IsNullOrEmpty(searchTerm))
-                {
-                    <button class="search-clear" @onclick="ClearSearch">×</button>
-                }
-            </div>
-        </div>
-    </div>
-
-    @if (isLoading)
-    {
-        <div class="loading-state">
-            <div class="spinner"></div>
-            <p>Loading customers...</p>
-        </div>
-    }
-    else if (!filteredCustomers.Any())
-    {
-        <div class="empty-state">
-            <i class="bi bi-inbox"></i>
-            <p>@(string.IsNullOrEmpty(searchTerm) && string.IsNullOrEmpty(statusFilter) ? "No customers found" : $"No customers match your search criteria")</p>
-            @if (!string.IsNullOrEmpty(searchTerm) || !string.IsNullOrEmpty(statusFilter))
-            {
-                <button class="btn-secondary" @onclick="ClearFilters">Clear Filters</button>
-            }
-        </div>
-    }
-    else
-    {
-        @foreach (var group in GetGroupedCustomers())
-        {
-            <div class="customer-card">
-                <div class="customer-card-header">
-                    <span class="customer-name">@group.Key</span>
-                    <span class="customer-count">@group.Value.Count customer(s)</span>
-                </div>
-
-                <div class="customer-table">
-                    <div class="table-header">
-                        <span>First Name</span>
-                        <span>Last Name</span>
-                        <span>Email</span>
-                        <span>Phone</span>
-                        <span>Status</span>
-                        <span>Actions</span>
+                <div class="customer-card">
+                    <div class="customer-card-header">
+                        <span class="customer-name">@group.Key</span>
+                        <span class="customer-count">@group.Value.Count customer(s)</span>
                     </div>
 
-                    @foreach (var customer in group.Value)
-                    {
-                        <div class="table-row">
-                            <span>@customer.FirstName</span>
-                            <span>@customer.LastName</span>
-                            <span>@customer.Email</span>
-                            <span>@(string.IsNullOrEmpty(customer.Phone) ? "N/A" : customer.Phone)</span>
-                            <span>
-                                <span class="status-badge status-@customer.CustomerStatus.ToLower()">
-                                    @customer.CustomerStatus
+                    <div class="customer-table">
+                        <div class="table-header">
+                            <span>First Name</span>
+                            <span>Last Name</span>
+                            <span>Email</span>
+                            <span>Phone</span>
+                            <span>Status</span>
+                            <span>Actions</span>
+                        </div>
+
+                        @foreach (var customer in group.Value)
+                        {
+                            <div class="table-row">
+                                <span>@customer.FirstName</span>
+                                <span>@customer.LastName</span>
+                                <span>@customer.Email</span>
+                                <span>@(string.IsNullOrEmpty(customer.Phone) ? "N/A" : customer.Phone)</span>
+                                <span>
+                                    <span class="status-badge status-@customer.CustomerStatus.ToLower()">
+                                        @customer.CustomerStatus
+                                    </span>
                                 </span>
-                            </span>
-                            <span class="action-buttons-cell">
-                                @if (showArchivedView)
-                                {
-                                    <button class="btn-icon btn-icon-success" @onclick="() => RestoreCustomer(customer)" title="Restore">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button class="btn-icon" @onclick="() => NavigateToDetails(customer.CustomerId)" title="View Details">
-                                        <i class="bi bi-eye"></i>
-                                    </button>
-                                    <button class="btn-icon" @onclick="() => OpenEditModal(customer)" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn-icon btn-icon-danger" @onclick="() => ConfirmArchive(customer)" title="Archive">
-                                        <i class="bi bi-archive"></i>
-                                    </button>
-                                }
-                            </span>
-                        </div>
-                    }
+                                <span class="action-buttons-cell">
+                                    @if (showArchivedView)
+                                    {
+                                        @* Only Admin and Marketing can restore *@
+                                        @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+                                        {
+                                            <button class="btn-icon btn-icon-success" @onclick="() => RestoreCustomer(customer)" title="Restore">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        @* Everyone can view *@
+                                        <button class="btn-icon" @onclick="() => NavigateToDetails(customer.CustomerId)" title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+
+                                        @* Only Admin and Marketing can edit *@
+                                        @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+                                        {
+                                            <button class="btn-icon" @onclick="() => OpenEditModal(customer)" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn-icon btn-icon-danger" @onclick="() => ConfirmArchive(customer)" title="Archive">
+                                                <i class="bi bi-archive"></i>
+                                            </button>
+                                        }
+                                    }
+                                </span>
+                            </div>
+                        }
+                    </div>
                 </div>
-            </div>
+            }
         }
-    }
-</div>
+    </div>
 
-@* Add/Edit Customer Modal *@
-@if (showModal)
-{
-    <div class="modal-overlay" @onclick="CloseModal">
-        <div class="modal-content" @onclick:stopPropagation>
-            <div class="modal-header">
-                <div class="modal-title">
-                    <span class="user-icon"><i class="bi bi-person"></i></span>
-                    <h2>@(isEditMode ? "Edit Customer" : "New Customer")</h2>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-cancel" @onclick="CloseModal">Cancel</button>
-                    <button class="btn-save" @onclick="SaveCustomer" disabled="@isSaving">
-                        @if (isSaving)
-                        {
-                            <span class="spinner-small"></span>
-                        }
-                        Save
-                    </button>
-                </div>
-            </div>
-
-            <div class="modal-body">
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="alert alert-danger">@errorMessage</div>
-                }
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>First Name <span class="required">*</span></label>
-                        <input type="text"
-                               class="form-control @(validationErrors.ContainsKey("FirstName") ? "is-invalid" : "")"
-                               @bind="editingCustomer.FirstName"
-                               placeholder="Enter first name" />
-                        @if (validationErrors.ContainsKey("FirstName"))
-                        {
-                            <span class="validation-error">@validationErrors["FirstName"]</span>
-                        }
+    @* Add/Edit Customer Modal *@
+    @if (showModal)
+    {
+        <div class="modal-overlay" @onclick="CloseModal">
+            <div class="modal-content" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span class="user-icon"><i class="bi bi-person"></i></span>
+                        <h2>@(isEditMode ? "Edit Customer" : "New Customer")</h2>
                     </div>
-                    <div class="form-group">
-                        <label>Last Name <span class="required">*</span></label>
-                        <input type="text"
-                               class="form-control @(validationErrors.ContainsKey("LastName") ? "is-invalid" : "")"
-                               @bind="editingCustomer.LastName"
-                               placeholder="Enter last name" />
-                        @if (validationErrors.ContainsKey("LastName"))
-                        {
-                            <span class="validation-error">@validationErrors["LastName"]</span>
-                        }
+                    <div class="modal-actions">
+                        <button class="btn-cancel" @onclick="CloseModal">Cancel</button>
+                        <button class="btn-save" @onclick="SaveCustomer" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-small"></span>
+                            }
+                            Save
+                        </button>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Email Address <span class="required">*</span></label>
-                    <input type="email"
-                           class="form-control @(validationErrors.ContainsKey("Email") ? "is-invalid" : "")"
-                           @bind="editingCustomer.Email"
-                           placeholder="email@example.com" />
-                    @if (validationErrors.ContainsKey("Email"))
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(errorMessage))
                     {
-                        <span class="validation-error">@validationErrors["Email"]</span>
+                        <div class="alert alert-danger">@errorMessage</div>
                     }
-                </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Phone</label>
-                        <input type="text"
-                               class="form-control"
-                               @bind="editingCustomer.Phone"
-                               placeholder="+63 912 345 6789" />
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name <span class="required">*</span></label>
+                            <input type="text"
+                                   class="form-control @(validationErrors.ContainsKey("FirstName") ? "is-invalid" : "")"
+                                   @bind="editingCustomer.FirstName"
+                                   placeholder="Enter first name" />
+                            @if (validationErrors.ContainsKey("FirstName"))
+                            {
+                                <span class="validation-error">@validationErrors["FirstName"]</span>
+                            }
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name <span class="required">*</span></label>
+                            <input type="text"
+                                   class="form-control @(validationErrors.ContainsKey("LastName") ? "is-invalid" : "")"
+                                   @bind="editingCustomer.LastName"
+                                   placeholder="Enter last name" />
+                            @if (validationErrors.ContainsKey("LastName"))
+                            {
+                                <span class="validation-error">@validationErrors["LastName"]</span>
+                            }
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Company Name</label>
-                        <input type="text"
-                               class="form-control"
-                               @bind="editingCustomer.CompanyName"
-                               placeholder="Company name (optional)" />
-                    </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Address</label>
-                    <input type="text"
-                           class="form-control"
-                           @bind="editingCustomer.Address"
-                           placeholder="Street address" />
-                </div>
-
-                <div class="form-row">
                     <div class="form-group">
-                        <label>City</label>
-                        <input type="text"
-                               class="form-control"
-                               @bind="editingCustomer.City"
-                               placeholder="City" />
-                    </div>
-                    <div class="form-group">
-                        <label>State/Province</label>
-                        <input type="text"
-                               class="form-control"
-                               @bind="editingCustomer.StateProvince"
-                               placeholder="State or Province" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Postal Code</label>
-                        <input type="text"
-                               class="form-control"
-                               @bind="editingCustomer.PostalCode"
-                               placeholder="Postal/ZIP code" />
-                    </div>
-                    <div class="form-group">
-                        <label>Country</label>
-                        <input type="text"
-                               class="form-control"
-                               @bind="editingCustomer.Country"
-                               placeholder="Country" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Customer Status <span class="required">*</span></label>
-                        <select class="form-control" @bind="editingCustomer.CustomerStatus">
-                            <option value="Lead">Lead</option>
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                            <option value="Dormant">Dormant</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Source</label>
-                        <input type="text"
-                               class="form-control"
-                               @bind="editingCustomer.Source"
-                               placeholder="e.g., Website, Referral, Cold Call" />
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Notes</label>
-                    <textarea class="form-control"
-                              rows="3"
-                              @bind="editingCustomer.Notes"
-                              placeholder="Additional notes about this customer..."></textarea>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-@* Archive Confirmation Modal *@
-@if (showArchiveModal && customerToArchive != null)
-{
-    <div class="modal-overlay" @onclick="CloseArchiveModal">
-        <div class="modal-content confirm-modal" @onclick:stopPropagation>
-            <div class="modal-header">
-                <div class="modal-title">
-                    <span class="user-icon warning"><i class="bi bi-exclamation-triangle"></i></span>
-                    <h2>Archive Customer</h2>
-                </div>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to archive <strong>@customerToArchive.FullName</strong>?</p>
-                <p class="text-muted">This customer will be moved to the archived list but can be restored later.</p>
-
-                <div class="modal-footer">
-                    <button class="btn-cancel" @onclick="CloseArchiveModal">Cancel</button>
-                    <button class="btn-danger" @onclick="ArchiveCustomer" disabled="@isSaving">
-                        @if (isSaving)
+                        <label>Email Address <span class="required">*</span></label>
+                        <input type="email"
+                               class="form-control @(validationErrors.ContainsKey("Email") ? "is-invalid" : "")"
+                               @bind="editingCustomer.Email"
+                               placeholder="email@example.com" />
+                        @if (validationErrors.ContainsKey("Email"))
                         {
-                            <span class="spinner-small"></span>
+                            <span class="validation-error">@validationErrors["Email"]</span>
                         }
-                        Archive Customer
-                    </button>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="editingCustomer.Phone"
+                                   placeholder="+63 912 345 6789" />
+                        </div>
+                        <div class="form-group">
+                            <label>Company Name</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="editingCustomer.CompanyName"
+                                   placeholder="Company name (optional)" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text"
+                               class="form-control"
+                               @bind="editingCustomer.Address"
+                               placeholder="Street address" />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>City</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="editingCustomer.City"
+                                   placeholder="City" />
+                        </div>
+                        <div class="form-group">
+                            <label>State/Province</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="editingCustomer.StateProvince"
+                                   placeholder="State or Province" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Postal Code</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="editingCustomer.PostalCode"
+                                   placeholder="Postal/ZIP code" />
+                        </div>
+                        <div class="form-group">
+                            <label>Country</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="editingCustomer.Country"
+                                   placeholder="Country" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Customer Status <span class="required">*</span></label>
+                            <select class="form-control" @bind="editingCustomer.CustomerStatus">
+                                <option value="Lead">Lead</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                                <option value="Dormant">Dormant</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Source</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="editingCustomer.Source"
+                                   placeholder="e.g., Website, Referral, Cold Call" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea class="form-control"
+                                  rows="3"
+                                  @bind="editingCustomer.Notes"
+                                  placeholder="Additional notes about this customer..."></textarea>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-}
+    }
+
+    @* Archive Confirmation Modal *@
+    @if (showArchiveModal && customerToArchive != null)
+    {
+        <div class="modal-overlay" @onclick="CloseArchiveModal">
+            <div class="modal-content confirm-modal" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span class="user-icon warning"><i class="bi bi-exclamation-triangle"></i></span>
+                        <h2>Archive Customer</h2>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to archive <strong>@customerToArchive.FullName</strong>?</p>
+                    <p class="text-muted">This customer will be moved to the archived list but can be restored later.</p>
+
+                    <div class="modal-footer">
+                        <button class="btn-cancel" @onclick="CloseArchiveModal">Cancel</button>
+                        <button class="btn-danger" @onclick="ArchiveCustomer" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-small"></span>
+                            }
+                            Archive Customer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</AuthorizeRoute>
 
 @code {
     private readonly CustomerService customerService = new();
@@ -387,7 +411,7 @@
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
     private Dictionary<string, string> validationErrors = new();
-    private int currentUserId = 1;
+    private int currentUserId => AuthService.CurrentUserId ?? 1;
     private bool showArchivedView = false;
 
     protected override async Task OnInitializedAsync()
@@ -502,6 +526,13 @@
 
     private void OpenAddModal()
     {
+        // Only Admin and Marketing can add customers
+        if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
+        {
+            errorMessage = "You don't have permission to add customers";
+            return;
+        }
+
         isEditMode = false;
         editingCustomer = new Customer
         {
@@ -518,6 +549,13 @@
 
     private void OpenEditModal(Customer customer)
     {
+        // Only Admin and Marketing can edit customers
+        if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
+        {
+            errorMessage = "You don't have permission to edit customers";
+            return;
+        }
+
         if (customer == null) return;
 
         isEditMode = true;
@@ -598,6 +636,13 @@
 
     private async Task SaveCustomer()
     {
+        // Only Admin and Marketing can save customers
+        if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
+        {
+            errorMessage = "You don't have permission to modify customers";
+            return;
+        }
+
         if (!ValidateCustomer())
         {
             errorMessage = "Please correct the validation errors";
@@ -652,6 +697,13 @@
 
     private void ConfirmArchive(Customer customer)
     {
+        // Only Admin and Marketing can archive customers
+        if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
+        {
+            errorMessage = "You don't have permission to archive customers";
+            return;
+        }
+
         customerToArchive = customer;
         showArchiveModal = true;
     }
@@ -724,6 +776,13 @@
 
     private async Task RestoreCustomer(Customer customer)
     {
+        // Only Admin and Marketing can restore customers
+        if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
+        {
+            errorMessage = "You don't have permission to restore customers";
+            return;
+        }
+
         try
         {
             isSaving = true;

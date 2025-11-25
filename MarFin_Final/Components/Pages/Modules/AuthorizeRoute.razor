@@ -1,0 +1,89 @@
+@using MarFin_Final.Database.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+@if (isAuthorized)
+{
+    @ChildContent
+}
+else if (!AuthService.IsAuthenticated)
+{
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <p>Redirecting to login...</p>
+    </div>
+}
+else
+{
+    <div class="unauthorized-container">
+        <div class="unauthorized-content">
+            <i class="bi bi-shield-exclamation"></i>
+            <h2>Access Denied</h2>
+            <p>You don't have permission to access this page.</p>
+            <div class="role-info">
+                <p>Your role: <strong>@AuthService.CurrentUserRole</strong></p>
+                @if (!string.IsNullOrEmpty(RequiredPermission))
+                {
+                    <p class="permission-required">Required permission: <strong>@RequiredPermission</strong></p>
+                }
+            </div>
+            <button class="btn-back" @onclick="GoToDashboard">
+                <i class="bi bi-arrow-left"></i> Go to Dashboard
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string? RequiredPermission { get; set; }
+
+    [Parameter]
+    public string? RequiredRole { get; set; }
+
+    private bool isAuthorized = false;
+
+    protected override void OnInitialized()
+    {
+        CheckAuthorization();
+    }
+
+    protected override void OnParametersSet()
+    {
+        CheckAuthorization();
+    }
+
+    private void CheckAuthorization()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        // Check by permission
+        if (!string.IsNullOrEmpty(RequiredPermission))
+        {
+            isAuthorized = AuthService.HasPermission(RequiredPermission);
+        }
+        // Check by role
+        else if (!string.IsNullOrEmpty(RequiredRole))
+        {
+            isAuthorized = AuthService.CurrentUserRole == RequiredRole;
+        }
+        // If no specific requirement, just check if authenticated
+        else
+        {
+            isAuthorized = true;
+        }
+    }
+
+    private void GoToDashboard()
+    {
+        Navigation.NavigateTo("/dashboard");
+    }
+}
+

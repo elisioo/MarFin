@@ -1,14 +1,11 @@
-html, body {
-    height: auto;
-    overflow-y: auto;
-}
-
-
 .login-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
     min-height: 100vh;
     background: linear-gradient(135deg, #0A1828 0%, #1a2f45 100%);
+}
+html{
+    overflow-y:auto;
 }
 
 .login-card {
@@ -18,10 +15,11 @@ html, body {
     padding: 3rem;
     background-color: white;
     max-width: 550px;
-    margin-top:12px;
-    border-radius:12px;
     margin: auto;
+    border-radius:12px;
     width: 100%;
+/*    max-height: 100vh;
+    overflow-y: auto;*/
 }
 
 .login-header {

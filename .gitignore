@@ -31,9 +31,7 @@ Release/
 *.appxbundle
 *.msix
 *.msixbundle
-*.mdf
-*.ldf
-*.ndf
+
 
 # =============================
 # NuGet packages
@@ -70,3 +68,13 @@ desktop.ini
 *.db
 *.sdf
 *.pdb
+
+# =============================
+# SQL Server Database Files
+# =============================
+*.mdf
+*.ldf
+*.ndf
+DB_CRM_MarFin.mdf
+DB_CRM_MarFin.ldf
+

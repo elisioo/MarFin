@@ -7,7 +7,6 @@ using RoleModel = MarFin_Final.Models.Role;
 
 namespace MarFin_Final.Database.Services
 {
-
     public class AuthService
     {
         private readonly string _connectionString;
@@ -22,11 +21,36 @@ namespace MarFin_Final.Database.Services
         // Event to notify components when auth state changes
         public event Action? OnAuthStateChanged;
 
+        // Authentication properties
         public bool IsAuthenticated => _currentUser != null;
         public User? CurrentUser => _currentUser;
         public string CurrentUserName => _currentUser?.FullName ?? "User";
         public string CurrentUserFirstName => _currentUser?.FirstName ?? "User";
         public string CurrentUserRole => _currentUser?.Role?.RoleName ?? "User";
+        public int? CurrentUserId => _currentUser?.UserId;
+
+        // Role checking methods
+        public bool IsAdmin() => CurrentUserRole == "Admin";
+        public bool IsFinance() => CurrentUserRole == "Finance";
+        public bool IsMarketing() => CurrentUserRole == "Marketing";
+        public bool IsSalesRep() => CurrentUserRole == "Sales Representative";
+
+        // Permission checking methods
+        public bool HasPermission(string permission)
+        {
+            if (!IsAuthenticated || string.IsNullOrEmpty(CurrentUserRole))
+                return false;
+
+            return RolePermissions.HasPermission(CurrentUserRole, permission);
+        }
+
+        public bool CanAccessPage(string page)
+        {
+            if (!IsAuthenticated || string.IsNullOrEmpty(CurrentUserRole))
+                return false;
+
+            return RolePermissions.CanAccessPage(CurrentUserRole, page);
+        }
 
         // Login method
         public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -60,7 +84,6 @@ namespace MarFin_Final.Database.Services
                 var user = MapUserFromReader(reader);
                 var storedHash = reader["password_hash"].ToString() ?? "";
                 var salt = reader["salt"].ToString() ?? "";
-
 
                 reader.Close();
 
@@ -98,7 +121,6 @@ namespace MarFin_Final.Database.Services
                     Message = "Login successful",
                     User = user
                 };
-
             }
             catch (Exception ex)
             {
@@ -283,7 +305,6 @@ namespace MarFin_Final.Database.Services
             command.Parameters.AddWithValue("@Action", action);
             await command.ExecuteNonQueryAsync();
         }
-
 
         private User MapUserFromReader(SqlDataReader reader)
         {
