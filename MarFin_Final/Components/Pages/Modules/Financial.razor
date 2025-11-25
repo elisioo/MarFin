@@ -185,27 +185,41 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Select Customer <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" placeholder="Search customer..."
-                                   @bind="customerSearchTerm"
-                                   @bind:event="oninput" />
-                            @if (showCustomerDropdown && searchResults.Any())
-                            {
-                                <div class="dropdown-menu show">
-                                    @foreach (var customer in searchResults)
+    
+                           <div class="position-relative">
+                                    <input type="text" 
+                                           class="form-control" 
+                                           placeholder="Search customer..."
+                                           @bind="customerSearchTerm"                              
+                                           @oninput="HandleCustomerInput" 
+                                           autocomplete="off" />
+
+                                    @if (showCustomerDropdown && searchResults.Any())
                                     {
-                                        <button type="button" @onclick="() => SelectCustomer(customer)">
-                                            <strong>@(string.IsNullOrEmpty(customer.CompanyName) ? customer.FullName : customer.CompanyName)</strong><br />
-                                            <small>@customer.Email</small>
-                                        </button>
-                                    }  
-                                </div>
-                            }
-                            @if (selectedCustomer != null)
-                            {
-                                <div class="selected-customer">
-                                    <i class="bi bi-check-circle-fill"></i> @customerSearchTerm
-                                </div>
-                            }
+                                        <div class="dropdown-menu show w-100" style="max-height: 300px; overflow-y: auto;">
+                                            @foreach (var customer in searchResults)
+                                            {
+                                                var capturedCustomer = customer;
+                                                <button type="button" 
+                                                        class="dropdown-item" 
+                                                        @onclick="() => SelectCustomer(capturedCustomer)">
+                                                    <strong>@(string.IsNullOrEmpty(customer.CompanyName) ? customer.FullName : customer.CompanyName)</strong>
+                                                    <br /><small class="text-muted">@customer.Email</small>
+                                                </button>
+                                            }
+                                        </div>
+                                    }
+
+                                    @if (selectedCustomer != null && !showCustomerDropdown)
+                                    {
+                                        <div class="selected-customer mt-2 p-2 border rounded bg-light">
+                                            <i class="bi bi-check-circle-fill text-success"></i>
+                                            <strong>@(string.IsNullOrEmpty(selectedCustomer.CompanyName) ? selectedCustomer.FullName : selectedCustomer.CompanyName)</strong>
+                                            <small class="text-muted d-block">@selectedCustomer.Email</small>
+                                            <button type="button" class="btn-close btn-sm float-end" @onclick="ClearCustomerSelection"></button>
+                                        </div>
+                                    }
+                           </div>
                         </div>
                         <div class="form-group">
                             <label>Invoice Number</label>
@@ -239,6 +253,7 @@
                             <input type="number" class="form-control"
                                    @bind="newInvoice.TaxRate"
                                    @bind:event="oninput"
+                                   @onchange="CalculateTotals"
                                    step="0.01" />
                         </div>
                     </div>
@@ -249,6 +264,7 @@
                             <input type="number" class="form-control"
                                    @bind="newInvoice.DiscountAmount"
                                    @bind:event="oninput"
+                                   @onchange="CalculateTotals"
                                    step="0.01" placeholder="0.00" />
                         </div>
                     </div>
@@ -282,10 +298,12 @@
                                 <input type="number" class="form-control"
                                        @bind="item.Quantity"
                                        @bind:event="oninput"
+                                       @onchange="CalculateTotals"
                                        step="0.01" min="0.01" />
                                 <input type="number" class="form-control"
                                        @bind="item.UnitPrice"
                                        @bind:event="oninput"
+                                       @onchange="CalculateTotals"
                                        step="0.01" min="0" />
                                 <span class="item-amount">Php @((item.Quantity * item.UnitPrice).ToString("N2"))</span>
                                 <button class="btn-remove" @onclick="() => RemoveLineItem(item)"
@@ -327,6 +345,9 @@
                     <button class="btn-icon" title="Edit" @onclick="() => EditInvoice(selectedInvoice)">
                         <i class="bi bi-pencil"></i>
                     </button>
+                    <button class="btn-icon" title="Archive" @onclick="() => DeleteInvoice(selectedInvoice.InvoiceId)">
+                        <i class="bi bi-trash"></i>
+                    </button>
                 </div>
             </div>
 
@@ -355,8 +376,8 @@
                         </div>
                         <div class="invoice-details">
                             <h4>Invoice Details:</h4>
-                            <div class="detail-row"><span>Invoice Date:</span> <span>@selectedInvoice.InvoiceDate:ToString("MM/dd/yyyy")</span></div>
-                            <div class="detail-row"><span>Due Date:</span> <span>@selectedInvoice.DueDate:ToString("MM/dd/yyyy")</span></div>
+                            <div class="detail-row"><span>Invoice Date:</span> <span>@selectedInvoice.InvoiceDate.ToString("MM/dd/yyyy")</span></div>
+                            <div class="detail-row"><span>Due Date:</span> <span>@selectedInvoice.DueDate.ToString("MM/dd/yyyy")</span></div>
                             <div class="detail-row"><span>Payment Terms:</span> <span>@selectedInvoice.PaymentTerms</span></div>
                             <div class="detail-row">
                                 <span>Status:</span>
@@ -506,6 +527,8 @@
                 InvoiceDate = DateTime.Now,
                 DueDate = DateTime.Now.AddDays(30),
                 PaymentTerms = "Net 30",
+                CreatedDate = DateTime.Now,    
+                ModifiedDate = DateTime.Now,
                 TaxRate = 12.00m,
                 PaymentStatus = "Draft",
                 LineItems = new List<InvoiceItem> { new() { Description = "", Quantity = 1, UnitPrice = 0, ItemOrder = 1 } }
@@ -524,7 +547,7 @@
         showCustomerDropdown = false;
     }
 
-    private async Task SearchCustomers()
+    private async Task SearchCustomersAsync()
     {
         if (string.IsNullOrWhiteSpace(customerSearchTerm))
         {
@@ -533,18 +556,79 @@
             return;
         }
 
-        searchResults = await customerService.SearchCustomersAsync(customerSearchTerm, 10);
-        showCustomerDropdown = searchResults.Any();
+        if (customerSearchTerm.Length < 2)
+        {
+            showCustomerDropdown = false;
+            return;
+        }
+
+        try
+        {
+            searchResults = await customerService.SearchCustomersAsync(customerSearchTerm, maxResults: 20);
+            showCustomerDropdown = searchResults.Any();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error searching customers: {ex.Message}";
+            showCustomerDropdown = false;
+        }
+    }
+    private Timer? _debounceTimer;
+
+    private async Task HandleCustomerInput(ChangeEventArgs e)
+    {
+        customerSearchTerm = e.Value?.ToString() ?? "";
+
+        // Clear previous timer
+        _debounceTimer?.Dispose();
+
+        if (string.IsNullOrWhiteSpace(customerSearchTerm) || customerSearchTerm.Length < 2)
+        {
+            showCustomerDropdown = false;
+            searchResults.Clear();
+            return;
+        }
+
+        // Debounce: wait 300ms after user stops typing
+        _debounceTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                try
+                {
+                    searchResults = await customerService.SearchCustomersAsync(customerSearchTerm, maxResults: 20);
+                    showCustomerDropdown = searchResults.Any();
+                    StateHasChanged();
+                }
+                catch (Exception ex)
+                {
+                    errorMessage = "Error searching customers: " + ex.Message;
+                    showCustomerDropdown = false;
+                }
+            });
+        }, null, 300, Timeout.Infinite);
     }
 
     private void SelectCustomer(Customer customer)
     {
         selectedCustomer = customer;
         newInvoice.CustomerId = customer.CustomerId;
-        customerSearchTerm = string.IsNullOrEmpty(customer.CompanyName) ? customer.FullName : customer.CompanyName;
+        customerSearchTerm = string.IsNullOrEmpty(customer.CompanyName)
+            ? customer.FullName
+            : customer.CompanyName;
+
         showCustomerDropdown = false;
+        searchResults.Clear();
+        StateHasChanged(); // Important!
     }
 
+    private void ClearCustomerSelection()
+    {
+        selectedCustomer = null;
+        newInvoice.CustomerId = 0;
+        customerSearchTerm = "";
+        showCustomerDropdown = false;
+    }
     private void AddLineItem()
     {
         var nextOrder = newInvoice.LineItems.Any() ? newInvoice.LineItems.Max(i => i.ItemOrder) + 1 : 1;
@@ -583,9 +667,10 @@
             errorMessage = "Please select a customer";
             return;
         }
+
         if (newInvoice.LineItems.All(i => string.IsNullOrWhiteSpace(i.Description)))
         {
-            errorMessage = "Please add at least one valid line item";
+            errorMessage = "Please add at least one valid line item with description";
             return;
         }
 
@@ -595,10 +680,9 @@
         try
         {
             isSaving = true;
-
             bool success = newInvoice.InvoiceId > 0
                 ? invoiceService.UpdateInvoice(newInvoice)
-                : invoiceService.AddInvoice(newInvoice);
+                : invoiceService.AddInvoice(newInvoice);  // This now throws real exception
 
             if (success)
             {
@@ -606,14 +690,13 @@
                 ToggleInvoiceModal();
                 await LoadInvoices();
             }
-            else
-            {
-                errorMessage = "Failed to save invoice.";
-            }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error: {ex.Message}";
+            // This will now show the REAL SQL error!
+            errorMessage = ex.Message;
+            if (ex.InnerException != null)
+                errorMessage += " → " + ex.InnerException.Message;
         }
         finally
         {
@@ -636,13 +719,32 @@
         showInvoiceModal = true;
     }
 
+    private async Task DeleteInvoice(int invoiceId)
+    {
+        try
+        {
+            if (invoiceService.ArchiveInvoice(invoiceId))
+            {
+                successMessage = "Invoice archived successfully!";
+                CloseViewModal();
+                await LoadInvoices();
+            }
+            else
+            {
+                errorMessage = "Failed to archive invoice.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+
     private void CloseViewModal()
     {
         showViewModal = false;
         selectedInvoice = null;
     }
-
-    private void SearchInvoices() => ApplyFilters();
 
     private void ApplyDateFilter(string filter)
     {

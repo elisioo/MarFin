@@ -1,6 +1,14 @@
 .financial-container {
     max-width: 100%;
 }
+.dropdown-item {
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+}
+
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
 
 .financial-header {
     margin-bottom: 2rem;
@@ -134,21 +142,8 @@
         left: 0;
         top: 0;
         bottom: 0;
-        width: 4px;
-        border-radius: 12px 0 0 12px;
     }
 
-    .summary-card.revenue::before {
-        background-color: #3b82f6;
-    }
-
-    .summary-card.pending::before {
-        background-color: #f59e0b;
-    }
-
-    .summary-card.overdue::before {
-        background-color: #ef4444;
-    }
 
 .card-icon {
     font-size: 32px;

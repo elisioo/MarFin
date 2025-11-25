@@ -31,6 +31,9 @@ Release/
 *.appxbundle
 *.msix
 *.msixbundle
+*.mdf
+*.ldf
+*.ndf
 
 # =============================
 # NuGet packages

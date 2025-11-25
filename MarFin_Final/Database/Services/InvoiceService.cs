@@ -9,6 +9,7 @@ namespace MarFin_Final.Data
     public class InvoiceService
     {
         // CREATE - Add new invoice with line items
+        // CREATE - Add new invoice with line items
         public bool AddInvoice(Invoice invoice)
         {
             try
@@ -20,66 +21,83 @@ namespace MarFin_Final.Data
                     {
                         try
                         {
-                            // Insert invoice
-                            string invoiceQuery = @"INSERT INTO tbl_Invoices 
-                                (customer_id, created_by, invoice_number, invoice_date, due_date, 
-                                 payment_terms, subtotal, tax_rate, tax_amount, discount_amount, 
-                                 total_amount, payment_status, notes, pdf_path, is_archived, 
-                                 created_date, modified_date) 
-                                OUTPUT INSERTED.invoice_id
-                                VALUES 
-                                (@CustomerId, @CreatedBy, @InvoiceNumber, @InvoiceDate, @DueDate, 
-                                 @PaymentTerms, @Subtotal, @TaxRate, @TaxAmount, @DiscountAmount, 
-                                 @TotalAmount, @PaymentStatus, @Notes, @PdfPath, @IsArchived, 
-                                 @CreatedDate, @ModifiedDate)";
+                            // Validations
+                            if (invoice.CustomerId <= 0)
+                                throw new ArgumentException("CustomerId is required");
+                            if (invoice.LineItems == null || !invoice.LineItems.Any())
+                                throw new ArgumentException("Invoice must have at least one line item");
+                            if (invoice.LineItems.Any(i => string.IsNullOrWhiteSpace(i.Description)))
+                                throw new ArgumentException("All line items must have a description");
+
+                            var now = DateTime.Now;
+                            invoice.CreatedDate = now;
+                            invoice.ModifiedDate = now;
+
+                            for (int i = 0; i < invoice.LineItems.Count; i++)
+                                invoice.LineItems[i].ItemOrder = i + 1;
+
+                            // Use SCOPE_IDENTITY() instead of OUTPUT
+                            string invoiceQuery = @"
+                        INSERT INTO tbl_Invoices (
+                            customer_id, created_by, invoice_number, invoice_date, due_date,
+                            payment_terms, subtotal, tax_rate, tax_amount, discount_amount,
+                            total_amount, payment_status, notes, pdf_path, is_archived,
+                            created_date, modified_date
+                        ) VALUES (
+                            @CustomerId, @CreatedBy, @InvoiceNumber, @InvoiceDate, @DueDate,
+                            @PaymentTerms, @Subtotal, @TaxRate, @TaxAmount, @DiscountAmount,
+                            @TotalAmount, @PaymentStatus, @Notes, @PdfPath, @IsArchived,
+                            @CreatedDate, @ModifiedDate
+                        );
+                        SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
                             int invoiceId;
                             using (SqlCommand cmd = new SqlCommand(invoiceQuery, conn, transaction))
                             {
                                 AddInvoiceParameters(cmd, invoice);
-                                invoiceId = (int)cmd.ExecuteScalar();
+                                var result = cmd.ExecuteScalar();
+                                if (result == null || result == DBNull.Value)
+                                    throw new Exception("Failed to retrieve new invoice ID");
+                                invoiceId = (int)result;
                             }
 
                             // Insert line items
-                            if (invoice.LineItems != null && invoice.LineItems.Count > 0)
-                            {
-                                string itemQuery = @"INSERT INTO tbl_Invoice_Items 
-                                    (invoice_id, item_order, description, quantity, unit_price, amount)
-                                    VALUES (@InvoiceId, @ItemOrder, @Description, @Quantity, @UnitPrice, @Amount)";
+                            string itemQuery = @"
+                        INSERT INTO tbl_Invoice_Items 
+                        (invoice_id, item_order, description, quantity, unit_price, amount)
+                        VALUES (@InvoiceId, @ItemOrder, @Description, @Quantity, @UnitPrice, @Amount)";
 
-                                foreach (var item in invoice.LineItems)
+                            foreach (var item in invoice.LineItems)
+                            {
+                                using (SqlCommand cmd = new SqlCommand(itemQuery, conn, transaction))
                                 {
-                                    using (SqlCommand cmd = new SqlCommand(itemQuery, conn, transaction))
-                                    {
-                                        cmd.Parameters.AddWithValue("@InvoiceId", invoiceId);
-                                        cmd.Parameters.AddWithValue("@ItemOrder", item.ItemOrder);
-                                        cmd.Parameters.AddWithValue("@Description", item.Description ?? "");
-                                        cmd.Parameters.AddWithValue("@Quantity", item.Quantity);
-                                        cmd.Parameters.AddWithValue("@UnitPrice", item.UnitPrice);
-                                        cmd.Parameters.AddWithValue("@Amount", item.Amount);
-                                        cmd.ExecuteNonQuery();
-                                    }
+                                    cmd.Parameters.AddWithValue("@InvoiceId", invoiceId);
+                                    cmd.Parameters.AddWithValue("@ItemOrder", item.ItemOrder);
+                                    cmd.Parameters.AddWithValue("@Description", item.Description ?? (object)DBNull.Value);
+                                    cmd.Parameters.AddWithValue("@Quantity", item.Quantity);
+                                    cmd.Parameters.AddWithValue("@UnitPrice", item.UnitPrice);
+                                    cmd.Parameters.AddWithValue("@Amount", item.Quantity * item.UnitPrice);
+                                    cmd.ExecuteNonQuery();
                                 }
                             }
 
                             transaction.Commit();
+                            invoice.InvoiceId = invoiceId;
                             return true;
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             transaction.Rollback();
-                            throw;
+                            throw new Exception($"Transaction failed: {ex.Message}", ex);
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error adding invoice: " + ex.Message);
-                return false;
+                throw new Exception($"Failed to add invoice: {ex.Message}. Inner: {ex.InnerException?.Message}", ex);
             }
         }
-
         // READ - Get all active invoices
         public List<Invoice> GetAllInvoices()
         {
@@ -95,13 +113,12 @@ namespace MarFin_Final.Data
                                     i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
                                     i.notes, i.pdf_path, i.is_archived, i.archived_date,
                                     i.created_date, i.modified_date,
-                                    c.first_name + ' ' + c.last_name AS customer_name,
-                                    c.email AS customer_email,
+                                    c.first_name, c.last_name, c.email AS customer_email,
                                     c.company_name AS customer_company,
-                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                    ISNULL(u.first_name + ' ' + u.last_name, 'System') AS created_by_name
                                 FROM tbl_Invoices i
                                 INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
-                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                LEFT JOIN tbl_Users u ON i.created_by = u.user_id
                                 WHERE i.is_archived = 0
                                 ORDER BY i.invoice_date DESC, i.invoice_number DESC";
 
@@ -127,27 +144,21 @@ namespace MarFin_Final.Data
         public Invoice GetInvoiceById(int invoiceId)
         {
             Invoice invoice = null;
-
             try
             {
                 using (SqlConnection conn = DBConnection.GetConnection())
                 {
                     conn.Open();
 
-                    // Get invoice
-                    string invoiceQuery = @"SELECT i.invoice_id, i.customer_id, i.created_by, i.invoice_number,
-                                    i.invoice_date, i.due_date, i.payment_terms, i.subtotal, i.tax_rate,
-                                    i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
-                                    i.notes, i.pdf_path, i.is_archived, i.archived_date,
-                                    i.created_date, i.modified_date,
-                                    c.first_name + ' ' + c.last_name AS customer_name,
-                                    c.email AS customer_email,
-                                    c.company_name AS customer_company,
-                                    u.first_name + ' ' + u.last_name AS created_by_name
-                                FROM tbl_Invoices i
-                                INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
-                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
-                                WHERE i.invoice_id = @InvoiceId";
+                    // SELECT query
+                    string invoiceQuery = @"
+                SELECT i.*, 
+                       c.first_name, c.last_name, c.email AS customer_email, c.company_name AS customer_company,
+                       ISNULL(u.first_name + ' ' + u.last_name, 'System') AS created_by_name
+                FROM tbl_Invoices i
+                INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                LEFT JOIN tbl_Users u ON i.created_by = u.user_id
+                WHERE i.invoice_id = @InvoiceId";
 
                     using (SqlCommand cmd = new SqlCommand(invoiceQuery, conn))
                     {
@@ -157,18 +168,19 @@ namespace MarFin_Final.Data
                             if (reader.Read())
                             {
                                 invoice = MapInvoiceFromReader(reader);
+                                invoice.LineItems = new List<InvoiceItem>();
                             }
                         }
                     }
 
-                    // Get line items
+                    // Load line items
                     if (invoice != null)
                     {
-                        string itemsQuery = @"SELECT item_id, invoice_id, item_order, description, 
-                                             quantity, unit_price, amount
-                                             FROM tbl_Invoice_Items
-                                             WHERE invoice_id = @InvoiceId
-                                             ORDER BY item_order";
+                        string itemsQuery = @"
+                    SELECT item_id, invoice_id, item_order, description, quantity, unit_price, amount
+                    FROM tbl_Invoice_Items
+                    WHERE invoice_id = @InvoiceId
+                    ORDER BY item_order";
 
                         using (SqlCommand cmd = new SqlCommand(itemsQuery, conn))
                         {
@@ -188,10 +200,8 @@ namespace MarFin_Final.Data
             {
                 Console.WriteLine("Error getting invoice: " + ex.Message);
             }
-
             return invoice;
         }
-
         // UPDATE - Update existing invoice
         public bool UpdateInvoice(Invoice invoice)
         {
@@ -204,6 +214,16 @@ namespace MarFin_Final.Data
                     {
                         try
                         {
+                            // Validate required fields
+                            if (invoice.InvoiceId <= 0)
+                                throw new Exception("Invalid Invoice ID");
+
+                            if (invoice.CustomerId <= 0)
+                                throw new Exception("Invalid Customer ID");
+
+                            if (invoice.LineItems == null || invoice.LineItems.Count == 0)
+                                throw new Exception("Invoice must have at least one line item");
+
                             // Update invoice
                             string invoiceQuery = @"UPDATE tbl_Invoices 
                                 SET customer_id = @CustomerId,
@@ -226,7 +246,9 @@ namespace MarFin_Final.Data
                             {
                                 cmd.Parameters.AddWithValue("@InvoiceId", invoice.InvoiceId);
                                 AddInvoiceParameters(cmd, invoice);
-                                cmd.ExecuteNonQuery();
+                                int rowsAffected = cmd.ExecuteNonQuery();
+                                if (rowsAffected == 0)
+                                    throw new Exception("Invoice not found for update");
                             }
 
                             // Delete existing line items
@@ -253,7 +275,7 @@ namespace MarFin_Final.Data
                                         cmd.Parameters.AddWithValue("@Description", item.Description ?? "");
                                         cmd.Parameters.AddWithValue("@Quantity", item.Quantity);
                                         cmd.Parameters.AddWithValue("@UnitPrice", item.UnitPrice);
-                                        cmd.Parameters.AddWithValue("@Amount", item.Amount);
+                                        cmd.Parameters.AddWithValue("@Amount", item.Quantity * item.UnitPrice);
                                         cmd.ExecuteNonQuery();
                                     }
                                 }
@@ -262,9 +284,10 @@ namespace MarFin_Final.Data
                             transaction.Commit();
                             return true;
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             transaction.Rollback();
+                            Console.WriteLine("Transaction error: " + ex.Message);
                             throw;
                         }
                     }
@@ -321,13 +344,12 @@ namespace MarFin_Final.Data
                                     i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
                                     i.notes, i.pdf_path, i.is_archived, i.archived_date,
                                     i.created_date, i.modified_date,
-                                    c.first_name + ' ' + c.last_name AS customer_name,
-                                    c.email AS customer_email,
+                                    c.first_name, c.last_name, c.email AS customer_email,
                                     c.company_name AS customer_company,
-                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                    ISNULL(u.first_name + ' ' + u.last_name, 'System') AS created_by_name
                                 FROM tbl_Invoices i
                                 INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
-                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                LEFT JOIN tbl_Users u ON i.created_by = u.user_id
                                 WHERE i.is_archived = 1
                                 ORDER BY i.archived_date DESC";
 
@@ -364,13 +386,12 @@ namespace MarFin_Final.Data
                                     i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
                                     i.notes, i.pdf_path, i.is_archived, i.archived_date,
                                     i.created_date, i.modified_date,
-                                    c.first_name + ' ' + c.last_name AS customer_name,
-                                    c.email AS customer_email,
+                                    c.first_name, c.last_name, c.email AS customer_email,
                                     c.company_name AS customer_company,
-                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                    ISNULL(u.first_name + ' ' + u.last_name, 'System') AS created_by_name
                                 FROM tbl_Invoices i
                                 INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
-                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                LEFT JOIN tbl_Users u ON i.created_by = u.user_id
                                 WHERE i.is_archived = 0
                                 AND (i.invoice_number LIKE @SearchTerm 
                                      OR c.first_name LIKE @SearchTerm 
@@ -414,13 +435,12 @@ namespace MarFin_Final.Data
                                     i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
                                     i.notes, i.pdf_path, i.is_archived, i.archived_date,
                                     i.created_date, i.modified_date,
-                                    c.first_name + ' ' + c.last_name AS customer_name,
-                                    c.email AS customer_email,
+                                    c.first_name, c.last_name, c.email AS customer_email,
                                     c.company_name AS customer_company,
-                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                    ISNULL(u.first_name + ' ' + u.last_name, 'System') AS created_by_name
                                 FROM tbl_Invoices i
                                 INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
-                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                LEFT JOIN tbl_Users u ON i.created_by = u.user_id
                                 WHERE i.is_archived = 0 AND i.payment_status = @Status
                                 ORDER BY i.invoice_date DESC";
 
@@ -460,13 +480,12 @@ namespace MarFin_Final.Data
                                     i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
                                     i.notes, i.pdf_path, i.is_archived, i.archived_date,
                                     i.created_date, i.modified_date,
-                                    c.first_name + ' ' + c.last_name AS customer_name,
-                                    c.email AS customer_email,
+                                    c.first_name, c.last_name, c.email AS customer_email,
                                     c.company_name AS customer_company,
-                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                    ISNULL(u.first_name + ' ' + u.last_name, 'System') AS created_by_name
                                 FROM tbl_Invoices i
                                 INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
-                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                LEFT JOIN tbl_Users u ON i.created_by = u.user_id
                                 WHERE i.is_archived = 0 
                                 AND i.payment_status != 'Paid' 
                                 AND i.payment_status != 'Void'
@@ -503,7 +522,8 @@ namespace MarFin_Final.Data
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
-                        return (int)cmd.ExecuteScalar();
+                        object result = cmd.ExecuteScalar();
+                        return result != null ? (int)result : 0;
                     }
                 }
             }
@@ -532,7 +552,6 @@ namespace MarFin_Final.Data
                         if (result != null)
                         {
                             string lastNumber = result.ToString();
-                            // Extract number part (e.g., "INV-2025-006" -> 6)
                             var parts = lastNumber.Split('-');
                             if (parts.Length >= 3 && int.TryParse(parts[2], out int num))
                             {
@@ -555,7 +574,7 @@ namespace MarFin_Final.Data
         {
             cmd.Parameters.AddWithValue("@CustomerId", invoice.CustomerId);
             cmd.Parameters.AddWithValue("@CreatedBy", invoice.CreatedBy);
-            cmd.Parameters.AddWithValue("@InvoiceNumber", invoice.InvoiceNumber);
+            cmd.Parameters.AddWithValue("@InvoiceNumber", invoice.InvoiceNumber ?? "");
             cmd.Parameters.AddWithValue("@InvoiceDate", invoice.InvoiceDate);
             cmd.Parameters.AddWithValue("@DueDate", invoice.DueDate);
             cmd.Parameters.AddWithValue("@PaymentTerms", invoice.PaymentTerms ?? "Net 30");
@@ -568,10 +587,11 @@ namespace MarFin_Final.Data
             cmd.Parameters.AddWithValue("@Notes", invoice.Notes ?? "");
             cmd.Parameters.AddWithValue("@PdfPath", invoice.PdfPath ?? "");
             cmd.Parameters.AddWithValue("@IsArchived", invoice.IsArchived);
+
+            // CORRECT ORDER + BOTH SET TO NOW
             cmd.Parameters.AddWithValue("@CreatedDate", DateTime.Now);
             cmd.Parameters.AddWithValue("@ModifiedDate", DateTime.Now);
         }
-
         // Helper method to map data reader to Invoice object
         private Invoice MapInvoiceFromReader(SqlDataReader reader)
         {
@@ -596,10 +616,10 @@ namespace MarFin_Final.Data
                 ArchivedDate = reader["archived_date"] != DBNull.Value ? Convert.ToDateTime(reader["archived_date"]) : null,
                 CreatedDate = Convert.ToDateTime(reader["created_date"]),
                 ModifiedDate = Convert.ToDateTime(reader["modified_date"]),
-                CustomerName = reader["customer_name"]?.ToString() ?? "",
+                CustomerName = (reader["first_name"]?.ToString() ?? "") + " " + (reader["last_name"]?.ToString() ?? ""),
                 CustomerEmail = reader["customer_email"]?.ToString() ?? "",
                 CustomerCompany = reader["customer_company"]?.ToString() ?? "",
-                CreatedByName = reader["created_by_name"]?.ToString() ?? ""
+                CreatedByName = reader["created_by_name"]?.ToString() ?? "System"
             };
         }
 

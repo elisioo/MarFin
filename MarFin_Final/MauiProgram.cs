@@ -52,7 +52,9 @@ namespace MarFin_Final
             builder.Services.AddScoped<RoleService>();
             builder.Services.AddScoped<UserService>();
             builder.Services.AddScoped<CustomerService>();
-       
+            builder.Services.AddScoped<InvoiceService>();
+     
+
 
             return builder.Build();
         }
