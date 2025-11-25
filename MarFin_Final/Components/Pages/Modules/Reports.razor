@@ -1,11 +1,51 @@
 ﻿@page "/reports"
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+@using MarFin_Final.Database.Services
+
+@code {
+    protected override void OnInitialized()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        if (!AuthService.HasPermission(RolePermissions.Permissions.ViewReports))
+        {
+            Navigation.NavigateTo("/dashboard", true);
+            return;
+        }
+    }
+}
 
 <div class="reports-container">
     <div class="reports-header">
         <div class="header-title">
             <h1>Reports & Analytics</h1>
-            <span class="header-subtitle">Generate your report</span>
+            <span class="header-subtitle">
+                @if (AuthService.IsAdmin())
+                {
+                    @:Complete analytics and reports across all departments
+                }
+                else if (AuthService.IsFinance())
+                {
+                    @:Financial reports and transaction analytics
+                }
+                else if (AuthService.IsMarketing())
+                {
+                    @:Marketing campaign and customer analytics
+                }
+                else if (AuthService.IsSalesRep())
+                {
+                    @:Sales pipeline and opportunity reports
+                }
+            </span>
         </div>
+        <button class="btn-export">
+            <i class="bi bi-download"></i> Export All Reports
+        </button>
     </div>
 
     <!-- Date Range Filters -->
@@ -16,213 +56,355 @@
         <button class="filter-btn @(selectedFilter == "last3Months" ? "active" : "")" @onclick='() => SetFilter("last3Months")'>
             Last 3 Months
         </button>
+        <button class="filter-btn @(selectedFilter == "thisYear" ? "active" : "")" @onclick='() => SetFilter("thisYear")'>
+            This Year
+        </button>
         <button class="filter-btn @(selectedFilter == "custom" ? "active" : "")" @onclick='() => SetFilter("custom")'>
             Custom Range
         </button>
-        <div class="date-inputs">
-            <input type="date" class="date-input" value="2025-10-01" />
-            <span>-</span>
-            <input type="date" class="date-input" value="2025-10-08" />
-        </div>
+        @if (selectedFilter == "custom")
+        {
+            <div class="date-inputs">
+                <input type="date" class="date-input" @bind="startDate" />
+                <span>-</span>
+                <input type="date" class="date-input" @bind="endDate" />
+            </div>
+        }
     </div>
 
-    <!-- Performance Overview -->
+    <!-- Performance Overview - Role-Based -->
     <div class="section-title">Performance Overview</div>
 
     <div class="charts-grid">
-        <!-- Revenue by Month Chart -->
-        <div class="chart-card">
-            <div class="chart-header">
-                <h3>Revenue by Month</h3>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="chart-content">
-                <div class="bar-chart">
-                    @foreach (var data in revenueData)
-                    {
-                        <div class="bar-group">
-                            <div class="bar green" style="height: @(data.Value1 * 10)px"></div>
-                            <div class="bar dark" style="height: @(data.Value2 * 10)px"></div>
-                            <span class="bar-label">@data.Month</span>
-                        </div>
-                    }   
+        <!-- ADMIN & FINANCE: Revenue by Month Chart -->
+        @if (AuthService.IsAdmin() || AuthService.IsFinance())
+        {
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>Revenue by Month</h3>
+                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
                 </div>
-            </div>
-        </div>
-
-        <!-- Campaign Performance -->
-        <div class="chart-card">
-            <div class="chart-header">
-                <h3>Campaign Performance</h3>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="chart-content">
-                <div class="metric-list">
-                    <div class="metric-item">
-                        <span class="metric-label">Email Open Rate</span>
-                        <div class="metric-bar-container">
-                            <div class="metric-bar" style="width: 23.3%"></div>
-                        </div>
-                        <span class="metric-value">23.3%</span>
-                    </div>
-                    <div class="metric-item">
-                        <span class="metric-label">Click Through Rate</span>
-                        <div class="metric-bar-container">
-                            <div class="metric-bar" style="width: 23.3%"></div>
-                        </div>
-                        <span class="metric-value">23.3%</span>
-                    </div>
-                    <div class="metric-item">
-                        <span class="metric-label">Conversion Rate</span>
-                        <div class="metric-bar-container">
-                            <div class="metric-bar" style="width: 23.3%"></div>
-                        </div>
-                        <span class="metric-value">23.3%</span>
-                    </div>
-                    <div class="metric-item">
-                        <span class="metric-label">Average Deal Size</span>
-                        <div class="metric-bar-container">
-                            <div class="metric-bar" style="width: 53.3%"></div>
-                        </div>
-                        <span class="metric-value">53.3%</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Top Customers -->
-        <div class="chart-card">
-            <div class="chart-header">
-                <h3>Top Customers</h3>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="chart-content">
-                <div class="customer-list">
-                    @foreach (var customer in topCustomers)
-                    {
-                        <div class="customer-item">
-                            <span class="customer-rank">@customer.Rank.</span>
-                            <span class="customer-name">@customer.Name</span>
-                            <span class="customer-amount">@customer.Amount</span>
-                            <span class="customer-transactions">@customer.Transactions transactions</span>
-                            <i class="bi bi-arrow-right"></i>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Second Row -->
-    <div class="charts-grid-2">
-        <!-- Revenue by Source -->
-        <div class="chart-card">
-            <div class="chart-header">
-                <h3>Revenue by Source</h3>
-                <i class="bi bi-chevron-down"></i>
-            </div>
-            <div class="chart-content">
-                <div class="source-list">
-                    @foreach (var source in revenueSources)
-                    {
-                        <div class="source-item">
-                            <span class="source-label">@source.Name</span>
-                            <div class="source-bar-container">
-                                <div class="source-bar" style="width: @source.Percentage%"></div>
+                <div class="chart-content">
+                    <div class="bar-chart">
+                        @foreach (var data in revenueData)
+                        {
+                            <div class="bar-group">
+                                <div class="bar green" style="height: @(data.Value1 * 10)px" title="Income: @data.Value1"></div>
+                                <div class="bar dark" style="height: @(data.Value2 * 10)px" title="Expenses: @data.Value2"></div>
+                                <span class="bar-label">@GetMonthName(data.Month)</span>
                             </div>
-                            <span class="source-value">@source.Percentage%</span>
-                        </div>
-                    }
+                        }
+                    </div>
+                    <div class="chart-legend">
+                        <span><span class="legend-color green"></span> Income</span>
+                        <span><span class="legend-color dark"></span> Expenses</span>
+                    </div>
                 </div>
             </div>
-        </div>
+        }
 
-        <!-- Sales Pipeline Health -->
-        <div class="chart-card large">
-            <div class="chart-header">
-                <h3>Sales Pipeline Health</h3>
-            </div>
-            <div class="chart-content">
-                <div class="pipeline-summary">
-                    <div class="pipeline-stat">
-                        <span class="stat-label">Total Pipeline Value:</span>
-                        <span class="stat-value">Php 2,042,423.00</span>
-                    </div>
-                    <div class="pipeline-stat">
-                        <span class="stat-label">Weighted Pipeline:</span>
-                        <span class="stat-value">Php 2,042,423.00 (65% probability)</span>
+        <!-- ADMIN & MARKETING: Campaign Performance -->
+        @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+        {
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>Campaign Performance</h3>
+                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                </div>
+                <div class="chart-content">
+                    <div class="metric-list">
+                        <div class="metric-item">
+                            <span class="metric-label">Email Open Rate</span>
+                            <div class="metric-bar-container">
+                                <div class="metric-bar" style="width: 68.5%"></div>
+                            </div>
+                            <span class="metric-value">68.5%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Click Through Rate</span>
+                            <div class="metric-bar-container">
+                                <div class="metric-bar" style="width: 42.3%"></div>
+                            </div>
+                            <span class="metric-value">42.3%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Conversion Rate</span>
+                            <div class="metric-bar-container">
+                                <div class="metric-bar" style="width: 28.7%"></div>
+                            </div>
+                            <span class="metric-value">28.7%</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">ROI</span>
+                            <div class="metric-bar-container">
+                                <div class="metric-bar" style="width: 85.4%"></div>
+                            </div>
+                            <span class="metric-value">285.4%</span>
+                        </div>
                     </div>
                 </div>
-                <div class="pipeline-stages">
-                    <div class="stage-label">By Stage:</div>
-                    <div class="stage-item">
-                        <span class="stage-name">Prospecting: ₱800K (33%)</span>
-                        <div class="stage-bar-container">
-                            <div class="stage-bar" style="width: 33%"></div>
-                        </div>
-                    </div>
-                    <div class="stage-item">
-                        <span class="stage-name">Qualified: ₱600K (25%)</span>
-                        <div class="stage-bar-container">
-                            <div class="stage-bar" style="width: 25%"></div>
-                        </div>
-                    </div>
-                    <div class="stage-item">
-                        <span class="stage-name">Closed Won: ₱200K (8%)</span>
-                        <div class="stage-bar-container">
-                            <div class="stage-bar" style="width: 8%"></div>
-                        </div>
+            </div>
+        }
+
+        <!-- ADMIN, FINANCE, SALES: Top Customers -->
+        @if (AuthService.IsAdmin() || AuthService.IsFinance() || AuthService.IsSalesRep())
+        {
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>Top Customers</h3>
+                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                </div>
+                <div class="chart-content">
+                    <div class="customer-list">
+                        @foreach (var customer in topCustomers)
+                        {
+                            <div class="customer-item">
+                                <span class="customer-rank">@customer.Rank.</span>
+                                <span class="customer-name">@customer.Name</span>
+                                <span class="customer-amount">@customer.Amount</span>
+                                <span class="customer-transactions">@customer.Transactions txns</span>
+                                <button class="btn-arrow"><i class="bi bi-arrow-right"></i></button>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
-        </div>
+        }
+
+        <!-- ADMIN, SALES: Sales Pipeline Health -->
+        @if (AuthService.IsAdmin() || AuthService.IsSalesRep())
+        {
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>Sales Opportunities</h3>
+                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                </div>
+                <div class="chart-content">
+                    <div class="opportunity-stats">
+                        <div class="opp-stat">
+                            <span class="opp-label">Active</span>
+                            <span class="opp-value">45</span>
+                        </div>
+                        <div class="opp-stat">
+                            <span class="opp-label">Won</span>
+                            <span class="opp-value">28</span>
+                        </div>
+                        <div class="opp-stat">
+                            <span class="opp-label">Lost</span>
+                            <span class="opp-value">12</span>
+                        </div>
+                        <div class="opp-stat">
+                            <span class="opp-label">Win Rate</span>
+                            <span class="opp-value">62%</span>
+                        </div>
+                    </div>
+                    <div class="pipeline-value">
+                        <span class="pipeline-label">Total Pipeline Value:</span>
+                        <span class="pipeline-amount">₱2,042,423.00</span>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- ADMIN, MARKETING: Customer Segments -->
+        @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+        {
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>Customer Segments</h3>
+                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                </div>
+                <div class="chart-content">
+                    <div class="segment-list">
+                        @foreach (var segment in customerSegments)
+                        {
+                            <div class="segment-item">
+                                <div class="segment-info">
+                                    <span class="segment-name">@segment.Name</span>
+                                    <span class="segment-count">@segment.Count customers</span>
+                                </div>
+                                <div class="segment-bar-container">
+                                    <div class="segment-bar" style="width: @segment.Percentage%"></div>
+                                </div>
+                                <span class="segment-percentage">@segment.Percentage%</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- ADMIN, FINANCE: Revenue by Source -->
+        @if (AuthService.IsAdmin() || AuthService.IsFinance())
+        {
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3>Revenue by Source</h3>
+                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                </div>
+                <div class="chart-content">
+                    <div class="source-list">
+                        @foreach (var source in revenueSources)
+                        {
+                            <div class="source-item">
+                                <span class="source-label">@source.Name</span>
+                                <div class="source-bar-container">
+                                    <div class="source-bar" style="width: @source.Percentage%"></div>
+                                </div>
+                                <span class="source-value">@source.Percentage%</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 
-    <!-- Generate Custom Reports -->
-    <div class="section-title">Generate Custom Reports</div>
+    <!-- Generate Custom Reports Section -->
+    <div class="section-title" style="margin-top: 3rem;">Generate Custom Reports</div>
 
     <div class="custom-reports-grid">
-        <div class="report-card">
-            <div class="report-icon">
-                <i class="bi bi-person-badge"></i>
+        <!-- ADMIN, MARKETING: Customer Report -->
+        @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+        {
+            <div class="report-card">
+                <div class="report-icon customer">
+                    <i class="bi bi-person-badge"></i>
+                </div>
+                <div class="report-content">
+                    <h4>Customer Report</h4>
+                    <p>Complete customer data with interactions, segments, and revenue breakdown</p>
+                </div>
+                <button class="btn-generate" @onclick='() => GenerateReport("customer")'>
+                    <i class="bi bi-file-earmark-arrow-down"></i> Generate
+                </button>
             </div>
-            <div class="report-content">
-                <h4>Customer Report</h4>
-                <p>All customer data with interactions and revenue</p>
-            </div>
-            <button class="btn-generate">Generate</button>
-        </div>
+        }
 
-        <div class="report-card">
-            <div class="report-icon">
-                <i class="bi bi-bar-chart"></i>
+        <!-- ADMIN, FINANCE: Financial Report -->
+        @if (AuthService.IsAdmin() || AuthService.IsFinance())
+        {
+            <div class="report-card">
+                <div class="report-icon financial">
+                    <i class="bi bi-bar-chart"></i>
+                </div>
+                <div class="report-content">
+                    <h4>Financial Report</h4>
+                    <p>Revenue, expenses, invoices, and transaction details with P&L statement</p>
+                </div>
+                <button class="btn-generate" @onclick='() => GenerateReport("financial")'>
+                    <i class="bi bi-file-earmark-arrow-down"></i> Generate
+                </button>
             </div>
-            <div class="report-content">
-                <h4>Financial Report</h4>
-                <p>All customer data with interactions and revenue</p>
-            </div>
-            <button class="btn-generate">Generate</button>
-        </div>
+        }
 
-        <div class="report-card">
-            <div class="report-icon">
-                <i class="bi bi-megaphone"></i>
+        <!-- ADMIN, MARKETING: Campaign Report -->
+        @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+        {
+            <div class="report-card">
+                <div class="report-icon campaign">
+                    <i class="bi bi-megaphone"></i>
+                </div>
+                <div class="report-content">
+                    <h4>Campaign Report</h4>
+                    <p>Marketing campaign performance, ROI, engagement metrics, and conversions</p>
+                </div>
+                <button class="btn-generate" @onclick='() => GenerateReport("campaign")'>
+                    <i class="bi bi-file-earmark-arrow-down"></i> Generate
+                </button>
             </div>
-            <div class="report-content">
-                <h4>Campaign Report</h4>
-                <p>Marketing campaign performance ROI</p>
+        }
+
+        <!-- ADMIN, SALES: Sales Pipeline Report -->
+        @if (AuthService.IsAdmin() || AuthService.IsSalesRep())
+        {
+            <div class="report-card">
+                <div class="report-icon sales">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div class="report-content">
+                    <h4>Sales Pipeline Report</h4>
+                    <p>Opportunity tracking, win rates, pipeline health, and forecast analysis</p>
+                </div>
+                <button class="btn-generate" @onclick='() => GenerateReport("sales")'>
+                    <i class="bi bi-file-earmark-arrow-down"></i> Generate
+                </button>
             </div>
-            <button class="btn-generate">Generate</button>
-        </div>
+        }
+
+        <!-- ADMIN, FINANCE: Invoice Report -->
+        @if (AuthService.IsAdmin() || AuthService.IsFinance())
+        {
+            <div class="report-card">
+                <div class="report-icon invoice">
+                    <i class="bi bi-receipt"></i>
+                </div>
+                <div class="report-content">
+                    <h4>Invoice Report</h4>
+                    <p>All invoices with payment status, overdue tracking, and aging analysis</p>
+                </div>
+                <button class="btn-generate" @onclick='() => GenerateReport("invoice")'>
+                    <i class="bi bi-file-earmark-arrow-down"></i> Generate
+                </button>
+            </div>
+        }
+
+        <!-- ADMIN ONLY: User Activity Report -->
+        @if (AuthService.IsAdmin())
+        {
+            <div class="report-card">
+                <div class="report-icon activity">
+                    <i class="bi bi-activity"></i>
+                </div>
+                <div class="report-content">
+                    <h4>User Activity Report</h4>
+                    <p>System usage, user logins, actions performed, and audit trail</p>
+                </div>
+                <button class="btn-generate" @onclick='() => GenerateReport("activity")'>
+                    <i class="bi bi-file-earmark-arrow-down"></i> Generate
+                </button>
+            </div>
+        }
     </div>
 </div>
 
 @code {
     private string selectedFilter = "thisMonth";
+    private DateTime startDate = DateTime.Now.AddDays(-30);
+    private DateTime endDate = DateTime.Now;
 
     private void SetFilter(string filter)
     {
         selectedFilter = filter;
+
+        if (filter == "thisMonth")
+        {
+            startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            endDate = DateTime.Now;
+        }
+        else if (filter == "last3Months")
+        {
+            startDate = DateTime.Now.AddMonths(-3);
+            endDate = DateTime.Now;
+        }
+        else if (filter == "thisYear")
+        {
+            startDate = new DateTime(DateTime.Now.Year, 1, 1);
+            endDate = DateTime.Now;
+        }
+    }
+
+    private string GetMonthName(int month)
+    {
+        var months = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        return months[month % 12];
+    }
+
+    private void GenerateReport(string reportType)
+    {
+        // TODO: Implement actual report generation logic
+        // This would typically call a service to generate PDF/Excel reports
+        Console.WriteLine($"Generating {reportType} report from {startDate:d} to {endDate:d}");
     }
 
     private class RevenueData
@@ -246,33 +428,49 @@
         public double Percentage { get; set; }
     }
 
+    private class CustomerSegment
+    {
+        public string Name { get; set; } = "";
+        public int Count { get; set; }
+        public double Percentage { get; set; }
+    }
+
     private List<RevenueData> revenueData = new()
     {
-        new() { Month = 0, Value1 = 9, Value2 = 10 },
-        new() { Month = 1, Value1 = 3, Value2 = 10 },
-        new() { Month = 2, Value1 = 5, Value2 = 4 },
-        new() { Month = 3, Value1 = 4, Value2 = 5 },
-        new() { Month = 4, Value1 = 1, Value2 = 2 },
-        new() { Month = 5, Value1 = 2, Value2 = 1 },
-        new() { Month = 6, Value1 = 1, Value2 = 3 },
-        new() { Month = 7, Value1 = 3, Value2 = 10 },
-        new() { Month = 8, Value1 = 5, Value2 = 5 },
-        new() { Month = 9, Value1 = 2, Value2 = 3 }
+        new() { Month = 0, Value1 = 9, Value2 = 6 },
+        new() { Month = 1, Value1 = 7, Value2 = 5 },
+        new() { Month = 2, Value1 = 8, Value2 = 4 },
+        new() { Month = 3, Value1 = 10, Value2 = 5 },
+        new() { Month = 4, Value1 = 8, Value2 = 6 },
+        new() { Month = 5, Value1 = 9, Value2 = 5 },
+        new() { Month = 6, Value1 = 11, Value2 = 6 },
+        new() { Month = 7, Value1 = 10, Value2 = 7 },
+        new() { Month = 8, Value1 = 12, Value2 = 6 },
+        new() { Month = 9, Value1 = 11, Value2 = 5 }
     };
 
     private List<Customer> topCustomers = new()
     {
-        new() { Rank = 1, Name = "Design Co.", Amount = "Php 300,432.00", Transactions = 12 },
-        new() { Rank = 2, Name = "ABC Corp.", Amount = "Php 300,432.00", Transactions = 12 },
-        new() { Rank = 3, Name = "XYZ ltd.", Amount = "Php 300,432.00", Transactions = 14 },
-        new() { Rank = 4, Name = "Read Corp", Amount = "Php 300,432.00", Transactions = 20 },
-        new() { Rank = 5, Name = "Google", Amount = "Php 100,340.00", Transactions = 4 }
+        new() { Rank = 1, Name = "Design Co.", Amount = "₱450,432.00", Transactions = 24 },
+        new() { Rank = 2, Name = "ABC Corp.", Amount = "₱380,250.00", Transactions = 18 },
+        new() { Rank = 3, Name = "XYZ Ltd.", Amount = "₱325,180.00", Transactions = 16 },
+        new() { Rank = 4, Name = "Tech Solutions", Amount = "₱298,540.00", Transactions = 14 },
+        new() { Rank = 5, Name = "Marketing Plus", Amount = "₱265,890.00", Transactions = 12 }
     };
 
     private List<RevenueSource> revenueSources = new()
     {
-        new() { Name = "Direct Sales", Percentage = 23.3 },
-        new() { Name = "Marketing Camp", Percentage = 23.3 },
-        new() { Name = "Referrals", Percentage = 23.3 }
+        new() { Name = "Direct Sales", Percentage = 42.5 },
+        new() { Name = "Marketing Campaigns", Percentage = 31.8 },
+        new() { Name = "Referrals", Percentage = 18.7 },
+        new() { Name = "Partnerships", Percentage = 7.0 }
+    };
+
+    private List<CustomerSegment> customerSegments = new()
+    {
+        new() { Name = "Enterprise", Count = 125, Percentage = 35.2 },
+        new() { Name = "Small Business", Count = 248, Percentage = 28.5 },
+        new() { Name = "Startups", Count = 186, Percentage = 22.8 },
+        new() { Name = "Individual", Count = 95, Percentage = 13.5 }
     };
 }
