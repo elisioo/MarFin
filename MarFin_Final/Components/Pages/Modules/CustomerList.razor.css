@@ -733,3 +733,114 @@ select.form-control {
     }
 }
 
+
+/* === MODERN PAGINATION - SAME AS DOCUMENTS PAGE === */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 0;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.pagination-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 14px;
+    color: #666;
+}
+
+.pagination-info {
+    color: #444;
+    font-weight: 500;
+}
+
+.rows-per-page {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+    .rows-per-page span {
+        color: #444;
+        font-weight: 500;
+    }
+
+    .rows-per-page select {
+        padding: 6px 10px;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        background-color: white;
+        font-size: 14px;
+        cursor: pointer;
+        min-width: 70px;
+        text-align: center;
+    }
+
+        .rows-per-page select:focus {
+            outline: none;
+            border-color: #0A1828;
+            box-shadow: 0 0 0 3px rgba(10, 24, 40, 0.1);
+        }
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.page-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #e0e0e0;
+    background-color: white;
+    color: #666;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+    .page-btn:hover:not(:disabled):not(.active) {
+        background-color: #f8f9fa;
+        border-color: #ccc;
+    }
+
+    .page-btn.active {
+        background-color: #0A1828;
+        color: white;
+        border-color: #0A1828;
+    }
+
+    .page-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+.page-dots {
+    padding: 0 0.5rem;
+    color: #666;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .pagination {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .pagination-left {
+        justify-content: center;
+    }
+
+    .pagination-controls {
+        order: -1;
+    }
+}

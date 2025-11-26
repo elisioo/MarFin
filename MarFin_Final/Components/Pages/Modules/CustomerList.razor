@@ -4,13 +4,14 @@
 @using MarFin_Final.Data
 @using MarFin_Final.Database.Services
 @using MarFin_Final.Models
+@using static MarFin_Final.Data.CustomerService
 
 <AuthorizeRoute RequiredPermission="@RolePermissions.Permissions.ViewCustomers">
     <div class="customers-container" @onclick="CloseDropdowns">
         <div class="customers-header">
             <div class="header-title">
                 <h1>@(showArchivedView ? "Archived Customers" : "Customers")</h1>
-                <span class="record-count">@filteredCustomers.Count records</span>
+                <span class="record-count">@customersResult.TotalCount records</span>
             </div>
         </div>
 
@@ -70,8 +71,8 @@
                 {
                     <div class="filter-group">
                         <button class="btn-secondary" @onclick="ToggleStatusFilter">
-                            <span><i class="bi bi-filter"></i></span>
-                            Filter by Status
+                            <span><i class="bi bi-funnel"></i></span>
+                            Filter by
                             @if (!string.IsNullOrEmpty(statusFilter))
                             {
                                 <span class="filter-badge">@statusFilter</span>
@@ -86,19 +87,19 @@
                                 </button>
                                 <button class="@(statusFilter == "Lead" ? "active" : "")"
                                         @onclick='() => ApplyStatusFilter("Lead")'>
-                                    <i class="bi bi-circle-fill status-dot-lead"></i> Lead
+                                    Lead
                                 </button>
                                 <button class="@(statusFilter == "Active" ? "active" : "")"
                                         @onclick='() => ApplyStatusFilter("Active")'>
-                                    <i class="bi bi-circle-fill status-dot-active"></i> Active
+                                    Active
                                 </button>
                                 <button class="@(statusFilter == "Inactive" ? "active" : "")"
                                         @onclick='() => ApplyStatusFilter("Inactive")'>
-                                    <i class="bi bi-circle-fill status-dot-inactive"></i> Inactive
+                                    Inactive
                                 </button>
                                 <button class="@(statusFilter == "Dormant" ? "active" : "")"
                                         @onclick='() => ApplyStatusFilter("Dormant")'>
-                                    <i class="bi bi-circle-fill status-dot-dormant"></i> Dormant
+                                    Dormant
                                 </button>
                             </div>
                         }
@@ -206,6 +207,97 @@
                 </div>
             }
         }
+
+        @if (customersResult.TotalPages > 1)
+        {
+            <div class="pagination">
+                <div class="pagination-left">
+                    <span class="pagination-info">
+                        Showing @(DisplayStart)–@(DisplayEnd) of @customersResult.TotalCount
+                    </span>
+
+                    <div class="rows-per-page">
+                        <span>Rows per page:</span>
+                        <select @bind="pageSize" @bind:event="onchange">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pagination-controls">
+                    <button class="page-btn" @onclick="PrevPage" disabled="!customersResult.HasPrevious">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+
+                    @if (customersResult.TotalPages <= 7)
+                    {
+                        @for (int i = 1; i <= customersResult.TotalPages; i++)
+                        {
+                            var pageNum = i;
+                            <button class="page-btn @(currentPage == pageNum ? "active" : "")"
+                                    @onclick="() => GoToPage(pageNum)">
+                                @pageNum
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        @if (currentPage > 4)
+                        {
+                            <button class="page-btn" @onclick="() => GoToPage(1)">1</button>
+                            <span class="page-dots">...</span>
+                        }
+                        else
+                        {
+                            for (int i = 1; i <= 3; i++)
+                            {
+                                var pageNum = i;
+                                <button class="page-btn @(currentPage == pageNum ? "active" : "")"
+                                        @onclick="() => GoToPage(pageNum)">
+                                    @pageNum
+                                </button>
+                            }
+                        }
+
+                        @for (int i = Math.Max(2, currentPage - 1); i <= Math.Min(customersResult.TotalPages - 1, currentPage + 1); i++)
+                        {
+                            var pageNum = i;
+                            <button class="page-btn @(currentPage == pageNum ? "active" : "")"
+                                    @onclick="() => GoToPage(pageNum)">
+                                @pageNum
+                            </button>
+                        }
+
+                        @if (currentPage < customersResult.TotalPages - 3)
+                        {
+                            <span class="page-dots">...</span>
+                            <button class="page-btn" @onclick="() => GoToPage(customersResult.TotalPages)">
+                                @customersResult.TotalPages
+                            </button>
+                        }
+                        else
+                        {
+                            for (int i = Math.Max(customersResult.TotalPages - 2, 2); i <= customersResult.TotalPages; i++)
+                            {
+                                var pageNum = i;
+                                <button class="page-btn @(currentPage == pageNum ? "active" : "")"
+                                        @onclick="() => GoToPage(pageNum)">
+                                    @pageNum
+                                </button>
+                            }
+                        }
+                    }
+
+                    <button class="page-btn" @onclick="NextPage" disabled="!customersResult.HasNext">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        }
     </div>
 
     @* Add/Edit Customer Modal *@
@@ -279,14 +371,14 @@
                             <input type="text"
                                    class="form-control"
                                    @bind="editingCustomer.Phone"
-                                   placeholder="+63 912 345 6789" />
+                                   placeholder="Enter phone number" />
                         </div>
                         <div class="form-group">
                             <label>Company Name</label>
                             <input type="text"
                                    class="form-control"
                                    @bind="editingCustomer.CompanyName"
-                                   placeholder="Company name (optional)" />
+                                   placeholder="Enter company name" />
                         </div>
                     </div>
 
@@ -295,7 +387,7 @@
                         <input type="text"
                                class="form-control"
                                @bind="editingCustomer.Address"
-                               placeholder="Street address" />
+                               placeholder="Enter address" />
                     </div>
 
                     <div class="form-row">
@@ -304,14 +396,14 @@
                             <input type="text"
                                    class="form-control"
                                    @bind="editingCustomer.City"
-                                   placeholder="City" />
+                                   placeholder="Enter city" />
                         </div>
                         <div class="form-group">
                             <label>State/Province</label>
                             <input type="text"
                                    class="form-control"
                                    @bind="editingCustomer.StateProvince"
-                                   placeholder="State or Province" />
+                                   placeholder="Enter state or province" />
                         </div>
                     </div>
 
@@ -321,42 +413,43 @@
                             <input type="text"
                                    class="form-control"
                                    @bind="editingCustomer.PostalCode"
-                                   placeholder="Postal/ZIP code" />
+                                   placeholder="Enter postal code" />
                         </div>
                         <div class="form-group">
                             <label>Country</label>
-                            <input type="text"
-                                   class="form-control"
-                                   @bind="editingCustomer.Country"
-                                   placeholder="Country" />
+                            <select class="form-control" @bind="editingCustomer.Country">
+                                <option value="Philippines">Philippines</option>
+                                <option value="United States">United States</option>
+                                <option value="Canada">Canada</option>
+                                <option value="Other">Other</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Customer Status <span class="required">*</span></label>
-                            <select class="form-control" @bind="editingCustomer.CustomerStatus">
-                                <option value="Lead">Lead</option>
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                                <option value="Dormant">Dormant</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Source</label>
-                            <input type="text"
-                                   class="form-control"
-                                   @bind="editingCustomer.Source"
-                                   placeholder="e.g., Website, Referral, Cold Call" />
-                        </div>
+                    <div class="form-group">
+                        <label>Customer Status</label>
+                        <select class="form-control" @bind="editingCustomer.CustomerStatus">
+                            <option value="Lead">Lead</option>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Dormant">Dormant</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Source</label>
+                        <input type="text"
+                               class="form-control"
+                               @bind="editingCustomer.Source"
+                               placeholder="How did you find us?" />
                     </div>
 
                     <div class="form-group">
                         <label>Notes</label>
                         <textarea class="form-control"
-                                  rows="3"
                                   @bind="editingCustomer.Notes"
-                                  placeholder="Additional notes about this customer..."></textarea>
+                                  placeholder="Additional notes..."
+                                  rows="3"></textarea>
                     </div>
                 </div>
             </div>
@@ -395,8 +488,9 @@
 </AuthorizeRoute>
 
 @code {
+
     private readonly CustomerService customerService = new();
-    private List<Customer> allCustomers = new();
+    private PaginatedResult<Customer> customersResult = new PaginatedResult<Customer>();
     private List<Customer> filteredCustomers = new();
     private string searchTerm = string.Empty;
     private string statusFilter = string.Empty;
@@ -413,6 +507,13 @@
     private Dictionary<string, string> validationErrors = new();
     private int currentUserId => AuthService.CurrentUserId ?? 1;
     private bool showArchivedView = false;
+    private int currentPage = 1;
+
+   
+    private int DisplayStart => customersResult.TotalCount == 0 ? 0 : (currentPage - 1) * pageSize + 1;
+    private int DisplayEnd => Math.Min(currentPage * pageSize, customersResult.TotalCount);
+
+    private int _pageSize = 5;
 
     protected override async Task OnInitializedAsync()
     {
@@ -425,6 +526,28 @@
         await LoadCustomers();
     }
 
+
+    private int pageSize
+    {
+        get => _pageSize;
+        set
+        {
+            if (_pageSize != value)
+            {
+                _pageSize = value;
+                currentPage = 1;
+                _ = LoadCustomers();
+            }
+        }
+    }
+    private async Task GoToPage(int page)
+    {
+        if (page >= 1 && page <= customersResult.TotalPages && page != currentPage)
+        {
+            currentPage = page;
+            await LoadCustomers();
+        }
+    }
     private async Task LoadCustomers()
     {
         try
@@ -434,18 +557,16 @@
 
             await Task.Run(() =>
             {
-                if (showArchivedView)
-                {
-                    allCustomers = customerService.GetArchivedCustomers() ?? new List<Customer>();
-                }
-                else
-                {
-                    allCustomers = customerService.GetAllCustomers() ?? new List<Customer>();
-                }
+                customersResult = customerService.GetCustomersPaginated(
+                    pageNumber: currentPage,
+                    pageSize: pageSize,
+                    searchTerm: searchTerm,
+                    statusFilter: statusFilter,
+                    isArchived: showArchivedView
+                );
             });
 
-            filteredCustomers = new List<Customer>(allCustomers);
-            ApplyFilters();
+            filteredCustomers = new List<Customer>(customersResult.Items);
             errorMessage = string.Empty;
         }
         catch (Exception ex)
@@ -460,48 +581,18 @@
         }
     }
 
-    private void SearchCustomers()
+    private async Task SearchCustomers()
     {
-        ApplyFilters();
+        currentPage = 1;
+        await LoadCustomers();
     }
 
-    private void ApplyFilters()
-    {
-        filteredCustomers = allCustomers;
-
-        // Apply status filter
-        if (!string.IsNullOrEmpty(statusFilter))
-        {
-            filteredCustomers = filteredCustomers.Where(c => c.CustomerStatus == statusFilter).ToList();
-        }
-
-        // Apply search filter
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            var term = searchTerm.ToLower();
-            filteredCustomers = filteredCustomers.Where(c =>
-                c.FirstName.ToLower().Contains(term) ||
-                c.LastName.ToLower().Contains(term) ||
-                c.Email.ToLower().Contains(term) ||
-                (!string.IsNullOrEmpty(c.CompanyName) && c.CompanyName.ToLower().Contains(term)) ||
-                (!string.IsNullOrEmpty(c.Phone) && c.Phone.Contains(term))
-            ).ToList();
-        }
-
-        StateHasChanged();
-    }
-
-    private void ToggleStatusFilter()
-    {
-        showStatusFilter = !showStatusFilter;
-        StateHasChanged();
-    }
-
-    private void ApplyStatusFilter(string status)
+    private async Task ApplyStatusFilter(string status)
     {
         statusFilter = status;
         showStatusFilter = false;
-        ApplyFilters();
+        currentPage = 1;
+        await LoadCustomers();
     }
 
     private void CloseDropdowns()
@@ -510,18 +601,19 @@
         StateHasChanged();
     }
 
-    private void ClearSearch()
+    private async Task ClearSearch()
     {
         searchTerm = string.Empty;
-        ApplyFilters();
+        currentPage = 1;
+        await LoadCustomers();
     }
 
-    private void ClearFilters()
+    private async Task ClearFilters()
     {
         searchTerm = string.Empty;
         statusFilter = string.Empty;
-        filteredCustomers = new List<Customer>(allCustomers);
-        StateHasChanged();
+        currentPage = 1;
+        await LoadCustomers();
     }
 
     private void OpenAddModal()
@@ -771,6 +863,7 @@
         searchTerm = string.Empty;
         statusFilter = string.Empty;
         showStatusFilter = false;
+        currentPage = 1;
         await LoadCustomers();
     }
 
@@ -814,5 +907,29 @@
             isSaving = false;
             StateHasChanged();
         }
+    }
+
+    private async Task PrevPage()
+    {
+        if (customersResult.HasPrevious)
+        {
+            currentPage--;
+            await LoadCustomers();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (customersResult.HasNext)
+        {
+            currentPage++;
+            await LoadCustomers();
+        }
+    }
+
+    private void ToggleStatusFilter()
+    {
+        showStatusFilter = !showStatusFilter;
+        StateHasChanged();
     }
 }
