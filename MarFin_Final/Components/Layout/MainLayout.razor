@@ -4,6 +4,19 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
+@code {
+    protected override void OnInitialized()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+
+        AuthService.OnAuthStateChanged += StateHasChanged;
+        LoadNotifications();
+    }
+}
+
 <div class="page @(isDarkTheme ? "dark-theme" : "light-theme")">
     @if (AuthService.IsAuthenticated)
     {
@@ -89,12 +102,15 @@
                                     <span>My Profile</span>
                                 </button>
                             </li>
-                            <li>
-                                <button class="dropdown-item d-flex align-items-center gap-2 py-2" @onclick="NavigateToAccountManagement">
-                                    <i class="bi bi-people"></i>
-                                    <span>Manage Accounts</span>
-                                </button>
-                            </li>
+                            @if (AuthService.IsAdmin())
+                            {
+                                <li>
+                                    <button class="dropdown-item d-flex align-items-center gap-2 py-2" @onclick="NavigateToAccountManagement">
+                                        <i class="bi bi-people"></i>
+                                        <span>Manage Accounts</span>
+                                    </button>
+                                </li>
+                            }
                             <li>
                                 <button class="dropdown-item d-flex align-items-center gap-2 py-2" @onclick="NavigateToSettings">
                                     <i class="bi bi-gear"></i>
@@ -132,12 +148,7 @@
 
     private List<Notification> notifications = new();
 
-    protected override void OnInitialized()
-    {
-        AuthService.OnAuthStateChanged += StateHasChanged;
-        LoadNotifications();
-    }
-
+  
     private void LoadNotifications()
     {
         notifications = new List<Notification>

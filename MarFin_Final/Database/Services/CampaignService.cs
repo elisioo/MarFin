@@ -8,6 +8,13 @@ namespace MarFin_Final.Services
 {
     public class CampaignService
     {
+        // Paginated Result Class
+        public class PaginatedCampaignResult
+        {
+            public List<Campaign> Campaigns { get; set; } = new();
+            public int TotalRecords { get; set; }
+        }
+
         // CREATE
         public bool AddCampaign(Campaign campaign)
         {
@@ -56,7 +63,109 @@ namespace MarFin_Final.Services
             }
         }
 
-        // READ ALL
+        // READ WITH PAGINATION AND FILTERS
+        public PaginatedCampaignResult GetCampaignsPaginated(
+            int pageNumber,
+            int pageSize,
+            string searchTerm = "",
+            string statusFilter = "",
+            string typeFilter = "",
+            bool isArchived = false)
+        {
+            var result = new PaginatedCampaignResult();
+
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+
+                    // Build WHERE clause
+                    var whereConditions = new List<string>();
+                    whereConditions.Add($"c.is_archived = {(isArchived ? 1 : 0)}");
+
+                    if (!string.IsNullOrWhiteSpace(searchTerm))
+                    {
+                        whereConditions.Add("(c.campaign_name LIKE @SearchTerm OR c.subject_line LIKE @SearchTerm)");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(statusFilter))
+                    {
+                        whereConditions.Add("c.campaign_status = @StatusFilter");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(typeFilter))
+                    {
+                        whereConditions.Add("c.campaign_type = @TypeFilter");
+                    }
+
+                    string whereClause = string.Join(" AND ", whereConditions);
+
+                    // Get total count
+                    string countQuery = $@"
+                        SELECT COUNT(*) 
+                        FROM tbl_Campaigns c
+                        WHERE {whereClause}";
+
+                    using (SqlCommand countCmd = new SqlCommand(countQuery, conn))
+                    {
+                        AddFilterParameters(countCmd, searchTerm, statusFilter, typeFilter);
+                        result.TotalRecords = (int)countCmd.ExecuteScalar();
+                    }
+
+                    // Get paginated data - ordered by created_date DESC (most recent first)
+                    string dataQuery = $@"
+                        SELECT c.*, u.first_name + ' ' + u.last_name AS created_by_name
+                        FROM tbl_Campaigns c
+                        INNER JOIN tbl_Users u ON c.created_by = u.user_id
+                        WHERE {whereClause}
+                        ORDER BY c.created_date DESC
+                        OFFSET @Offset ROWS
+                        FETCH NEXT @PageSize ROWS ONLY";
+
+                    using (SqlCommand dataCmd = new SqlCommand(dataQuery, conn))
+                    {
+                        AddFilterParameters(dataCmd, searchTerm, statusFilter, typeFilter);
+                        dataCmd.Parameters.AddWithValue("@Offset", (pageNumber - 1) * pageSize);
+                        dataCmd.Parameters.AddWithValue("@PageSize", pageSize);
+
+                        using (SqlDataReader reader = dataCmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                result.Campaigns.Add(MapCampaignFromReader(reader));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error getting paginated campaigns: " + ex.Message);
+            }
+
+            return result;
+        }
+
+        private void AddFilterParameters(SqlCommand cmd, string searchTerm, string statusFilter, string typeFilter)
+        {
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                cmd.Parameters.AddWithValue("@SearchTerm", $"%{searchTerm}%");
+            }
+
+            if (!string.IsNullOrWhiteSpace(statusFilter))
+            {
+                cmd.Parameters.AddWithValue("@StatusFilter", statusFilter);
+            }
+
+            if (!string.IsNullOrWhiteSpace(typeFilter))
+            {
+                cmd.Parameters.AddWithValue("@TypeFilter", typeFilter);
+            }
+        }
+
+        // READ ALL (kept for backwards compatibility)
         public List<Campaign> GetAllCampaigns()
         {
             List<Campaign> campaigns = new List<Campaign>();
@@ -330,6 +439,5 @@ namespace MarFin_Final.Services
                 CreatedByName = reader["created_by_name"]?.ToString() ?? ""
             };
         }
-
     }
 }
