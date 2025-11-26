@@ -35,6 +35,25 @@ namespace MarFin_Final.Database.Services
         public bool IsMarketing() => CurrentUserRole == "Marketing";
         public bool IsSalesRep() => CurrentUserRole == "Sales Representative";
 
+        // Helper methods for DashboardService
+        public string GetUserRole()
+        {
+            if (!IsAuthenticated || _currentUser?.Role == null)
+                return "Guest";
+
+            // Normalize role names for dashboard
+            var roleName = _currentUser.Role.RoleName;
+            if (roleName == "Sales Representative")
+                return "SalesRep";
+
+            return roleName;
+        }
+
+        public int GetUserId()
+        {
+            return _currentUser?.UserId ?? 0;
+        }
+
         // Permission checking methods
         public bool HasPermission(string permission)
         {

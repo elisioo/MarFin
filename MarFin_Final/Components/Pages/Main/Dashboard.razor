@@ -2,442 +2,616 @@
 @using MarFin_Final.Database.Services
 @inject NavigationManager Navigation
 @inject AuthService AuthService
+@inject DashboardService DashboardService
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         if (!AuthService.IsAuthenticated)
         {
             Navigation.NavigateTo("/login", true);
+            return;
+        }
+
+        await LoadDashboardDataAsync();
+
+        // Auto-refresh every 30 seconds
+        _refreshTimer = new System.Threading.Timer(async _ =>
+        {
+            await RefreshDashboard();
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private async Task RefreshDashboard()
+    {
+        if (_isRefreshing) return;
+
+        _isRefreshing = true;
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadDashboardDataAsync();
+                StateHasChanged();
+            });
+        }
+        finally
+        {
+            _isRefreshing = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
+
+    private async Task LoadDashboardDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var role = AuthService.GetUserRole();
+
+            if (role == "Admin")
+            {
+                adminStats = await DashboardService.GetAdminStatsAsync(startDate, endDate);
+            }
+            else if (role == "Finance")
+            {
+                financeStats = await DashboardService.GetFinanceStatsAsync(startDate, endDate);
+            }
+            else if (role == "Marketing")
+            {
+                marketingStats = await DashboardService.GetMarketingStatsAsync(startDate, endDate);
+            }
+            else if (role == "SalesRep")
+            {
+                salesStats = await DashboardService.GetSalesStatsAsync(AuthService.GetUserId(), startDate, endDate);
+            }
+
+            // Load chart data
+            revenueChartData = await DashboardService.GetRevenueTrendAsync(startDate.AddMonths(-6), endDate, revenueFilter);
+
+            // Load activities
+            activities = await DashboardService.GetRecentActivitiesAsync(role, AuthService.GetUserId());
+
+            // Load transactions for Finance/Admin
+            if (role == "Admin" || role == "Finance")
+            {
+                recentTransactions = await DashboardService.GetRecentTransactionsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading dashboard: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 }
 
-<div class="dashboard-container">
-    <!-- Dashboard Header with Export -->
-    <div class="dashboard-header">
-        <div>
-            <h1>
-                @if (AuthService.IsFinance())
-                {
-                    @:Finance Dashboard
-                }
-                else if (AuthService.IsMarketing())
-                {
-                    @:Marketing Dashboard
-                }
-                else if (AuthService.IsSalesRep())
-                {
-                    @:Sales Dashboard
-                }
-                else
-                {
-                    @:Dashboard Overview
-                }
-            </h1>
-            <p class="subtitle">
-                @if (AuthService.IsFinance())
-                {
-                    @:Monitor financial performance and transactions
-                }
-                else if (AuthService.IsMarketing())
-                {
-                    @:Track campaign performance and customer engagement
-                }
-                else if (AuthService.IsSalesRep())
-                {
-                    @:Manage your sales pipeline and opportunities
-                }
-                else
-                {
-                    @:Monitor your business performance
-                }
-            </p>
+@if (isLoading)
+{
+    <div class="loading-spinner">
+        <i class="bi bi-arrow-clockwise spin"></i>
+        <p>Loading dashboard...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        @errorMessage
+    </div>
+}
+else
+{
+    <div class="dashboard-container">
+        <!-- Refresh Indicator -->
+        @if (_isRefreshing)
+        {
+            <div class="refresh-indicator">
+                <i class="bi bi-arrow-clockwise spin"></i>
+                Updating data...
+            </div>
+        }
+
+        <!-- Dashboard Header with Export -->
+        <div class="dashboard-header">
+            <div>
+                <h1>
+                    @if (AuthService.IsFinance())
+                    {
+                        @:Finance Dashboard
+                    }
+                    else if (AuthService.IsMarketing())
+                    {
+                        @:Marketing Dashboard
+                    }
+                    else if (AuthService.IsSalesRep())
+                    {
+                        @:Sales Dashboard
+                    }
+                    else
+                    {
+                        @:Dashboard Overview
+                    }
+                </h1>
+                <p class="subtitle">
+                    @if (AuthService.IsFinance())
+                    {
+                        @:Monitor financial performance and transactions
+                    }
+                    else if (AuthService.IsMarketing())
+                    {
+                        @:Track campaign performance and customer engagement
+                    }
+                    else if (AuthService.IsSalesRep())
+                    {
+                        @:Manage your sales pipeline and opportunities
+                    }
+                    else
+                    {
+                        @:Monitor your business performance
+                    }
+                </p>
+            </div>
+            <div class="header-actions">
+                <button class="refresh-btn" @onclick="ManualRefresh" disabled="@_isRefreshing">
+                    <i class="bi bi-arrow-clockwise @(_isRefreshing ? "spin" : "")"></i>
+                    @(_isRefreshing ? "Refreshing..." : "Refresh")
+                </button>
+                <button class="export-btn" @onclick="ExportReport">
+                    <i class="bi bi-download"></i>
+                    Export Report
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
         </div>
-        <div class="header-actions">
-            <button class="export-btn">
-                <i class="bi bi-download"></i>
-                Export Report
-                <i class="bi bi-chevron-down"></i>
+
+        <!-- Date Range Filters -->
+        <div class="date-filters">
+            <button class="filter-btn @(selectedFilter == "thisMonth" ? "active" : "")" @onclick='() => SetFilter("thisMonth")'>
+                This Month
             </button>
+            <button class="filter-btn @(selectedFilter == "last3Months" ? "active" : "")" @onclick='() => SetFilter("last3Months")'>
+                Last 3 Months
+            </button>
+            <button class="filter-btn @(selectedFilter == "custom" ? "active" : "")" @onclick='() => SetFilter("custom")'>
+                Custom Range
+            </button>
+            <div class="date-inputs">
+                <input type="date" class="date-input" @bind="startDate" @bind:event="oninput" @onchange="OnDateChanged" />
+                <span>-</span>
+                <input type="date" class="date-input" @bind="endDate" @bind:event="oninput" @onchange="OnDateChanged" />
+            </div>
         </div>
-    </div>
 
-    <!-- Date Range Filters -->
-    <div class="date-filters">
-        <button class="filter-btn @(selectedFilter == "thisMonth" ? "active" : "")" @onclick='() => SetFilter("thisMonth")'>
-            This Month
-        </button>
-        <button class="filter-btn @(selectedFilter == "last3Months" ? "active" : "")" @onclick='() => SetFilter("last3Months")'>
-            Last 3 Months
-        </button>
-        <button class="filter-btn @(selectedFilter == "custom" ? "active" : "")" @onclick='() => SetFilter("custom")'>
-            Custom Range
-        </button>
-        <div class="date-inputs">
-            <input type="date" class="date-input" @bind="startDate" />
-            <span>-</span>
-            <input type="date" class="date-input" @bind="endDate" />
+        <!-- Stats Cards Row - Role-Based -->
+        <div class="stats-row">
+            @if (AuthService.IsAdmin() && adminStats != null)
+            {
+                <!-- Admin sees all stats -->
+                <div class="stat-card">
+                    <div class="stat-icon customers">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Customers</p>
+                        <h2>@adminStats.TotalCustomers.ToString("N0")</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> +@adminStats.NewCustomers new
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon revenue">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Revenue</p>
+                        <h2>₱@adminStats.TotalRevenue.ToString("N0")</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> ₱@adminStats.PeriodRevenue.ToString("N0")
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon campaigns">
+                        <i class="bi bi-megaphone-fill"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Campaigns</p>
+                        <h2>@adminStats.ActiveCampaigns</h2>
+                        <span class="stat-change">
+                            of @adminStats.TotalCampaigns total
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon conversion">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Conversion</p>
+                        <h2>@adminStats.ConversionRate.ToString("F1")%</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> Growth
+                        </span>
+                    </div>
+                </div>
+            }
+            else if (AuthService.IsFinance() && financeStats != null)
+            {
+                <!-- Finance sees financial stats -->
+                <div class="stat-card">
+                    <div class="stat-icon revenue">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Total Revenue</p>
+                        <h2>₱@financeStats.TotalRevenue.ToString("N0")</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> Collected
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Invoices</p>
+                        <h2>@financeStats.TotalInvoices</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> This period
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-arrow-left-right"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Transactions</p>
+                        <h2>@financeStats.TotalTransactions</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> Processed
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Pending</p>
+                        <h2>₱@financeStats.PendingAmount.ToString("N0")</h2>
+                        <span class="stat-change @(financeStats.OverdueAmount > 0 ? "negative" : "")">
+                            <i class="bi bi-exclamation-triangle"></i> ₱@financeStats.OverdueAmount.ToString("N0") overdue
+                        </span>
+                    </div>
+                </div>
+            }
+            else if (AuthService.IsMarketing() && marketingStats != null)
+            {
+                <!-- Marketing sees campaign stats -->
+                <div class="stat-card">
+                    <div class="stat-icon customers">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Total Customers</p>
+                        <h2>@marketingStats.TotalCustomers.ToString("N0")</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> Growing
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon campaigns">
+                        <i class="bi bi-megaphone-fill"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Active Campaigns</p>
+                        <h2>@marketingStats.ActiveCampaigns</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> Running
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-envelope-open"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Email Sent</p>
+                        <h2>@marketingStats.TotalEmailsSent.ToString("N0")</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> This period
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon conversion">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Open Rate</p>
+                        <h2>@marketingStats.ConversionRate.ToString("F1")%</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> Engagement
+                        </span>
+                    </div>
+                </div>
+            }
+            else if (AuthService.IsSalesRep() && salesStats != null)
+            {
+                <!-- Sales sees sales stats -->
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-bullseye"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Opportunities</p>
+                        <h2>@salesStats.TotalOpportunities</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> Active
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon revenue">
+                        <i class="bi bi-currency-dollar"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Pipeline Value</p>
+                        <h2>₱@salesStats.PipelineValue.ToString("N0")</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> Total
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Closed Deals</p>
+                        <h2>@salesStats.ClosedDeals</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> This period
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon conversion">
+                        <i class="bi bi-percent"></i>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Win Rate</p>
+                        <h2>@salesStats.WinRate.ToString("F0")%</h2>
+                        <span class="stat-change positive">
+                            <i class="bi bi-arrow-up"></i> Success
+                        </span>
+                    </div>
+                </div>
+            }
         </div>
-    </div>
 
-    <!-- Stats Cards Row - Role-Based -->
-    <div class="stats-row">
-        @if (AuthService.IsAdmin())
-        {
-            <!-- Admin sees all stats -->
-            <div class="stat-card">
-                <div class="stat-icon customers">
-                    <i class="bi bi-people-fill"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Customers</p>
-                    <h2>1,248</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +12%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon revenue">
-                    <i class="bi bi-wallet2"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Revenue</p>
-                    <h2>₱2.4M</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +28%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon campaigns">
-                    <i class="bi bi-megaphone-fill"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Campaigns</p>
-                    <h2>12</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +8%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon conversion">
-                    <i class="bi bi-graph-up-arrow"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Conversion</p>
-                    <h2>24.5%</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +15%
-                    </span>
-                </div>
-            </div>
-        }
-        else if (AuthService.IsFinance())
-        {
-            <!-- Finance sees financial stats -->
-            <div class="stat-card">
-                <div class="stat-icon revenue">
-                    <i class="bi bi-wallet2"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Total Revenue</p>
-                    <h2>₱2.4M</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +28%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="bi bi-receipt"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Invoices</p>
-                    <h2>156</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +18%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="bi bi-arrow-left-right"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Transactions</p>
-                    <h2>423</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +22%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="bi bi-clock-history"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Pending</p>
-                    <h2>₱450K</h2>
-                    <span class="stat-change">
-                        <i class="bi bi-dash"></i> -5%
-                    </span>
-                </div>
-            </div>
-        }
-        else if (AuthService.IsMarketing())
-        {
-            <!-- Marketing sees campaign stats -->
-            <div class="stat-card">
-                <div class="stat-icon customers">
-                    <i class="bi bi-people-fill"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Total Customers</p>
-                    <h2>1,248</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +12%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon campaigns">
-                    <i class="bi bi-megaphone-fill"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Active Campaigns</p>
-                    <h2>12</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +8%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="bi bi-envelope-open"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Email Sent</p>
-                    <h2>8,542</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +35%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon conversion">
-                    <i class="bi bi-graph-up-arrow"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Conversion Rate</p>
-                    <h2>24.5%</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +15%
-                    </span>
-                </div>
-            </div>
-        }
-        else if (AuthService.IsSalesRep())
-        {
-            <!-- Sales sees sales stats -->
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="bi bi-bullseye"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Opportunities</p>
-                    <h2>45</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +10%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon revenue">
-                    <i class="bi bi-currency-dollar"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Pipeline Value</p>
-                    <h2>₱1.8M</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +25%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="bi bi-check-circle"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Closed Deals</p>
-                    <h2>28</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +12%
-                    </span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-icon conversion">
-                    <i class="bi bi-percent"></i>
-                </div>
-                <div class="stat-content">
-                    <p class="stat-label">Win Rate</p>
-                    <h2>62%</h2>
-                    <span class="stat-change positive">
-                        <i class="bi bi-arrow-up"></i> +8%
-                    </span>
-                </div>
-            </div>
-        }
-    </div>
-
-    <!-- Charts Row - Role-Based -->
-    <div class="charts-row">
-        @if (AuthService.IsAdmin() || AuthService.IsFinance())
-        {
-            <!-- Revenue Trend Chart -->
-            <div class="chart-card revenue-chart">
-                <div class="card-header">
-                    <h3>Revenue Trend</h3>
-                    <div class="chart-filter">
-                        <button class="mini-filter-btn @(revenueFilter == "monthly" ? "active" : "")" @onclick='() => revenueFilter = "monthly"'>Monthly</button>
-                        <button class="mini-filter-btn @(revenueFilter == "quarterly" ? "active" : "")" @onclick='() => revenueFilter = "quarterly"'>Quarterly</button>
-                        <button class="mini-filter-btn @(revenueFilter == "yearly" ? "active" : "")" @onclick='() => revenueFilter = "yearly"'>Yearly</button>
-                    </div>
-                </div>
-                <div class="chart-content">
-                    <div class="bar-chart">
-                        @foreach (var month in revenueData)
-                        {
-                            <div class="bar-item">
-                                <div class="bar" style="height: @(month.Value * 2)px"></div>
-                                <span class="bar-label">@month.Month</span>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        }
-        else if (AuthService.IsMarketing())
-        {
-            <!-- Campaign Performance Chart -->
-            <div class="chart-card revenue-chart">
-                <div class="card-header">
-                    <h3>Campaign Performance</h3>
-                    <div class="chart-filter">
-                        <button class="mini-filter-btn active">Last 6 Months</button>
-                    </div>
-                </div>
-                <div class="chart-content">
-                    <div class="bar-chart">
-                        @foreach (var data in campaignData)
-                        {
-                            <div class="bar-item">
-                                <div class="bar" style="height: @(data.Value * 2)px; background: #10b981"></div>
-                                <span class="bar-label">@data.Month</span>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        }
-        else if (AuthService.IsSalesRep())
-        {
-            <!-- Sales Pipeline Chart -->
-            <div class="chart-card revenue-chart">
-                <div class="card-header">
-                    <h3>Sales Pipeline</h3>
-                    <div class="chart-filter">
-                        <button class="mini-filter-btn active">This Quarter</button>
-                    </div>
-                </div>
-                <div class="chart-content">
-                    <div class="bar-chart">
-                        @foreach (var data in salesData)
-                        {
-                            <div class="bar-item">
-                                <div class="bar" style="height: @(data.Value * 2)px; background: #f59e0b"></div>
-                                <span class="bar-label">@data.Month</span>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        }
-
-        <!-- Recent Activity -->
-        <div class="chart-card activity-card">
-            <div class="card-header">
-                <h3>Recent Activity</h3>
-                <button class="refresh-icon"><i class="bi bi-arrow-clockwise"></i></button>
-            </div>
-            <div class="activity-list">
-                @foreach (var activity in GetRoleBasedActivities())
-                {
-                    <div class="activity-item">
-                        <div class="activity-icon-dot @activity.Type"></div>
-                        <div class="activity-details">
-                            <p class="activity-text">@activity.Text</p>
-                            <span class="activity-time">@activity.Time</span>
+        <!-- Charts Row - Role-Based -->
+        <div class="charts-row">
+            @if ((AuthService.IsAdmin() || AuthService.IsFinance() || AuthService.IsMarketing() || AuthService.IsSalesRep()) && revenueChartData != null && revenueChartData.Any())
+            {
+                <!-- Revenue/Performance Trend Chart -->
+                <div class="chart-card revenue-chart">
+                    <div class="card-header">
+                        <h3>
+                            @if (AuthService.IsMarketing())
+                            {
+                                @:Campaign Performance
+                            }
+                            else if (AuthService.IsSalesRep())
+                            {
+                                @:Sales Pipeline
+                            }
+                            else
+                            {
+                                @:Revenue Trend
+                            }
+                        </h3>
+                        <div class="chart-filter">
+                            <button class="mini-filter-btn @(revenueFilter == "monthly" ? "active" : "")" @onclick='async () => await ChangeRevenueFilter("monthly")'>Monthly</button>
+                            <button class="mini-filter-btn @(revenueFilter == "quarterly" ? "active" : "")" @onclick='async () => await ChangeRevenueFilter("quarterly")'>Quarterly</button>
+                            <button class="mini-filter-btn @(revenueFilter == "yearly" ? "active" : "")" @onclick='async () => await ChangeRevenueFilter("yearly")'>Yearly</button>
                         </div>
                     </div>
-                }
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Transactions - Finance & Admin Only -->
-    @if (AuthService.IsAdmin() || AuthService.IsFinance())
-    {
-        <div class="transactions-section">
-            <div class="section-header">
-                <h3>Recent Transactions</h3>
-                <a href="/financial" class="view-all-link">View All <i class="bi bi-arrow-right"></i></a>
-            </div>
-            <div class="transactions-table">
-                <div class="table-header">
-                    <span>Invoice</span>
-                    <span>Customer</span>
-                    <span>Amount</span>
-                    <span>Date</span>
-                    <span>Status</span>
-                </div>
-                @foreach (var transaction in recentTransactions)
-                {
-                    <div class="table-row">
-                        <span class="transaction-invoice">@transaction.Invoice</span>
-                        <span class="transaction-customer">@transaction.Customer</span>
-                        <span class="transaction-amount">@transaction.Amount</span>
-                        <span class="transaction-date">@transaction.Date</span>
-                        <span class="transaction-status @transaction.Status.ToLower()">@transaction.Status</span>
+                    <div class="chart-content">
+                        <div class="bar-chart">
+                            @{
+                                var maxValue = revenueChartData.Max(x => x.Value);
+                                var heightMultiplier = maxValue > 0 ? 200.0 / (double)maxValue : 0;
+                            }
+                            @foreach (var data in revenueChartData)
+                            {
+                                <div class="bar-item">
+                                    <div class="bar" style="height: @((data.Value * (decimal)heightMultiplier))px" title="₱@data.Value.ToString("N0")"></div>
+                                    <span class="bar-label">@data.Label</span>
+                                </div>
+                            }
+                        </div>
                     </div>
-                }
+                </div>
+            }
+
+            <!-- Recent Activity -->
+            <div class="chart-card activity-card">
+                <div class="card-header">
+                    <h3>Recent Activity</h3>
+                    <button class="refresh-icon" @onclick="RefreshActivities"><i class="bi bi-arrow-clockwise"></i></button>
+                </div>
+                <div class="activity-list">
+                    @if (activities != null && activities.Any())
+                    {
+                        @foreach (var activity in activities)
+                        {
+                            <div class="activity-item">
+                                <div class="activity-icon-dot @activity.Type"></div>
+                                <div class="activity-details">
+                                    <p class="activity-text">@activity.Text</p>
+                                    <span class="activity-time">@activity.Time</span>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="no-data">No recent activities</p>
+                    }
+                </div>
             </div>
         </div>
+
+        <!-- Recent Transactions - Finance & Admin Only -->
+        @if ((AuthService.IsAdmin() || AuthService.IsFinance()) && recentTransactions != null && recentTransactions.Any())
+        {
+            <div class="transactions-section">
+                <div class="section-header">
+                    <h3>Recent Transactions</h3>
+                    <a href="/financial" class="view-all-link">View All <i class="bi bi-arrow-right"></i></a>
+                </div>
+                <div class="transactions-table">
+                    <div class="table-header">
+                        <span>Invoice</span>
+                        <span>Customer</span>
+                        <span>Amount</span>
+                        <span>Date</span>
+                        <span>Status</span>
+                    </div>
+                    @foreach (var transaction in recentTransactions)
+                    {
+                        <div class="table-row">
+                            <span class="transaction-invoice">@transaction.Invoice</span>
+                            <span class="transaction-customer">@transaction.Customer</span>
+                            <span class="transaction-amount">@transaction.Amount</span>
+                            <span class="transaction-date">@transaction.Date</span>
+                            <span class="transaction-status @transaction.Status.ToLower()">@transaction.Status</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<style>
+    .loading-spinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        color: #666;
     }
-</div>
+
+        .loading-spinner i {
+            font-size: 48px;
+            margin-bottom: 1rem;
+        }
+
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+
+    @@keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .refresh-indicator {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background: #0A1828;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+        .refresh-indicator i {
+            font-size: 16px;
+        }
+
+    .no-data {
+        text-align: center;
+        color: #999;
+        padding: 2rem;
+        font-size: 14px;
+    }
+
+    .alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+
+    .alert-danger {
+        background-color: #fee;
+        color: #c00;
+        border: 1px solid #fcc;
+    }
+</style>
+
+@implements IDisposable
 
 @code {
     private string selectedFilter = "thisMonth";
     private string revenueFilter = "monthly";
-    private DateTime startDate = DateTime.Now.AddDays(-7);
+    private DateTime startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
     private DateTime endDate = DateTime.Now;
+    private bool isLoading = true;
+    private string errorMessage = "";
+    private System.Threading.Timer? _refreshTimer;
+    private bool _isRefreshing = false;
 
-    private void SetFilter(string filter)
+    // Stats objects
+    private AdminDashboardStats adminStats;
+    private FinanceDashboardStats financeStats;
+    private MarketingDashboardStats marketingStats;
+    private SalesDashboardStats salesStats;
+
+    // Chart and activity data
+    private List<ChartData> revenueChartData;
+    private List<ActivityItem> activities;
+    private List<TransactionItem> recentTransactions;
+
+    private async Task SetFilter(string filter)
     {
         selectedFilter = filter;
 
@@ -451,114 +625,46 @@
             startDate = DateTime.Now.AddMonths(-3);
             endDate = DateTime.Now;
         }
+
+        await LoadDashboardDataAsync();
     }
 
-    private class RevenueMonth
+    private async Task OnDateChanged()
     {
-        public string Month { get; set; } = "";
-        public int Value { get; set; }
+        if (selectedFilter == "custom")
+        {
+            await LoadDashboardDataAsync();
+        }
     }
 
-    private class Activity
+    private async Task ChangeRevenueFilter(string filter)
     {
-        public string Text { get; set; } = "";
-        public string Time { get; set; } = "";
-        public string Type { get; set; } = "";
+        revenueFilter = filter;
+        revenueChartData = await DashboardService.GetRevenueTrendAsync(startDate.AddMonths(-6), endDate, revenueFilter);
     }
 
-    private class Transaction
+    private async Task RefreshActivities()
     {
-        public string Invoice { get; set; } = "";
-        public string Customer { get; set; } = "";
-        public string Amount { get; set; } = "";
-        public string Date { get; set; } = "";
-        public string Status { get; set; } = "";
+        try
+        {
+            var role = AuthService.GetUserRole();
+            activities = await DashboardService.GetRecentActivitiesAsync(role, AuthService.GetUserId());
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error refreshing activities: {ex.Message}");
+        }
     }
 
-    private List<RevenueMonth> revenueData = new()
+    private async Task ManualRefresh()
     {
-        new() { Month = "May", Value = 45 },
-        new() { Month = "Jun", Value = 65 },
-        new() { Month = "Jul", Value = 85 },
-        new() { Month = "Aug", Value = 100 },
-        new() { Month = "Sep", Value = 90 },
-        new() { Month = "Oct", Value = 75 }
-    };
-
-    private List<RevenueMonth> campaignData = new()
-    {
-        new() { Month = "May", Value = 35 },
-        new() { Month = "Jun", Value = 55 },
-        new() { Month = "Jul", Value = 70 },
-        new() { Month = "Aug", Value = 85 },
-        new() { Month = "Sep", Value = 80 },
-        new() { Month = "Oct", Value = 90 }
-    };
-
-    private List<RevenueMonth> salesData = new()
-    {
-        new() { Month = "May", Value = 40 },
-        new() { Month = "Jun", Value = 60 },
-        new() { Month = "Jul", Value = 75 },
-        new() { Month = "Aug", Value = 90 },
-        new() { Month = "Sep", Value = 85 },
-        new() { Month = "Oct", Value = 95 }
-    };
-
-    private List<Activity> financeActivities = new()
-    {
-        new() { Text = "Payment received from ABC Corp", Time = "15 min ago", Type = "success" },
-        new() { Text = "Invoice INV-123 generated", Time = "1 hour ago", Type = "info" },
-        new() { Text = "Transaction processed - ₱25,000", Time = "2 hours ago", Type = "success" },
-        new() { Text = "Pending payment reminder sent", Time = "3 hours ago", Type = "warning" },
-        new() { Text = "Monthly report generated", Time = "5 hours ago", Type = "info" }
-    };
-
-    private List<Activity> marketingActivities = new()
-    {
-        new() { Text = "Campaign sent to 500 customers", Time = "1 hour ago", Type = "info" },
-        new() { Text = "New customer segment created", Time = "2 hours ago", Type = "success" },
-        new() { Text = "Email campaign opened by 245 users", Time = "3 hours ago", Type = "success" },
-        new() { Text = "Campaign scheduled for tomorrow", Time = "4 hours ago", Type = "info" },
-        new() { Text = "New subscriber added", Time = "5 hours ago", Type = "success" }
-    };
-
-    private List<Activity> salesActivities = new()
-    {
-        new() { Text = "New opportunity created - ₱50K", Time = "30 min ago", Type = "success" },
-        new() { Text = "Deal moved to negotiation", Time = "1 hour ago", Type = "info" },
-        new() { Text = "Customer meeting scheduled", Time = "2 hours ago", Type = "info" },
-        new() { Text = "Deal closed - ₱75,000", Time = "3 hours ago", Type = "success" },
-        new() { Text = "Follow-up task completed", Time = "4 hours ago", Type = "success" }
-    };
-
-    private List<Activity> adminActivities = new()
-    {
-        new() { Text = "New customer registered", Time = "2 min ago", Type = "success" },
-        new() { Text = "Payment received from ABC Corp", Time = "15 min ago", Type = "success" },
-        new() { Text = "Campaign sent to 500 customers", Time = "1 hour ago", Type = "info" },
-        new() { Text = "New order placed - INV-003", Time = "2 hours ago", Type = "info" },
-        new() { Text = "Customer support ticket opened", Time = "3 hours ago", Type = "warning" }
-    };
-
-    private List<Activity> GetRoleBasedActivities()
-    {
-        if (AuthService.IsFinance())
-            return financeActivities;
-        else if (AuthService.IsMarketing())
-            return marketingActivities;
-        else if (AuthService.IsSalesRep())
-            return salesActivities;
-        else
-            return adminActivities;
+        await RefreshDashboard();
     }
 
-    private List<Transaction> recentTransactions = new()
+    private void ExportReport()
     {
-        new() { Invoice = "INV-001", Customer = "ABC Corp", Amount = "₱25,000", Date = "Oct 20", Status = "Paid" },
-        new() { Invoice = "INV-002", Customer = "XYZ Ltd", Amount = "₱18,500", Date = "Oct 19", Status = "Pending" },
-        new() { Invoice = "INV-003", Customer = "Design Co.", Amount = "₱32,000", Date = "Oct 18", Status = "Paid" },
-        new() { Invoice = "INV-004", Customer = "Tech Solutions", Amount = "₱15,750", Date = "Oct 17", Status = "Paid" },
-        new() { Invoice = "INV-005", Customer = "Marketing Plus", Amount = "₱22,300", Date = "Oct 16", Status = "Pending" }
-    };
+        // TODO: Implement export functionality
+        Console.WriteLine("Export report clicked");
+    }
 }
