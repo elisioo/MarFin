@@ -279,6 +279,47 @@ namespace MarFin_Final.Data
             return customers;
         }
 
+        // NEW: Get ALL customers regardless of status (for sync purposes)
+        public List<Customer> GetAllCustomersForSync()
+        {
+            List<Customer> customers = new List<Customer>();
+
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    string query = @"SELECT c.customer_id, c.segment_id, c.created_by, c.modified_by,
+                                    c.first_name, c.last_name, c.email, c.phone, c.company_name,
+                                    c.address, c.city, c.state_province, c.postal_code, c.country,
+                                    c.customer_status, c.total_revenue, c.source, c.notes,
+                                    c.is_active, c.is_archived, c.archived_date, c.archived_by,
+                                    c.created_date, c.modified_date,
+                                    s.segment_name
+                                   FROM tbl_Customers c
+                                   LEFT JOIN tbl_Customer_Segments s ON c.segment_id = s.segment_id
+                                   ORDER BY c.company_name, c.last_name, c.first_name";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                customers.Add(MapCustomerFromReader(reader));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error getting all customers for sync: " + ex.Message);
+            }
+
+            return customers;
+        }
+
         // READ - Get customer by ID
         public Customer GetCustomerById(int customerId)
         {

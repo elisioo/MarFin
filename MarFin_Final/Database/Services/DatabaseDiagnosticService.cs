@@ -5,7 +5,7 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
 
-namespace MarFin.Services
+namespace MarFin_Final.Database.Services
 {
     public class DiagnosticResult
     {

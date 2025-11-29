@@ -1,0 +1,68 @@
+@* Reusable Confirmation Modal Component *@
+
+@if (IsVisible)
+{
+    <div class="modal-overlay" @onclick="OnCancel">
+        <div class="modal-content confirm-modal" @onclick:stopPropagation>
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="user-icon @IconClass"><i class="bi @IconName"></i></span>
+                    <h2>@Title</h2>
+                </div>
+            </div>
+            <div class="modal-body">
+                <p>@Message</p>
+                @if (!string.IsNullOrEmpty(SubMessage))
+                {
+                    <p class="text-muted">@SubMessage</p>
+                }
+
+                <div class="modal-footer">
+                    <button class="btn-cancel" @onclick="OnCancel">Cancel</button>
+                    <button class="@ButtonClass" @onclick="OnConfirm" disabled="@IsLoading">
+                        @if (IsLoading)
+                        {
+                            <span class="spinner-small"></span>
+                        }
+                        @ButtonText
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = "Confirm Action";
+
+    [Parameter]
+    public string Message { get; set; } = "Are you sure?";
+
+    [Parameter]
+    public string? SubMessage { get; set; }
+
+    [Parameter]
+    public string ButtonText { get; set; } = "Confirm";
+
+    [Parameter]
+    public string ButtonClass { get; set; } = "btn-confirm";
+
+    [Parameter]
+    public string IconName { get; set; } = "bi-exclamation-triangle";
+
+    [Parameter]
+    public string IconClass { get; set; } = "warning";
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+}

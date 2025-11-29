@@ -5,7 +5,7 @@
     <div class="nav-header">
         <div class="logo-container">
             <NavLink href="/">
-                <img src="img/marfin_logo.png" alt="MarFin Logo" class="logo" />
+                <img src="@(isDarkMode ? "img/marfin_logo.png" : "img/logo_blacktxt.png")" alt="MarFin Logo" class="logo" />
             </NavLink>
         </div>
     </div>
@@ -134,6 +134,15 @@
                     <span class="nav-text">Settings</span>
                 }
             </button>
+
+            <!-- Manual Sync - Admin only -->
+            <button class="nav-btn @(IsActive("manual-sync") ? "active" : "")" @onclick="@(() => NavigateTo("manual-sync"))">
+                <i class="bi bi-cloud-arrow-up nav-icon"></i>
+                @if (!IsCollapsed)
+                {
+                    <span class="nav-text">Manual Sync</span>
+                }
+            </button>
         }
     </nav>
 
@@ -161,14 +170,6 @@
                 </div>
             </div>
         }
-
-        <button class="theme-btn" @onclick="ToggleTheme">
-            <i class="bi bi-@(isDarkMode ? "moon" : "sun") nav-icon"></i>
-            @if (!IsCollapsed)
-            {
-                <span class="nav-text">@(isDarkMode ? "Dark" : "Light")</span>
-            }
-        </button>
 
         <button class="collapse-btn" @onclick="OnToggleSidebar">
             <i class="bi bi-@(IsCollapsed ? "chevron-right" : "chevron-left") nav-icon"></i>

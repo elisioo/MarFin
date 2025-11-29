@@ -415,7 +415,7 @@ else
 
         <!-- Charts Row - Role-Based -->
         <div class="charts-row">
-            @if ((AuthService.IsAdmin() || AuthService.IsFinance() || AuthService.IsMarketing() || AuthService.IsSalesRep()) && revenueChartData != null && revenueChartData.Any())
+            @if (AuthService.IsAdmin() || AuthService.IsFinance() || AuthService.IsMarketing() || AuthService.IsSalesRep())
             {
                 <!-- Revenue/Performance Trend Chart -->
                 <div class="chart-card revenue-chart">
@@ -441,19 +441,28 @@ else
                         </div>
                     </div>
                     <div class="chart-content">
-                        <div class="bar-chart">
-                            @{
-                                var maxValue = revenueChartData.Max(x => x.Value);
-                                var heightMultiplier = maxValue > 0 ? 200.0 / (double)maxValue : 0;
-                            }
-                            @foreach (var data in revenueChartData)
-                            {
-                                <div class="bar-item">
-                                    <div class="bar" style="height: @((data.Value * (decimal)heightMultiplier))px" title="₱@data.Value.ToString("N0")"></div>
-                                    <span class="bar-label">@data.Label</span>
-                                </div>
-                            }
-                        </div>
+                        @if (revenueChartData != null && revenueChartData.Any())
+                        {
+                            <div class="bar-chart">
+                                @{
+                                    var maxValue = revenueChartData.Max(x => x.Value);
+                                    var heightMultiplier = maxValue > 0 ? 200.0 / (double)maxValue : 0;
+                                }
+                                @foreach (var data in revenueChartData)
+                                {
+                                    <div class="bar-item">
+                                        <div class="bar" style="height: @((int)(data.Value * (decimal)heightMultiplier))px" title="₱@data.Value.ToString("N0")"></div>
+                                        <span class="bar-label">@data.Label</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="no-data-chart">
+                                <p>No data available for the selected period</p>
+                            </div>
+                        }
                     </div>
                 </div>
             }
@@ -518,75 +527,6 @@ else
     </div>
 }
 
-<style>
-    .loading-spinner {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 400px;
-        color: #666;
-    }
-
-        .loading-spinner i {
-            font-size: 48px;
-            margin-bottom: 1rem;
-        }
-
-    .spin {
-        animation: spin 1s linear infinite;
-    }
-
-    @@keyframes spin {
-        from {
-            transform: rotate(0deg);
-        }
-
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    .refresh-indicator {
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        background: #0A1828;
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 1000;
-        font-size: 14px;
-        font-weight: 500;
-    }
-
-        .refresh-indicator i {
-            font-size: 16px;
-        }
-
-    .no-data {
-        text-align: center;
-        color: #999;
-        padding: 2rem;
-        font-size: 14px;
-    }
-
-    .alert {
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-    }
-
-    .alert-danger {
-        background-color: #fee;
-        color: #c00;
-        border: 1px solid #fcc;
-    }
-</style>
 
 @implements IDisposable
 

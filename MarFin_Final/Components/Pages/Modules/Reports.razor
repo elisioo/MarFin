@@ -1,10 +1,17 @@
 ﻿@page "/reports"
 @inject NavigationManager Navigation
 @inject AuthService AuthService
+@inject IJSRuntime JS
 @using MarFin_Final.Database.Services
+@using System.Globalization
 
 @code {
-    protected override void OnInitialized()
+    private ReportService reportService = new ReportService();
+    private PdfExportService pdfExportService = new PdfExportService();
+    private bool isLoading = true;
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
     {
         if (!AuthService.IsAuthenticated)
         {
@@ -16,6 +23,42 @@
         {
             Navigation.NavigateTo("/dashboard", true);
             return;
+        }
+
+        await LoadReportData();
+    }
+
+    private async Task LoadReportData()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = "";
+
+            // Load revenue data
+            revenueData = await reportService.GetRevenueByMonthAsync(startDate, endDate);
+
+            // Load campaign performance
+            campaignPerformance = await reportService.GetCampaignPerformanceAsync(startDate, endDate);
+
+            // Load top customers
+            topCustomers = await reportService.GetTopCustomersAsync(startDate, endDate);
+
+            // Load sales opportunities
+            salesOpportunities = await reportService.GetSalesOpportunitiesAsync(startDate, endDate);
+
+            // Load customer segments
+            customerSegments = await reportService.GetCustomerSegmentsAsync(startDate, endDate);
+
+            // Load revenue sources
+            revenueSources = await reportService.GetRevenueBySourceAsync(startDate, endDate);
+
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading report data: {ex.Message}";
+            isLoading = false;
         }
     }
 }
@@ -50,13 +93,13 @@
 
     <!-- Date Range Filters -->
     <div class="date-filters">
-        <button class="filter-btn @(selectedFilter == "thisMonth" ? "active" : "")" @onclick='() => SetFilter("thisMonth")'>
+        <button class="filter-btn @(selectedFilter == "thisMonth" ? "active" : "")" @onclick='() => SetFilterAndReload("thisMonth")'>
             This Month
         </button>
-        <button class="filter-btn @(selectedFilter == "last3Months" ? "active" : "")" @onclick='() => SetFilter("last3Months")'>
+        <button class="filter-btn @(selectedFilter == "last3Months" ? "active" : "")" @onclick='() => SetFilterAndReload("last3Months")'>
             Last 3 Months
         </button>
-        <button class="filter-btn @(selectedFilter == "thisYear" ? "active" : "")" @onclick='() => SetFilter("thisYear")'>
+        <button class="filter-btn @(selectedFilter == "thisYear" ? "active" : "")" @onclick='() => SetFilterAndReload("thisYear")'>
             This Year
         </button>
         <button class="filter-btn @(selectedFilter == "custom" ? "active" : "")" @onclick='() => SetFilter("custom")'>
@@ -65,12 +108,20 @@
         @if (selectedFilter == "custom")
         {
             <div class="date-inputs">
-                <input type="date" class="date-input" @bind="startDate" />
+                <input type="date" class="date-input" @bind="startDate" @bind:after="LoadReportData" />
                 <span>-</span>
-                <input type="date" class="date-input" @bind="endDate" />
+                <input type="date" class="date-input" @bind="endDate" @bind:after="LoadReportData" />
             </div>
         }
     </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            <span>@errorMessage</span>
+            <button class="alert-close" @onclick='() => errorMessage = ""'>×</button>
+        </div>
+    }
 
     <!-- Performance Overview - Role-Based -->
     <div class="section-title">Performance Overview</div>
@@ -85,20 +136,36 @@
                     <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
                 </div>
                 <div class="chart-content">
-                    <div class="bar-chart">
-                        @foreach (var data in revenueData)
-                        {
-                            <div class="bar-group">
-                                <div class="bar green" style="height: @(data.Value1 * 10)px" title="Income: @data.Value1"></div>
-                                <div class="bar dark" style="height: @(data.Value2 * 10)px" title="Expenses: @data.Value2"></div>
-                                <span class="bar-label">@GetMonthName(data.Month)</span>
-                            </div>
-                        }
-                    </div>
-                    <div class="chart-legend">
-                        <span><span class="legend-color green"></span> Income</span>
-                        <span><span class="legend-color dark"></span> Expenses</span>
-                    </div>
+                    @if (isLoading)
+                    {
+                        <p>Loading revenue data...</p>
+                    }
+                    else if (revenueData.Any())
+                    {
+                        <div class="bar-chart">
+                            @foreach (var data in revenueData)
+                            {
+                                var maxValue = revenueData.Max(r => Math.Max(r.Income, r.Expense));
+                                var incomeHeight = maxValue > 0 ? (data.Income / maxValue * 200) : 0;
+                                var expenseHeight = maxValue > 0 ? (data.Expense / maxValue * 200) : 0;
+                                var monthDate = new DateTime(data.Year, data.Month, 1);
+                                
+                                <div class="bar-group">
+                                    <div class="bar green" style="height: @((int)incomeHeight)px" title="Income: ₱@data.Income.ToString("N2")"></div>
+                                    <div class="bar dark" style="height: @((int)expenseHeight)px" title="Expenses: ₱@data.Expense.ToString("N2")"></div>
+                                    <span class="bar-label">@monthDate.ToString("MMM")</span>
+                                </div>
+                            }
+                        </div>
+                        <div class="chart-legend">
+                            <span><span class="legend-color green"></span> Income</span>
+                            <span><span class="legend-color dark"></span> Expenses</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <p>No revenue data available for the selected period.</p>
+                    }
                 </div>
             </div>
         }
@@ -112,36 +179,47 @@
                     <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
                 </div>
                 <div class="chart-content">
-                    <div class="metric-list">
-                        <div class="metric-item">
-                            <span class="metric-label">Email Open Rate</span>
-                            <div class="metric-bar-container">
-                                <div class="metric-bar" style="width: 68.5%"></div>
+                    @if (isLoading)
+                    {
+                        <p>Loading campaign data...</p>
+                    }
+                    else if (campaignPerformance != null)
+                    {
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <span class="metric-label">Email Open Rate</span>
+                                <div class="metric-bar-container">
+                                    <div class="metric-bar" style="width: @(Math.Min(campaignPerformance.OpenRate, 100))%"></div>
+                                </div>
+                                <span class="metric-value">@campaignPerformance.OpenRate.ToString("F1")%</span>
                             </div>
-                            <span class="metric-value">68.5%</span>
-                        </div>
-                        <div class="metric-item">
-                            <span class="metric-label">Click Through Rate</span>
-                            <div class="metric-bar-container">
-                                <div class="metric-bar" style="width: 42.3%"></div>
+                            <div class="metric-item">
+                                <span class="metric-label">Click Through Rate</span>
+                                <div class="metric-bar-container">
+                                    <div class="metric-bar" style="width: @(Math.Min(campaignPerformance.ClickRate, 100))%"></div>
+                                </div>
+                                <span class="metric-value">@campaignPerformance.ClickRate.ToString("F1")%</span>
                             </div>
-                            <span class="metric-value">42.3%</span>
-                        </div>
-                        <div class="metric-item">
-                            <span class="metric-label">Conversion Rate</span>
-                            <div class="metric-bar-container">
-                                <div class="metric-bar" style="width: 28.7%"></div>
+                            <div class="metric-item">
+                                <span class="metric-label">Conversion Rate</span>
+                                <div class="metric-bar-container">
+                                    <div class="metric-bar" style="width: @(Math.Min(campaignPerformance.ConversionRate, 100))%"></div>
+                                </div>
+                                <span class="metric-value">@campaignPerformance.ConversionRate.ToString("F1")%</span>
                             </div>
-                            <span class="metric-value">28.7%</span>
-                        </div>
-                        <div class="metric-item">
-                            <span class="metric-label">ROI</span>
-                            <div class="metric-bar-container">
-                                <div class="metric-bar" style="width: 85.4%"></div>
+                            <div class="metric-item">
+                                <span class="metric-label">ROI</span>
+                                <div class="metric-bar-container">
+                                    <div class="metric-bar" style="width: @(Math.Min(campaignPerformance.ROI / 10, 100))%"></div>
+                                </div>
+                                <span class="metric-value">@campaignPerformance.ROI.ToString("F1")%</span>
                             </div>
-                            <span class="metric-value">285.4%</span>
                         </div>
-                    </div>
+                    }
+                    else
+                    {
+                        <p>No campaign data available for the selected period.</p>
+                    }
                 </div>
             </div>
         }
@@ -180,28 +258,39 @@
                     <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
                 </div>
                 <div class="chart-content">
-                    <div class="opportunity-stats">
-                        <div class="opp-stat">
-                            <span class="opp-label">Active</span>
-                            <span class="opp-value">45</span>
+                    @if (isLoading)
+                    {
+                        <p>Loading sales data...</p>
+                    }
+                    else if (salesOpportunities != null)
+                    {
+                        <div class="opportunity-stats">
+                            <div class="opp-stat">
+                                <span class="opp-label">Active</span>
+                                <span class="opp-value">@salesOpportunities.Active</span>
+                            </div>
+                            <div class="opp-stat">
+                                <span class="opp-label">Won</span>
+                                <span class="opp-value">@salesOpportunities.Won</span>
+                            </div>
+                            <div class="opp-stat">
+                                <span class="opp-label">Lost</span>
+                                <span class="opp-value">@salesOpportunities.Lost</span>
+                            </div>
+                            <div class="opp-stat">
+                                <span class="opp-label">Win Rate</span>
+                                <span class="opp-value">@salesOpportunities.WinRate.ToString("F1")%</span>
+                            </div>
                         </div>
-                        <div class="opp-stat">
-                            <span class="opp-label">Won</span>
-                            <span class="opp-value">28</span>
+                        <div class="pipeline-value">
+                            <span class="pipeline-label">Total Pipeline Value:</span>
+                            <span class="pipeline-amount">₱@salesOpportunities.TotalPipelineValue.ToString("N2")</span>
                         </div>
-                        <div class="opp-stat">
-                            <span class="opp-label">Lost</span>
-                            <span class="opp-value">12</span>
-                        </div>
-                        <div class="opp-stat">
-                            <span class="opp-label">Win Rate</span>
-                            <span class="opp-value">62%</span>
-                        </div>
-                    </div>
-                    <div class="pipeline-value">
-                        <span class="pipeline-label">Total Pipeline Value:</span>
-                        <span class="pipeline-amount">₱2,042,423.00</span>
-                    </div>
+                    }
+                    else
+                    {
+                        <p>No sales data available for the selected period.</p>
+                    }
                 </div>
             </div>
         }
@@ -400,77 +489,47 @@
         return months[month % 12];
     }
 
-    private void GenerateReport(string reportType)
+    private async Task GenerateReport(string reportType)
     {
-        // TODO: Implement actual report generation logic
-        // This would typically call a service to generate PDF/Excel reports
-        Console.WriteLine($"Generating {reportType} report from {startDate:d} to {endDate:d}");
+        try
+        {
+            // Generate HTML report
+            var htmlContent = pdfExportService.GenerateReportHtml(
+                reportType, 
+                startDate, 
+                endDate,
+                campaignPerformance,
+                revenueData,
+                topCustomers,
+                salesOpportunities,
+                customerSegments,
+                revenueSources
+            );
+
+            // Create a data URL for the HTML
+            var base64Html = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(htmlContent));
+            var dataUrl = $"data:text/html;base64,{base64Html}";
+
+            // Open in new window for printing/saving as PDF using JavaScript
+            await JS.InvokeVoidAsync("open", dataUrl, "_blank");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error generating report: {ex.Message}";
+        }
     }
 
-    private class RevenueData
+    private async Task SetFilterAndReload(string filter)
     {
-        public int Month { get; set; }
-        public int Value1 { get; set; }
-        public int Value2 { get; set; }
+        SetFilter(filter);
+        await LoadReportData();
     }
 
-    private class Customer
-    {
-        public int Rank { get; set; }
-        public string Name { get; set; } = "";
-        public string Amount { get; set; } = "";
-        public int Transactions { get; set; }
-    }
-
-    private class RevenueSource
-    {
-        public string Name { get; set; } = "";
-        public double Percentage { get; set; }
-    }
-
-    private class CustomerSegment
-    {
-        public string Name { get; set; } = "";
-        public int Count { get; set; }
-        public double Percentage { get; set; }
-    }
-
-    private List<RevenueData> revenueData = new()
-    {
-        new() { Month = 0, Value1 = 9, Value2 = 6 },
-        new() { Month = 1, Value1 = 7, Value2 = 5 },
-        new() { Month = 2, Value1 = 8, Value2 = 4 },
-        new() { Month = 3, Value1 = 10, Value2 = 5 },
-        new() { Month = 4, Value1 = 8, Value2 = 6 },
-        new() { Month = 5, Value1 = 9, Value2 = 5 },
-        new() { Month = 6, Value1 = 11, Value2 = 6 },
-        new() { Month = 7, Value1 = 10, Value2 = 7 },
-        new() { Month = 8, Value1 = 12, Value2 = 6 },
-        new() { Month = 9, Value1 = 11, Value2 = 5 }
-    };
-
-    private List<Customer> topCustomers = new()
-    {
-        new() { Rank = 1, Name = "Design Co.", Amount = "₱450,432.00", Transactions = 24 },
-        new() { Rank = 2, Name = "ABC Corp.", Amount = "₱380,250.00", Transactions = 18 },
-        new() { Rank = 3, Name = "XYZ Ltd.", Amount = "₱325,180.00", Transactions = 16 },
-        new() { Rank = 4, Name = "Tech Solutions", Amount = "₱298,540.00", Transactions = 14 },
-        new() { Rank = 5, Name = "Marketing Plus", Amount = "₱265,890.00", Transactions = 12 }
-    };
-
-    private List<RevenueSource> revenueSources = new()
-    {
-        new() { Name = "Direct Sales", Percentage = 42.5 },
-        new() { Name = "Marketing Campaigns", Percentage = 31.8 },
-        new() { Name = "Referrals", Percentage = 18.7 },
-        new() { Name = "Partnerships", Percentage = 7.0 }
-    };
-
-    private List<CustomerSegment> customerSegments = new()
-    {
-        new() { Name = "Enterprise", Count = 125, Percentage = 35.2 },
-        new() { Name = "Small Business", Count = 248, Percentage = 28.5 },
-        new() { Name = "Startups", Count = 186, Percentage = 22.8 },
-        new() { Name = "Individual", Count = 95, Percentage = 13.5 }
-    };
+    // Data properties
+    private List<ReportService.RevenueData> revenueData = new List<ReportService.RevenueData>();
+    private ReportService.CampaignPerformanceData? campaignPerformance;
+    private List<ReportService.TopCustomerData> topCustomers = new List<ReportService.TopCustomerData>();
+    private ReportService.SalesOpportunitiesData? salesOpportunities;
+    private List<ReportService.CustomerSegmentData> customerSegments = new List<ReportService.CustomerSegmentData>();
+    private List<ReportService.RevenueSourceData> revenueSources = new List<ReportService.RevenueSourceData>();
 }

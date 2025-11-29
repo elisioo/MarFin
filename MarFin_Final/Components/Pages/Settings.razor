@@ -1,0 +1,531 @@
+@page "/settings"
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+@inject RemoteDatabaseService RemoteDbService
+@inject LocalDatabaseService LocalDbService
+@using MarFin_Final.Data
+@using MarFin_Final.Database.Services
+@using MarFin_Final.Models
+
+<div class="settings-container light-theme">
+    <div class="settings-header">
+        <h1>Settings</h1>
+        <p class="settings-subtitle">Manage your preferences and account settings</p>
+    </div>
+
+    <div class="settings-content">
+        <!-- Settings Sidebar -->
+        <div class="settings-sidebar">
+            <div class="settings-menu">
+                <button class="settings-menu-item @(activeTab == "appearance" ? "active" : "")"
+                        @onclick='() => SelectTab("appearance")'>
+                    <i class="bi bi-palette"></i>
+                    <span>Appearance</span>
+                </button>
+                <button class="settings-menu-item @(activeTab == "sync" ? "active" : "")"
+                        @onclick='() => SelectTab("sync")'>
+                    <i class="bi bi-cloud-arrow-up"></i>
+                    <span>Data Sync</span>
+                </button>
+                <button class="settings-menu-item @(activeTab == "account" ? "active" : "")"
+                        @onclick='() => SelectTab("account")'>
+                    <i class="bi bi-person"></i>
+                    <span>Account</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Content -->
+        <div class="settings-main">
+            <!-- Appearance Tab -->
+            @if (activeTab == "appearance")
+            {
+                <div class="settings-section">
+                    <div class="section-header">
+                        <h2>Appearance</h2>
+                        <p>Customize how MarFin looks and feels</p>
+                    </div>
+
+                    <!-- Theme Selection -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <h3>Theme</h3>
+                            <p>Choose your preferred color theme</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="theme-selector">
+                                <div class="theme-option @(selectedTheme == "light" ? "selected" : "")"
+                                     @onclick='() => SelectTheme("light")'>
+                                    <div class="theme-preview light-preview">
+                                        <div class="preview-header"></div>
+                                        <div class="preview-content">
+                                            <div class="preview-line"></div>
+                                            <div class="preview-line short"></div>
+                                        </div>
+                                    </div>
+                                    <div class="theme-label">
+                                        <span class="theme-name">Light</span>
+                                        <span class="theme-desc">Bright and clean interface</span>
+                                    </div>
+                                    @if (selectedTheme == "light")
+                                    {
+                                        <div class="theme-check">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="theme-option @(selectedTheme == "dark" ? "selected" : "")"
+                                     @onclick='() => SelectTheme("dark")'>
+                                    <div class="theme-preview dark-preview">
+                                        <div class="preview-header"></div>
+                                        <div class="preview-content">
+                                            <div class="preview-line"></div>
+                                            <div class="preview-line short"></div>
+                                        </div>
+                                    </div>
+                                    <div class="theme-label">
+                                        <span class="theme-name">Dark</span>
+                                        <span class="theme-desc">Easy on the eyes</span>
+                                    </div>
+                                    @if (selectedTheme == "dark")
+                                    {
+                                        <div class="theme-check">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="theme-info">
+                                <i class="bi bi-info-circle"></i>
+                                <span>Your theme preference will be saved automatically</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Data Sync Tab -->
+            @if (activeTab == "sync")
+            {
+                <div class="settings-section">
+                    <div class="section-header">
+                        <h2>Data Sync</h2>
+                        <p>Synchronize your data with DatabaseASP.NET server</p>
+                    </div>
+
+                    <!-- Sync Status Card -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <h3>Sync Status</h3>
+                            <p>Current synchronization status</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="sync-status">
+                                <div class="status-item">
+                                    <div class="status-icon @(syncStatus == "connected" ? "connected" : "disconnected")">
+                                        <i class="bi @(syncStatus == "connected" ? "bi-check-circle-fill" : "bi-exclamation-circle-fill")"></i>
+                                    </div>
+                                    <div class="status-info">
+                                        <span class="status-label">Server Connection</span>
+                                        <span class="status-value">@(syncStatus == "connected" ? "Connected" : "Disconnected")</span>
+                                    </div>
+                                </div>
+                                <div class="status-item">
+                                    <div class="status-icon">
+                                        <i class="bi bi-calendar-event"></i>
+                                    </div>
+                                    <div class="status-info">
+                                        <span class="status-label">Last Sync</span>
+                                        <span class="status-value">@lastSyncTime</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connection Test Card -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <h3>Connection Test</h3>
+                            <p>Test your connection to the remote database</p>
+                        </div>
+                        <div class="card-content">
+                            <button class="btn btn-outline-primary" @onclick="TestConnection" disabled="@isTestingConnection">
+                                @if (isTestingConnection)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Testing...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-arrow-repeat me-2"></i>
+                                    <span>Test Connection</span>
+                                }
+                            </button>
+                            @if (!string.IsNullOrEmpty(connectionTestMessage))
+                            {
+                                <div class="alert @(connectionTestSuccess ? "alert-success" : "alert-warning") mt-3">
+                                    <i class="bi @(connectionTestSuccess ? "bi-check-circle" : "bi-exclamation-triangle") me-2"></i>
+                                    @connectionTestMessage
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Sync Options Card -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <h3>Sync Options</h3>
+                            <p>Configure what data to synchronize</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="sync-options">
+                                <div class="sync-option">
+                                    <div class="option-header">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" @bind="syncCustomers" />
+                                            <span>Customers</span>
+                                        </label>
+                                        <span class="option-desc">Sync customer data</span>
+                                    </div>
+                                </div>
+                                <div class="sync-option">
+                                    <div class="option-header">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" @bind="syncInvoices" />
+                                            <span>Invoices</span>
+                                        </label>
+                                        <span class="option-desc">Sync invoice records</span>
+                                    </div>
+                                </div>
+                                <div class="sync-option">
+                                    <div class="option-header">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" @bind="syncTransactions" />
+                                            <span>Transactions</span>
+                                        </label>
+                                        <span class="option-desc">Sync financial transactions</span>
+                                    </div>
+                                </div>
+                                <div class="sync-option">
+                                    <div class="option-header">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" @bind="syncReports" disabled />
+                                            <span>Reports</span>
+                                        </label>
+                                        <span class="option-desc">Sync generated reports (Coming Soon)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sync Actions Card -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <h3>Sync Actions</h3>
+                            <p>Manage your data synchronization</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="sync-actions">
+                                <button class="btn btn-primary @(isSyncing ? "disabled" : "")"
+                                        @onclick="PerformSync"
+                                        disabled="@isSyncing">
+                                    @if (isSyncing)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Syncing... @syncProgress</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-cloud-arrow-up me-2"></i>
+                                        <span>Sync Now</span>
+                                    }
+                                </button>
+                                <button class="btn btn-outline-secondary" @onclick="RefreshStats">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>
+                                    <span>Refresh Stats</span>
+                                </button>
+                                <button class="btn btn-outline-info" @onclick="RunDiagnostics">
+                                    <i class="bi bi-bug me-2"></i>
+                                    <span>Run Diagnostics</span>
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(syncMessage))
+                            {
+                                <div class="alert @(syncSuccess ? "alert-success" : "alert-warning") mt-3">
+                                    <i class="bi @(syncSuccess ? "bi-check-circle" : "bi-exclamation-triangle") me-2"></i>
+                                    @syncMessage
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Account Tab -->
+            @if (activeTab == "account")
+            {
+                <div class="settings-section">
+                    <div class="section-header">
+                        <h2>Account</h2>
+                        <p>Manage your account information</p>
+                    </div>
+
+                    <!-- Account Info Card -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <h3>Account Information</h3>
+                            <p>Your current account details</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="account-info">
+                                <div class="info-item">
+                                    <span class="info-label">Full Name</span>
+                                    <span class="info-value">@AuthService.CurrentUserName</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Role</span>
+                                    <span class="info-value">@AuthService.CurrentUserRole</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Account Status</span>
+                                    <span class="info-value">
+                                        <span class="badge bg-success">Active</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Card -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <h3>Security</h3>
+                            <p>Manage your security settings</p>
+                        </div>
+                        <div class="card-content">
+                            <button class="btn btn-outline-primary">
+                                <i class="bi bi-key me-2"></i>
+                                <span>Change Password</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string activeTab = "sync"; // Start on sync tab
+    private string selectedTheme = "light";
+    private string syncStatus = "disconnected";
+    private string lastSyncTime = "Never";
+    private bool isSyncing = false;
+    private bool syncSuccess = false;
+    private string syncMessage = "";
+    private string syncProgress = "";
+
+    private bool isTestingConnection = false;
+    private bool connectionTestSuccess = false;
+    private string connectionTestMessage = "";
+
+    private bool syncCustomers = true;
+    private bool syncInvoices = true;
+    private bool syncTransactions = false;
+    private bool syncReports = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", true);
+        }
+
+        // Load saved theme preference
+        var savedTheme = GetSavedTheme();
+        selectedTheme = savedTheme ?? "dark";
+
+        // Test connection on load
+        await TestConnectionOnLoad();
+    }
+
+    private async Task TestConnectionOnLoad()
+    {
+        try
+        {
+            var (isConnected, message) = await RemoteDbService.GetConnectionStatusAsync();
+            syncStatus = isConnected ? "connected" : "disconnected";
+
+            if (isConnected)
+            {
+                var lastSync = await RemoteDbService.GetLastSyncTimeAsync();
+                if (lastSync.HasValue)
+                {
+                    lastSyncTime = lastSync.Value.ToString("MMM dd, yyyy HH:mm");
+                }
+            }
+        }
+        catch (Exception)
+        {
+            syncStatus = "disconnected";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task TestConnection()
+    {
+        isTestingConnection = true;
+        connectionTestMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var (isConnected, message) = await RemoteDbService.GetConnectionStatusAsync();
+            connectionTestSuccess = isConnected;
+            connectionTestMessage = message;
+            syncStatus = isConnected ? "connected" : "disconnected";
+        }
+        catch (Exception ex)
+        {
+            connectionTestSuccess = false;
+            connectionTestMessage = $"Connection test failed: {ex.Message}";
+            syncStatus = "disconnected";
+        }
+        finally
+        {
+            isTestingConnection = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectTab(string tab)
+    {
+        activeTab = tab;
+    }
+
+    private void SelectTheme(string theme)
+    {
+        selectedTheme = theme;
+        SaveThemePreference(theme);
+        StateHasChanged();
+    }
+
+    private void SaveThemePreference(string theme)
+    {
+        // TODO: Save to local storage or database
+    }
+
+    private string? GetSavedTheme()
+    {
+        // TODO: Retrieve from local storage or database
+        return null;
+    }
+
+    private async Task PerformSync()
+    {
+        isSyncing = true;
+        syncMessage = "";
+        syncProgress = "";
+        StateHasChanged();
+
+        try
+        {
+            // Test connection first
+            var (isConnected, message) = await RemoteDbService.GetConnectionStatusAsync();
+            if (!isConnected)
+            {
+                syncSuccess = false;
+                syncMessage = "Cannot connect to remote database. Please check your connection.";
+                syncStatus = "disconnected";
+                return;
+            }
+
+            syncStatus = "connected";
+
+            // Fetch all data from local database
+            syncProgress = "(Fetching data from local database...)";
+            StateHasChanged();
+
+            var customers = await LocalDbService.GetAllCustomersAsync();
+            var invoices = await LocalDbService.GetAllInvoicesAsync();
+
+            // Check if there's data to sync
+            if ((customers?.Count ?? 0) == 0 && (invoices?.Count ?? 0) == 0)
+            {
+                syncSuccess = false;
+                syncMessage = "⚠ No data found in local database to sync. Please add customers or invoices first.";
+                isSyncing = false;
+                StateHasChanged();
+                return;
+            }
+
+            syncProgress = $"(Syncing {customers?.Count ?? 0} customers and {invoices?.Count ?? 0} invoices...)";
+            StateHasChanged();
+
+            // Use comprehensive sync function
+            var syncResult = await RemoteDbService.SyncAllDataAsync(customers ?? new List<Customer>(), invoices ?? new List<Invoice>());
+
+            syncSuccess = syncResult.IsSuccess;
+            syncMessage = syncResult.Message;
+            
+            if (syncResult.TotalSynced > 0)
+            {
+                lastSyncTime = DateTime.Now.ToString("MMM dd, yyyy HH:mm");
+            }
+        }
+        catch (Exception ex)
+        {
+            syncSuccess = false;
+            syncMessage = $"Sync failed: {ex.Message}";
+            syncStatus = "disconnected";
+        }
+        finally
+        {
+            isSyncing = false;
+            syncProgress = "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshStats()
+    {
+        try
+        {
+            var stats = await RemoteDbService.GetSyncStatsAsync();
+            syncMessage = $"Remote database stats - Customers: {stats.CustomerCount}, Invoices: {stats.InvoiceCount}, Transactions: {stats.TransactionCount}";
+            syncSuccess = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            syncMessage = $"Failed to get stats: {ex.Message}";
+            syncSuccess = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RunDiagnostics()
+    {
+        try
+        {
+            syncMessage = "Running diagnostics...";
+            syncSuccess = false;
+            StateHasChanged();
+
+            var diagnostics = await ConnectionDiagnostics.RunAllDiagnosticsAsync();
+            syncMessage = diagnostics;
+            syncSuccess = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            syncMessage = $"Diagnostics error: {ex.Message}";
+            syncSuccess = false;
+            StateHasChanged();
+        }
+    }
+}

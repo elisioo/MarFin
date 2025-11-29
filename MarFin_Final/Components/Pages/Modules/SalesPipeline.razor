@@ -188,7 +188,7 @@
                     <span>Date</span>
                 </div>
 
-                @foreach (var deal in filteredOpportunities)
+                @foreach (var deal in GetPaginatedOpportunities())
                 {
                     <div class="list-row" @onclick="@(() => EditOpportunity(deal.OpportunityId))">
                         <span>@deal.OpportunityName</span>
@@ -203,6 +203,49 @@
                         <span>@(deal.ExpectedCloseDate?.ToString("MMM dd, yyyy") ?? "No date")</span>
                     </div>
                 }
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="pagination-section">
+                <div class="pagination-info">
+                    <span>Showing <strong>@((currentPage - 1) * pageSize + 1)</strong> to <strong>@Math.Min(currentPage * pageSize, totalRecords)</strong> of <strong>@totalRecords</strong> opportunities</span>
+                </div>
+
+                <div class="pagination-controls">
+                    <div class="page-size-selector">
+                        <label>Rows per page:</label>
+                        <select @bind="pageSize" @bind:after="ReloadWithNewPageSize">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+
+                    <div class="pagination-buttons">
+                        <button class="pagination-btn" @onclick="() => ChangePage(1)" disabled="@(currentPage == 1)">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </button>
+                        <button class="pagination-btn" @onclick="() => ChangePage(currentPage - 1)" disabled="@(currentPage == 1)">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+
+                        @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(TotalPages, currentPage + 2); i++)
+                        {
+                            int pageNum = i;
+                            <button class="@(currentPage == pageNum ? "pagination-btn active" : "pagination-btn")" @onclick="() => ChangePage(pageNum)">
+                                @pageNum
+                            </button>
+                        }
+
+                        <button class="pagination-btn" @onclick="() => ChangePage(currentPage + 1)" disabled="@(currentPage == TotalPages)">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                        <button class="pagination-btn" @onclick="() => ChangePage(TotalPages)" disabled="@(currentPage == TotalPages)">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         }
     }
@@ -405,6 +448,12 @@
     private int activeDealsCount = 0;
     private decimal avgDealSize = 0;
     private decimal winRate = 0;
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalRecords = 0;
+    private int TotalPages => (int)Math.Ceiling(totalRecords / (double)pageSize);
 
     // Confirmation modal
     private bool showConfirmModal = false;
@@ -668,5 +717,27 @@
     {
         selectedStageFilter = Convert.ToInt32(e.Value);
         ApplyFilters();
+    }
+
+    private List<SalesPipelineModel> GetPaginatedOpportunities()
+    {
+        totalRecords = filteredOpportunities.Count;
+        return filteredOpportunities
+            .Skip((currentPage - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+    }
+
+    private async Task ChangePage(int page)
+    {
+        if (page < 1 || page > TotalPages) return;
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private async Task ReloadWithNewPageSize()
+    {
+        currentPage = 1;
+        StateHasChanged();
     }
 }

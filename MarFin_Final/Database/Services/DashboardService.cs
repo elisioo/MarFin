@@ -172,8 +172,7 @@ namespace MarFin_Final.Database.Services
                         ISNULL(SUM(total_converted), 0) as TotalConverted
                     FROM tbl_Campaigns 
                     WHERE is_archived = 0 
-                    AND start_date >= @StartDate", connection);
-                campaignCmd.Parameters.AddWithValue("@StartDate", startDate);
+                    AND campaign_status = 'Active'", connection);
 
                 using (var reader = await campaignCmd.ExecuteReaderAsync())
                 {
@@ -410,6 +409,50 @@ namespace MarFin_Final.Database.Services
             }
 
             return transactions;
+        }
+
+        // Debug: Get Campaign Status Breakdown
+        public async Task<Dictionary<string, int>> GetCampaignStatusBreakdownAsync()
+        {
+            var breakdown = new Dictionary<string, int>();
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                var cmd = new SqlCommand(@"
+                    SELECT campaign_status, COUNT(*) as Count
+                    FROM tbl_Campaigns
+                    WHERE is_archived = 0
+                    GROUP BY campaign_status
+                    ORDER BY campaign_status", connection);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        var status = reader.GetString(0);
+                        var count = reader.GetInt32(1);
+                        breakdown[status] = count;
+                    }
+                }
+            }
+
+            return breakdown;
+        }
+
+        // Debug: Get Total Campaign Count
+        public async Task<int> GetTotalCampaignCountAsync()
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                var cmd = new SqlCommand(@"
+                    SELECT COUNT(*) FROM tbl_Campaigns WHERE is_archived = 0", connection);
+
+                return (int)await cmd.ExecuteScalarAsync();
+            }
         }
     }
 

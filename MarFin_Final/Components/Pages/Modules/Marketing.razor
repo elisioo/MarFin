@@ -114,11 +114,11 @@
                     @if (showStatusDropdown)
                     {
                         <div class="dropdown-menu show">
-                            <button @onclick='() => { statusFilter = ""; showStatusDropdown = false; ApplyFilters(); }'>All</button>
-                            <button @onclick='() => { statusFilter = "Draft"; showStatusDropdown = false; ApplyFilters(); }'>Draft</button>
-                            <button @onclick='() => { statusFilter = "Active"; showStatusDropdown = false; ApplyFilters(); }'>Active</button>
-                            <button @onclick='() => { statusFilter = "Completed"; showStatusDropdown = false; ApplyFilters(); }'>Completed</button>
-                            <button @onclick='() => { statusFilter = "Paused"; showStatusDropdown = false; ApplyFilters(); }'>Paused</button>
+                            <button @onclick='() => { statusFilter = ""; showStatusDropdown = false; FilterByStatus(""); }'>All</button>
+                            <button @onclick='() => { statusFilter = "Draft"; showStatusDropdown = false; FilterByStatus("Draft"); }'>Draft</button>
+                            <button @onclick='() => { statusFilter = "Active"; showStatusDropdown = false; FilterByStatus("Active"); }'>Active</button>
+                            <button @onclick='() => { statusFilter = "Completed"; showStatusDropdown = false; FilterByStatus("Completed"); }'>Completed</button>
+                            <button @onclick='() => { statusFilter = "Paused"; showStatusDropdown = false; FilterByStatus("Paused"); }'>Paused</button>
                         </div>
                     }
                 </div>
@@ -134,11 +134,11 @@
                     @if (showTypeDropdown)
                     {
                         <div class="dropdown-menu show">
-                            <button @onclick='() => { typeFilter = ""; showTypeDropdown = false; ApplyFilters(); }'>All</button>
-                            <button @onclick='() => { typeFilter = "Email"; showTypeDropdown = false; ApplyFilters(); }'>Email</button>
-                            <button @onclick='() => { typeFilter = "SMS"; showTypeDropdown = false; ApplyFilters(); }'>SMS</button>
-                            <button @onclick='() => { typeFilter = "Social"; showTypeDropdown = false; ApplyFilters(); }'>Social</button>
-                            <button @onclick='() => { typeFilter = "Other"; showTypeDropdown = false; ApplyFilters(); }'>Other</button>
+                            <button @onclick='() => { typeFilter = ""; showTypeDropdown = false; FilterByType(""); }'>All</button>
+                            <button @onclick='() => { typeFilter = "Email"; showTypeDropdown = false; FilterByType("Email"); }'>Email</button>
+                            <button @onclick='() => { typeFilter = "SMS"; showTypeDropdown = false; FilterByType("SMS"); }'>SMS</button>
+                            <button @onclick='() => { typeFilter = "Social"; showTypeDropdown = false; FilterByType("Social"); }'>Social</button>
+                            <button @onclick='() => { typeFilter = "Other"; showTypeDropdown = false; FilterByType("Other"); }'>Other</button>
                         </div>
                     }
                 </div>
@@ -146,11 +146,21 @@
 
             <div class="search-box">
                 <i class="bi bi-search search-icon"></i>
-                <input type="text" placeholder="Search campaigns..." @bind="searchTerm" @bind:event="oninput" @onkeyup="ApplyFilters" />
+                <input type="text" placeholder="Search campaigns..." @bind="searchTerm" @bind:event="oninput" @onkeyup="DelaySearch" />
                 @if (!string.IsNullOrEmpty(searchTerm))
                 {
                     <button class="search-clear" @onclick="ClearSearch">×</button>
                 }
+            </div>
+
+            <!-- View Toggle -->
+            <div class="view-toggle">
+                <button class="@(isCardView ? "view-btn active" : "view-btn")" @onclick="() => SetView(true)" title="Card View">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </button>
+                <button class="@(!isCardView ? "view-btn active" : "view-btn")" @onclick="() => SetView(false)" title="Table View">
+                    <i class="bi bi-list-ul"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -175,70 +185,177 @@
     }
     else
     {
-        <div class="campaigns-grid">
-            @foreach (var campaign in filteredCampaigns)
-            {
-                <div class="campaign-card">
-                    <div class="campaign-header">
-                        <div class="campaign-title">
-                            <i class="bi bi-tag"></i>
-                            <span>@campaign.CampaignName</span>
+        @if (isCardView)
+        {
+            <!-- Card View -->
+            <div class="campaigns-grid">
+                @foreach (var campaign in filteredCampaigns)
+                {
+                    <div class="campaign-card">
+                        <div class="campaign-header">
+                            <div class="campaign-title">
+                                <i class="bi bi-tag"></i>
+                                <span>@campaign.CampaignName</span>
+                            </div>
+                            <span class="campaign-status status-@campaign.CampaignStatus.ToLower()">
+                                <i class="bi bi-circle-fill"></i> @campaign.CampaignStatus
+                            </span>
                         </div>
-                        <span class="campaign-status status-@campaign.CampaignStatus.ToLower()">
-                            <i class="bi bi-circle-fill"></i> @campaign.CampaignStatus
-                        </span>
+
+                        <div class="campaign-metrics">
+                            <div class="metric-row">
+                                <span class="metric-label">Budget:</span>
+                                <span class="metric-value">₱@campaign.Budget.ToString("N0")</span>
+                                <span class="metric-label">Spent:</span>
+                                <span class="metric-value">₱@campaign.ActualSpend.ToString("N0")</span>
+                                <span class="metric-label">ROI:</span>
+                                <span class="metric-value">@campaign.ROI%</span>
+                            </div>
+                        </div>
+
+                        <div class="campaign-date">@campaign.DateRange</div>
+
+                        <div class="campaign-stats">
+                            <div class="stat-box">
+                                <span class="stat-label">Sent</span>
+                                <span class="stat-value">@campaign.TotalSent</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Opened</span>
+                                <span class="stat-value">@campaign.TotalOpened</span>
+                                <span class="stat-percent">@campaign.OpenRate%</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label">Clicked</span>
+                                <span class="stat-value">@campaign.TotalClicked</span>
+                                <span class="stat-percent">@campaign.ClickRate%</span>
+                            </div>
+                        </div>
+
+                        <div class="campaign-revenue">
+                            Revenue Generated: <strong>₱@campaign.RevenueGenerated.ToString("N2")</strong>
+                        </div>
+
+                        <div class="campaign-actions">
+                            @if (showArchivedView)
+                            {
+                                <button class="action-link restore" @onclick="() => RestoreCampaign(campaign)">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Restore
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="action-link" @onclick="() => OpenEditModal(campaign)">Edit</button>
+                                <button class="action-link" @onclick="() => DuplicateCampaign(campaign)">Duplicate</button>
+                                <button class="action-link danger" @onclick="() => ConfirmArchive(campaign)">Archive</button>
+                            }
+                        </div>
                     </div>
-
-                    <div class="campaign-metrics">
-                        <div class="metric-row">
-                            <span class="metric-label">Budget:</span>
-                            <span class="metric-value">₱@campaign.Budget.ToString("N0")</span>
-                            <span class="metric-label">Spent:</span>
-                            <span class="metric-value">₱@campaign.ActualSpend.ToString("N0")</span>
-                            <span class="metric-label">ROI:</span>
-                            <span class="metric-value">@campaign.ROI%</span>
-                        </div>
-                    </div>
-
-                    <div class="campaign-date">@campaign.DateRange</div>
-
-                    <div class="campaign-stats">
-                        <div class="stat-box">
-                            <span class="stat-label">Sent</span>
-                            <span class="stat-value">@campaign.TotalSent</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="stat-label">Opened</span>
-                            <span class="stat-value">@campaign.TotalOpened</span>
-                            <span class="stat-percent">@campaign.OpenRate%</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="stat-label">Clicked</span>
-                            <span class="stat-value">@campaign.TotalClicked</span>
-                            <span class="stat-percent">@campaign.ClickRate%</span>
-                        </div>
-                    </div>
-
-                    <div class="campaign-revenue">
-                        Revenue Generated: <strong>₱@campaign.RevenueGenerated.ToString("N2")</strong>
-                    </div>
-
-                    <div class="campaign-actions">
-                        @if (showArchivedView)
+                }
+            </div>
+        }
+        else
+        {
+            <!-- Table View -->
+            <div class="campaigns-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Campaign Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Date Range</th>
+                            <th>Budget</th>
+                            <th>Spent</th>
+                            <th>Sent</th>
+                            <th>Open Rate</th>
+                            <th>Revenue</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var campaign in filteredCampaigns)
                         {
-                            <button class="action-link restore" @onclick="() => RestoreCampaign(campaign)">
-                                <i class="bi bi-arrow-counterclockwise"></i> Restore
-                            </button>
+                            <tr>
+                                <td><strong>@campaign.CampaignName</strong></td>
+                                <td>@campaign.CampaignType</td>
+                                <td><span class="status-badge status-@campaign.CampaignStatus.ToLower()">@campaign.CampaignStatus</span></td>
+                                <td>@campaign.DateRange</td>
+                                <td>₱@campaign.Budget.ToString("N0")</td>
+                                <td>₱@campaign.ActualSpend.ToString("N0")</td>
+                                <td>@campaign.TotalSent</td>
+                                <td>@campaign.OpenRate%</td>
+                                <td>₱@campaign.RevenueGenerated.ToString("N0")</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        @if (showArchivedView)
+                                        {
+                                            <button class="action-btn" @onclick="() => RestoreCampaign(campaign)" title="Restore">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="action-btn" @onclick="() => OpenEditModal(campaign)" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="action-btn" @onclick="() => DuplicateCampaign(campaign)" title="Duplicate">
+                                                <i class="bi bi-files"></i>
+                                            </button>
+                                            <button class="action-btn danger" @onclick="() => ConfirmArchive(campaign)" title="Archive">
+                                                <i class="bi bi-archive"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
                         }
-                        else
-                        {
-                            <button class="action-link" @onclick="() => OpenEditModal(campaign)">Edit</button>
-                            <button class="action-link" @onclick="() => DuplicateCampaign(campaign)">Duplicate</button>
-                            <button class="action-link danger" @onclick="() => ConfirmArchive(campaign)">Archive</button>
-                        }
-                    </div>
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <!-- Pagination Controls -->
+        <div class="pagination-section">
+            <div class="pagination-info">
+                <span>Showing <strong>@((currentPage - 1) * pageSize + 1)</strong> to <strong>@Math.Min(currentPage * pageSize, totalRecords)</strong> of <strong>@totalRecords</strong> campaigns</span>
+            </div>
+
+            <div class="pagination-controls">
+                <div class="page-size-selector">
+                    <label>Rows per page:</label>
+                    <select @bind="pageSize" @bind:after="ReloadWithNewPageSize">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
                 </div>
-            }
+
+                <div class="pagination-buttons">
+                    <button class="pagination-btn" @onclick="() => ChangePage(1)" disabled="@(currentPage == 1)">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </button>
+                    <button class="pagination-btn" @onclick="() => ChangePage(currentPage - 1)" disabled="@(currentPage == 1)">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+
+                    @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(TotalPages, currentPage + 2); i++)
+                    {
+                        int pageNum = i;
+                        <button class="@(currentPage == pageNum ? "pagination-btn active" : "pagination-btn")" @onclick="() => ChangePage(pageNum)">
+                            @pageNum
+                        </button>
+                    }
+
+                    <button class="pagination-btn" @onclick="() => ChangePage(currentPage + 1)" disabled="@(currentPage == TotalPages)">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                    <button class="pagination-btn" @onclick="() => ChangePage(TotalPages)" disabled="@(currentPage == TotalPages)">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     }
 </div>

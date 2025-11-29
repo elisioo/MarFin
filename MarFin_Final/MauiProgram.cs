@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using System.Reflection;
 using MarFin_Final.Services;
 using MarFin_Final.Database.Services;
-using MarFin.Services;
 using MarFin_Final.Data;
 
 namespace MarFin_Final
@@ -53,6 +52,8 @@ namespace MarFin_Final
             builder.Services.AddScoped<UserService>();
             builder.Services.AddScoped<CustomerService>();
             builder.Services.AddScoped<DashboardService>();
+            builder.Services.AddSingleton<RemoteDatabaseService>();
+            builder.Services.AddSingleton<LocalDatabaseService>();
 
 
             return builder.Build();

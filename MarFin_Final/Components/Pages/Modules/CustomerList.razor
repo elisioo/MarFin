@@ -141,71 +141,78 @@
         }
         else
         {
-            @foreach (var group in GetGroupedCustomers())
-            {
-                <div class="customer-card">
-                    <div class="customer-card-header">
-                        <span class="customer-name">@group.Key</span>
-                        <span class="customer-count">@group.Value.Count customer(s)</span>
-                    </div>
-
-                    <div class="customer-table">
-                        <div class="table-header">
-                            <span>First Name</span>
-                            <span>Last Name</span>
-                            <span>Email</span>
-                            <span>Phone</span>
-                            <span>Status</span>
-                            <span>Actions</span>
-                        </div>
-
-                        @foreach (var customer in group.Value)
+            <div class="modern-table-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Company</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Total Revenue</th>
+                            <th>Created Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var customer in filteredCustomers.OrderByDescending(c => c.CreatedDate))
                         {
-                            <div class="table-row">
-                                <span>@customer.FirstName</span>
-                                <span>@customer.LastName</span>
-                                <span>@customer.Email</span>
-                                <span>@(string.IsNullOrEmpty(customer.Phone) ? "N/A" : customer.Phone)</span>
-                                <span>
+                            <tr>
+                                <td>
+                                    <div class="customer-name-cell">
+                                        <span class="customer-avatar">@customer.FirstName[0]@customer.LastName[0]</span>
+                                        <span class="customer-name">@customer.FullName</span>
+                                    </div>
+                                </td>
+                                <td>@(string.IsNullOrEmpty(customer.CompanyName) ? "—" : customer.CompanyName)</td>
+                                <td>
+                                    <a href="mailto:@customer.Email" class="email-link">@customer.Email</a>
+                                </td>
+                                <td>@(string.IsNullOrEmpty(customer.Phone) ? "—" : customer.Phone)</td>
+                                <td>
                                     <span class="status-badge status-@customer.CustomerStatus.ToLower()">
                                         @customer.CustomerStatus
                                     </span>
-                                </span>
-                                <span class="action-buttons-cell">
-                                    @if (showArchivedView)
-                                    {
-                                        @* Only Admin and Marketing can restore *@
-                                        @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+                                </td>
+                                <td>
+                                    <span class="revenue-badge">₱@customer.TotalRevenue.ToString("N0")</span>
+                                </td>
+                                <td>@customer.CreatedDate.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        @if (showArchivedView)
                                         {
-                                            <button class="btn-icon btn-icon-success" @onclick="() => RestoreCustomer(customer)" title="Restore">
-                                                <i class="bi bi-arrow-counterclockwise"></i>
-                                            </button>
+                                            @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+                                            {
+                                                <button class="btn-icon btn-icon-success" @onclick="() => RestoreCustomer(customer)" title="Restore">
+                                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                                </button>
+                                            }
                                         }
-                                    }
-                                    else
-                                    {
-                                        @* Everyone can view *@
-                                        <button class="btn-icon" @onclick="() => NavigateToDetails(customer.CustomerId)" title="View Details">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
+                                        else
+                                        {
+                                            <button class="btn-icon" @onclick="() => NavigateToDetails(customer.CustomerId)" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
 
-                                        @* Only Admin and Marketing can edit *@
-                                        @if (AuthService.IsAdmin() || AuthService.IsMarketing())
-                                        {
-                                            <button class="btn-icon" @onclick="() => OpenEditModal(customer)" title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <button class="btn-icon btn-icon-danger" @onclick="() => ConfirmArchive(customer)" title="Archive">
-                                                <i class="bi bi-archive"></i>
-                                            </button>
+                                            @if (AuthService.IsAdmin() || AuthService.IsMarketing())
+                                            {
+                                                <button class="btn-icon" @onclick="() => OpenEditModal(customer)" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn-icon btn-icon-danger" @onclick="() => ConfirmArchive(customer)" title="Archive">
+                                                    <i class="bi bi-archive"></i>
+                                                </button>
+                                            }
                                         }
-                                    }
-                                </span>
-                            </div>
+                                    </div>
+                                </td>
+                            </tr>
                         }
-                    </div>
-                </div>
-            }
+                    </tbody>
+                </table>
+            </div>
         }
 
         @if (customersResult.TotalPages > 1)
@@ -312,7 +319,7 @@
                     </div>
                     <div class="modal-actions">
                         <button class="btn-cancel" @onclick="CloseModal">Cancel</button>
-                        <button class="btn-save" @onclick="SaveCustomer" disabled="@isSaving">
+                        <button class="btn-save" @onclick="ShowSaveConfirmation" disabled="@isSaving">
                             @if (isSaving)
                             {
                                 <span class="spinner-small"></span>
@@ -485,18 +492,48 @@
             </div>
         </div>
     }
+
+    @* Confirmation Modal *@
+    @if (showConfirmModal)
+    {
+        <div class="modal-overlay" @onclick="CloseConfirmModal">
+            <div class="modal-content confirm-modal" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span class="user-icon warning"><i class="bi bi-exclamation-triangle"></i></span>
+                        <h2>@confirmTitle</h2>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <p>@confirmMessage</p>
+
+                    <div class="modal-footer">
+                        <button class="btn-cancel" @onclick="CloseConfirmModal">Cancel</button>
+                        <button class="btn-save" @onclick="ConfirmSaveCustomer" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-small"></span>
+                            }
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </AuthorizeRoute>
 
-@code {
+    @code {
 
     private readonly CustomerService customerService = new();
     private PaginatedResult<Customer> customersResult = new PaginatedResult<Customer>();
-    private List<Customer> filteredCustomers = new();
+    private List<Models.Customer> filteredCustomers = new();
     private string searchTerm = string.Empty;
     private string statusFilter = string.Empty;
     private bool showStatusFilter = false;
     private bool showModal = false;
     private bool showArchiveModal = false;
+    private bool showConfirmModal = false;
     private bool isEditMode = false;
     private bool isLoading = true;
     private bool isSaving = false;
@@ -504,6 +541,8 @@
     private Customer? customerToArchive = null;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
+    private string confirmTitle = string.Empty;
+    private string confirmMessage = string.Empty;
     private Dictionary<string, string> validationErrors = new();
     private int currentUserId => AuthService.CurrentUserId ?? 1;
     private bool showArchivedView = false;
@@ -687,6 +726,18 @@
         errorMessage = string.Empty;
     }
 
+    private void CloseConfirmModal()
+    {
+        showConfirmModal = false;
+        confirmTitle = string.Empty;
+        confirmMessage = string.Empty;
+    }
+
+    private async Task ConfirmSaveCustomer()
+    {
+        await SaveCustomer();
+    }
+
     private bool ValidateCustomer()
     {
         validationErrors.Clear();
@@ -726,7 +777,7 @@
         }
     }
 
-    private async Task SaveCustomer()
+    private void ShowSaveConfirmation()
     {
         // Only Admin and Marketing can save customers
         if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
@@ -740,6 +791,17 @@
             errorMessage = "Please correct the validation errors";
             return;
         }
+
+        confirmTitle = isEditMode ? "Update Customer" : "Add Customer";
+        confirmMessage = isEditMode
+            ? $"Are you sure you want to update {editingCustomer.FullName}? This will modify their information in the system."
+            : $"Are you sure you want to add {editingCustomer.FullName} as a new customer?";
+        showConfirmModal = true;
+    }
+
+    private async Task SaveCustomer()
+    {
+        if (!showConfirmModal) return;
 
         try
         {
@@ -783,6 +845,7 @@
         finally
         {
             isSaving = false;
+            showConfirmModal = false;
             StateHasChanged();
         }
     }
@@ -854,7 +917,7 @@
         return filteredCustomers
             .GroupBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? "Individual Customers" : c.CompanyName)
             .OrderBy(g => g.Key)
-            .ToDictionary(g => g.Key, g => g.OrderBy(c => c.LastName).ThenBy(c => c.FirstName).ToList());
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CreatedDate).ToList());
     }
 
     private async Task ToggleArchivedView()
