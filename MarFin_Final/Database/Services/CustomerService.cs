@@ -92,7 +92,7 @@ namespace MarFin_Final.Data
                         FROM tbl_Customers c
                         LEFT JOIN tbl_Customer_Segments s ON c.segment_id = s.segment_id
                         {whereClause}
-                        ORDER BY c.company_name, c.last_name, c.first_name
+                        ORDER BY c.created_date DESC, c.company_name, c.last_name, c.first_name
                         OFFSET @Offset ROWS
                         FETCH NEXT @PageSize ROWS ONLY";
 
@@ -257,7 +257,7 @@ namespace MarFin_Final.Data
                                    FROM tbl_Customers c
                                    LEFT JOIN tbl_Customer_Segments s ON c.segment_id = s.segment_id
                                    WHERE c.is_archived = 0 AND c.is_active = 1
-                                   ORDER BY c.company_name, c.last_name, c.first_name";
+                                   ORDER BY c.created_date DESC, c.company_name, c.last_name, c.first_name";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {

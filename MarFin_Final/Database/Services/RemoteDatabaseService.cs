@@ -43,7 +43,7 @@ namespace MarFin_Final.Database.Services
                     using (SqlCommand cmd = new SqlCommand(tableQuery, connection))
                     {
                         var tableExists = (int)await cmd.ExecuteScalarAsync() > 0;
-                        diagnostic.AddStep(tableExists ? "✓ tbl_Customers exists" : "✗ tbl_Customers does NOT exist");
+                        diagnostic.AddStep(tableExists ? "✓tbl_Customers exists" : "tbl_Customers does NOT exist");
                         diagnostic.TableExists = tableExists;
                     }
 
@@ -99,7 +99,7 @@ namespace MarFin_Final.Database.Services
                                 using (SqlCommand cmd = new SqlCommand(testQuery, connection, transaction))
                                 {
                                     await cmd.ExecuteNonQueryAsync();
-                                    diagnostic.AddStep("✓ INSERT permission verified (test rolled back)");
+                                    diagnostic.AddStep("INSERT permission verified (test rolled back)");
                                     diagnostic.CanInsert = true;
                                 }
 
@@ -131,7 +131,7 @@ namespace MarFin_Final.Database.Services
                     }
                     else
                     {
-                        diagnostic.AddStep("✗ Cannot proceed - table does not exist");
+                        diagnostic.AddStep("Cannot proceed - table does not exist");
                     }
                 }
 
@@ -159,7 +159,7 @@ namespace MarFin_Final.Database.Services
 
             if (customers == null || customers.Count == 0)
             {
-                Console.WriteLine("⚠ RemoteDatabaseService: No customers provided to sync");
+                Console.WriteLine("RemoteDatabaseService: No customers provided to sync");
                 return 0;
             }
 
@@ -172,7 +172,7 @@ namespace MarFin_Final.Database.Services
                 try
                 {
                     await connection.OpenAsync();
-                    Console.WriteLine("✓ Connection opened successfully");
+                    Console.WriteLine("Connection opened successfully");
 
                     // First, ensure at least one segment exists
                     await EnsureSegmentExistsAsync(connection);
@@ -310,7 +310,7 @@ namespace MarFin_Final.Database.Services
 
                 if (!exists)
                 {
-                    Console.WriteLine("⚠ Default segment missing - creating segment_id=1");
+                    Console.WriteLine(" Default segment missing - creating segment_id=1");
                     var insertQuery = @"INSERT INTO tbl_Customer_Segments 
                         (segment_id, segment_name, description, min_revenue, max_revenue, is_active, created_date)
                         VALUES (1, 'Default', 'Default customer segment', 0, NULL, 1, GETDATE())";
@@ -382,7 +382,7 @@ namespace MarFin_Final.Database.Services
                 }
                 else
                 {
-                    Console.WriteLine("⚠ WARNING: No customers provided to sync!");
+                    Console.WriteLine("WARNING: No customers provided to sync!");
                     Console.WriteLine("   → Check if local database has any active, non-archived customers");
                 }
 
@@ -398,11 +398,11 @@ namespace MarFin_Final.Database.Services
 
                 if (result.TotalSynced > 0)
                 {
-                    result.Message = $"✓ Sync completed: {result.CustomersSynced} customers and {result.InvoicesSynced} invoices synced successfully";
+                    result.Message = $" Sync completed: {result.CustomersSynced} customers and {result.InvoicesSynced} invoices synced successfully";
                 }
                 else
                 {
-                    result.Message = "⚠ No records were synced. Run diagnostics to investigate.";
+                    result.Message = "No records were synced. Run diagnostics to investigate.";
                 }
             }
             catch (Exception ex)

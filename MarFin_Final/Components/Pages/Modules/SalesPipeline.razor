@@ -77,19 +77,11 @@
             </div>
         </div>
 
-        <!-- View Toggle -->
-        <div class="view-toggle">
-            <button class="toggle-btn @(isPipelineView ? "active" : "")" @onclick="@(() => SetView(true))">
-                Pipeline View
-            </button>
-            <button class="toggle-btn @(!isPipelineView ? "active" : "")" @onclick="@(() => SetView(false))">
-                List View
-            </button>
-        </div>
+        
     }
 
     <!-- Toolbar -->
-    <div class="customers-toolbar">
+    <div class="sales-pipeline-toolbar">
         @if (!showArchived)
         {
             <button class="btn-primary" @onclick="ToggleModal">
@@ -101,30 +93,39 @@
             <div></div>
         }
 
-        <div class="toolbar-right">
-            <button class="@(showArchived ? "btn-primary" : "btn-secondary")" @onclick="ToggleArchivedView">
+        <div class="toolbar-filters">
+            <button class="@(showArchived ? "btn-primary" : "btn-filter")" @onclick="ToggleArchivedView">
                 <i class="bi bi-@(showArchived ? "arrow-left" : "archive")"></i>
                 @(showArchived ? "Back to Active Pipeline" : "View Archived")
             </button>
 
             @if (!showArchived && (!string.IsNullOrEmpty(searchTerm) || selectedStageFilter > 0))
             {
-                <button class="btn-secondary" @onclick="ClearFilters" title="Clear all filters">
-                    <i class="bi bi-x-circle"></i>
-                    Clear Filters
+                <button class="btn-filter" @onclick="ClearFilters" title="Clear all filters">
+                    <i class="bi bi-x-circle"></i> Clear Filters
                 </button>
             }
 
             @if (!showArchived)
             {
-                <div class="dropdown-filter">
-                    <select class="btn-filter" @onchange="FilterByStage">
-                        <option value="0">All Stages</option>
-                        @foreach (var stage in allStages)
+                <div class="filter-dropdown">
+                    <button class="btn-filter" @onclick="() => showStageDropdown = !showStageDropdown">
+                        <i class="bi bi-funnel"></i> Stage
+                        @if (selectedStageFilter > 0)
                         {
-                            <option value="@stage.StageId">@stage.StageName</option>
+                            <span class="filter-badge">@(allStages.FirstOrDefault(s => s.StageId == selectedStageFilter)?.StageName ?? "Selected")</span>
                         }
-                    </select>
+                    </button>
+                    @if (showStageDropdown)
+                    {
+                        <div class="dropdown-menu show">
+                            <button @onclick='() => { selectedStageFilter = 0; showStageDropdown = false; ApplyFilters(); }'>All Stages</button>
+                            @foreach (var stage in allStages)
+                            {
+                                <button @onclick='() => { selectedStageFilter = stage.StageId; showStageDropdown = false; ApplyFilters(); }'>@stage.StageName</button>
+                            }
+                        </div>
+                    }
                 </div>
             }
 
@@ -136,7 +137,20 @@
                     <button class="search-clear" @onclick="ClearSearch">×</button>
                 }
             </div>
+            <!-- View Toggle -->
+            <div class="view-toggle">
+
+                <button class="@(isPipelineView ? "view-btn active" : "view-btn")" @onclick="@(() => SetView(true))" title="Pipeline View">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </button>
+                <button class="@(!isPipelineView ? "view-btn active" : "view-btn")" @onclick="@(() => SetView(false))" title="List View">
+                    <i class="bi bi-list-ul"></i>
+                </button>
+            </div>
+            
         </div>
+    
+
     </div>
 
     <!-- Active Pipeline Views -->
@@ -436,6 +450,7 @@
     private bool isEditMode = false;
     private bool showArchived = false;
     private int selectedStageFilter = 0;
+    private bool showStageDropdown = false;
 
     private DateTime? closeDate { get; set; }
 
@@ -510,13 +525,20 @@
 
         foreach (var stage in allStages.OrderBy(s => s.StageOrder))
         {
+            // Limit to 5 most recently added deals per stage
+            var stageDeals = filteredOpportunities
+                .Where(o => o.StageId == stage.StageId)
+                .OrderByDescending(o => o.OpportunityId) // Most recently added first
+                .Take(5)
+                .ToList();
+
             pipelineStages.Add(new PipelineColumn
             {
                 StageId = stage.StageId,
                 StageName = stage.StageName,
                 StageColor = stage.StageColor,
                 StageOrder = stage.StageOrder,
-                Deals = filteredOpportunities.Where(o => o.StageId == stage.StageId).ToList()
+                Deals = stageDeals
             });
         }
     }

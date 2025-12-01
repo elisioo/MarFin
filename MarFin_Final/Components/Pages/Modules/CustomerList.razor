@@ -236,7 +236,7 @@
                 </div>
 
                 <div class="pagination-controls">
-                    <button class="page-btn" @onclick="PrevPage" disabled="!customersResult.HasPrevious">
+                    <button class="page-btn" @onclick="PrevPage" disabled="@(!customersResult.HasPrevious)">
                         <i class="bi bi-chevron-left"></i>
                     </button>
 
@@ -299,7 +299,7 @@
                         }
                     }
 
-                    <button class="page-btn" @onclick="NextPage" disabled="!customersResult.HasNext">
+                    <button class="page-btn" @onclick="NextPage" disabled="@(!customersResult.HasNext)">
                         <i class="bi bi-chevron-right"></i>
                     </button>
                 </div>

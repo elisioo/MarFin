@@ -1,5 +1,6 @@
 .sales-pipeline-container {
     max-width: 100%;
+    position: relative;
 }
 
 .pipeline-header {
@@ -1077,5 +1078,182 @@
             min-width: 800px;
         }
 }
+
+/* Sales Pipeline Toolbar - Marketing Style */
+.sales-pipeline-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+.toolbar-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.btn-primary {
+    background-color: #0A1828;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+    .btn-primary:hover {
+        background-color: #0f2138;
+    }
+
+.btn-filter {
+    background-color: white;
+    color: #1a1a1a;
+    border: 1px solid #e0e0e0;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+    .btn-filter:hover {
+        background-color: #f8f9fa;
+        border-color: #ccc;
+    }
+
+.filter-badge {
+    background-color: #0A1828;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    margin-left: 4px;
+}
+
+/* Dropdowns */
+.filter-dropdown {
+    position: relative;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    min-width: 160px;
+    z-index: 1000;
+    overflow: hidden;
+    display: none;
+}
+
+    .dropdown-menu.show {
+        display: block;
+    }
+
+    .dropdown-menu button {
+        display: block;
+        width: 100%;
+        padding: 10px 16px;
+        border: none;
+        background: none;
+        text-align: left;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        color: #1a1a1a;
+    }
+
+        .dropdown-menu button:hover {
+            background-color: #f8f9fa;
+        }
+
+/* Search Box */
+.search-box {
+    position: relative;
+}
+
+    .search-box .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #666;
+    }
+
+    .search-box input {
+        padding: 10px 40px 10px 40px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        width: 250px;
+        outline: none;
+    }
+
+        .search-box input:focus {
+            border-color: #0A1828;
+        }
+
+    .search-box .search-clear {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        font-size: 18px;
+        color: #666;
+        cursor: pointer;
+    }
+
+        .search-box .search-clear:hover {
+            color: #1a1a1a;
+        }
+
+/* View Toggle */
+.view-toggle {
+    display: flex;
+    gap: 4px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 4px;
+    background-color: white;
+}
+
+.view-btn {
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: #666;
+    font-size: 16px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+    .view-btn:hover {
+        background-color: #f0f0f0;
+        color: #1a1a1a;
+    }
+
+    .view-btn.active {
+        background-color: #0A1828;
+        color: white;
+    }
 
 

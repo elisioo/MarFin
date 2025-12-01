@@ -56,6 +56,10 @@ namespace MarFin_Final
             builder.Services.AddSingleton<LocalDatabaseService>();
 
 
+            builder.Services.AddBlazorWebViewDeveloperTools();
+
+
+
             return builder.Build();
         }
     }

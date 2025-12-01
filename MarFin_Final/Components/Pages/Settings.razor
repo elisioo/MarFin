@@ -457,7 +457,7 @@
             if ((customers?.Count ?? 0) == 0 && (invoices?.Count ?? 0) == 0)
             {
                 syncSuccess = false;
-                syncMessage = "⚠ No data found in local database to sync. Please add customers or invoices first.";
+                syncMessage = " No data found in local database to sync. Please add customers or invoices first.";
                 isSyncing = false;
                 StateHasChanged();
                 return;

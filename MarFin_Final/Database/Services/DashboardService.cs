@@ -4,6 +4,7 @@ using System.Data;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using MarFin_Final.Database.Models;
 
 namespace MarFin_Final.Database.Services
 {
@@ -411,48 +412,251 @@ namespace MarFin_Final.Database.Services
             return transactions;
         }
 
-        // Debug: Get Campaign Status Breakdown
-        public async Task<Dictionary<string, int>> GetCampaignStatusBreakdownAsync()
+        // Get Monthly Revenue Comparison
+        public async Task<List<LineChartData>> GetMonthlyRevenueComparisonAsync(DateTime startDate, DateTime endDate)
         {
-            var breakdown = new Dictionary<string, int>();
+            var data = new List<LineChartData>();
 
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
 
                 var cmd = new SqlCommand(@"
-                    SELECT campaign_status, COUNT(*) as Count
-                    FROM tbl_Campaigns
-                    WHERE is_archived = 0
-                    GROUP BY campaign_status
-                    ORDER BY campaign_status", connection);
+                    SELECT 
+                        FORMAT(invoice_date, 'MMM') as Month,
+                        ISNULL(SUM(total_amount), 0) as Revenue
+                    FROM tbl_Invoices
+                    WHERE is_archived = 0 
+                    AND payment_status = 'Paid'
+                    AND invoice_date BETWEEN @StartDate AND @EndDate
+                    GROUP BY YEAR(invoice_date), MONTH(invoice_date), FORMAT(invoice_date, 'MMM')
+                    ORDER BY YEAR(invoice_date), MONTH(invoice_date)", connection);
+                cmd.Parameters.AddWithValue("@StartDate", startDate);
+                cmd.Parameters.AddWithValue("@EndDate", endDate);
 
                 using (var reader = await cmd.ExecuteReaderAsync())
                 {
                     while (await reader.ReadAsync())
                     {
-                        var status = reader.GetString(0);
-                        var count = reader.GetInt32(1);
-                        breakdown[status] = count;
+                        data.Add(new LineChartData
+                        {
+                            Month = reader.GetString(0),
+                            Revenue = (double)reader.GetDecimal(1)
+                        });
                     }
                 }
             }
 
-            return breakdown;
+            return data;
         }
 
-        // Debug: Get Total Campaign Count
-        public async Task<int> GetTotalCampaignCountAsync()
+        // Get Lead Sources Distribution
+        public async Task<List<BarChartData>> GetLeadSourcesAsync(DateTime startDate, DateTime endDate)
         {
+            var data = new List<BarChartData>();
+
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
 
                 var cmd = new SqlCommand(@"
-                    SELECT COUNT(*) FROM tbl_Campaigns WHERE is_archived = 0", connection);
+                    SELECT 
+                        ISNULL(source, 'Direct') as Source,
+                        COUNT(*) as LeadCount
+                    FROM tbl_Customers
+                    WHERE is_archived = 0 
+                    AND created_date BETWEEN @StartDate AND @EndDate
+                    GROUP BY source
+                    ORDER BY LeadCount DESC", connection);
+                cmd.Parameters.AddWithValue("@StartDate", startDate);
+                cmd.Parameters.AddWithValue("@EndDate", endDate);
 
-                return (int)await cmd.ExecuteScalarAsync();
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        data.Add(new BarChartData
+                        {
+                            Category = reader.GetString(0),
+                            Value = reader.GetInt32(1)
+                        });
+                    }
+                }
             }
+
+            return data;
+        }
+
+        // Get Revenue by Customer Segment
+        public async Task<List<BarChartData>> GetRevenueBySegmentAsync(DateTime startDate, DateTime endDate)
+        {
+            var data = new List<BarChartData>();
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                var cmd = new SqlCommand(@"
+                    SELECT 
+                        ISNULL(cs.segment_name, 'Other') as Segment,
+                        ISNULL(SUM(i.total_amount), 0) as Revenue
+                    FROM tbl_Invoices i
+                    LEFT JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                    LEFT JOIN tbl_Customer_Segments cs ON c.segment_id = cs.segment_id
+                    WHERE i.is_archived = 0 
+                    AND i.payment_status = 'Paid'
+                    AND i.invoice_date BETWEEN @StartDate AND @EndDate
+                    GROUP BY cs.segment_name
+                    ORDER BY Revenue DESC", connection);
+                cmd.Parameters.AddWithValue("@StartDate", startDate);
+                cmd.Parameters.AddWithValue("@EndDate", endDate);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        data.Add(new BarChartData
+                        {
+                            Category = reader.GetString(0),
+                            Value = (int)reader.GetDecimal(1)
+                        });
+                    }
+                }
+            }
+
+            return data;
+        }
+
+        // Get Sales Pipeline by Stage
+        public async Task<List<BarChartData>> GetSalesPipelineByStageAsync(int userId)
+        {
+            var data = new List<BarChartData>();
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                var cmd = new SqlCommand(@"
+                    SELECT 
+                        ISNULL(ps.stage_name, 'Unknown') as Stage,
+                        COUNT(*) as Count
+                    FROM tbl_Sales_Pipeline sp
+                    LEFT JOIN tbl_Pipeline_Stages ps ON sp.stage_id = ps.stage_id
+                    WHERE sp.assigned_to = @UserId AND sp.is_archived = 0
+                    GROUP BY ps.stage_name
+                    ORDER BY ps.stage_order", connection);
+                cmd.Parameters.AddWithValue("@UserId", userId);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        data.Add(new BarChartData
+                        {
+                            Category = reader.GetString(0),
+                            Value = reader.GetInt32(1)
+                        });
+                    }
+                }
+            }
+
+            return data;
+        }
+
+        // Get Campaign Performance Metrics
+        public async Task<List<CampaignMetrics>> GetCampaignPerformanceAsync(DateTime startDate, DateTime endDate)
+        {
+            var data = new List<CampaignMetrics>();
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                var cmd = new SqlCommand(@"
+                    SELECT TOP 10
+                        campaign_name,
+                        ISNULL(total_sent, 0) as Sent,
+                        ISNULL(total_opened, 0) as Opened,
+                        ISNULL(total_clicked, 0) as Clicked,
+                        ISNULL(total_converted, 0) as Converted
+                    FROM tbl_Campaigns
+                    WHERE is_archived = 0 
+                    AND created_date BETWEEN @StartDate AND @EndDate
+                    ORDER BY total_sent DESC", connection);
+                cmd.Parameters.AddWithValue("@StartDate", startDate);
+                cmd.Parameters.AddWithValue("@EndDate", endDate);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        data.Add(new CampaignMetrics
+                        {
+                            CampaignName = reader.GetString(0),
+                            Sent = reader.GetInt32(1),
+                            Opened = reader.GetInt32(2),
+                            Clicked = reader.GetInt32(3),
+                            Converted = reader.GetInt32(4)
+                        });
+                    }
+                }
+            }
+
+            return data;
+        }
+
+        // Get Financial Data for Candlestick Chart
+        public async Task<List<FinancialPoint>> GetFinancialDataAsync(DateTime startDate, DateTime endDate)
+        {
+            var data = new List<FinancialPoint>();
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                var cmd = new SqlCommand(@"
+                    WITH DailyInvoices AS (
+                        SELECT 
+                            CAST(invoice_date AS DATE) as InvoiceDate,
+                            total_amount,
+                            ROW_NUMBER() OVER (PARTITION BY CAST(invoice_date AS DATE) ORDER BY invoice_id ASC) as OpenRow,
+                            ROW_NUMBER() OVER (PARTITION BY CAST(invoice_date AS DATE) ORDER BY invoice_id DESC) as CloseRow
+                        FROM tbl_Invoices
+                        WHERE is_archived = 0 
+                        AND payment_status = 'Paid'
+                        AND invoice_date BETWEEN @StartDate AND @EndDate
+                    )
+                    SELECT 
+                        InvoiceDate as Date,
+                        MIN(total_amount) as Low,
+                        MAX(total_amount) as High,
+                        MAX(CASE WHEN OpenRow = 1 THEN total_amount END) as [Open],
+                        MAX(CASE WHEN CloseRow = 1 THEN total_amount END) as [Close],
+                        COUNT(*) as Volume
+                    FROM DailyInvoices
+                    GROUP BY InvoiceDate
+                    ORDER BY InvoiceDate DESC", connection);
+                cmd.Parameters.AddWithValue("@StartDate", startDate);
+                cmd.Parameters.AddWithValue("@EndDate", endDate);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        data.Add(new FinancialPoint
+                        {
+                            Date = reader.GetDateTime(0),
+                            Low = reader.GetDecimal(1),
+                            High = reader.GetDecimal(2),
+                            Open = reader.GetDecimal(3),
+                            Close = reader.GetDecimal(4),
+                            Volume = reader.GetInt32(5)
+                        });
+                    }
+                }
+            }
+
+            return data;
         }
     }
 
@@ -513,5 +717,26 @@ namespace MarFin_Final.Database.Services
         public string Amount { get; set; }
         public string Date { get; set; }
         public string Status { get; set; }
+    }
+
+    public class LineChartData
+    {
+        public string Month { get; set; }
+        public double Revenue { get; set; }
+    }
+
+    public class BarChartData
+    {
+        public string Category { get; set; }
+        public int Value { get; set; }
+    }
+
+    public class CampaignMetrics
+    {
+        public string CampaignName { get; set; }
+        public int Sent { get; set; }
+        public int Opened { get; set; }
+        public int Clicked { get; set; }
+        public int Converted { get; set; }
     }
 }
