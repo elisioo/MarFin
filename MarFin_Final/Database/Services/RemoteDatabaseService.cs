@@ -300,6 +300,178 @@ namespace MarFin_Final.Database.Services
             return syncedCount;
         }
 
+        public async Task<int> SyncInvoicesToRemoteAsync(List<Invoice> invoices)
+        {
+            int syncedCount = 0;
+
+            if (invoices == null || invoices.Count == 0)
+            {
+                Console.WriteLine("RemoteDatabaseService: No invoices provided to sync");
+                return 0;
+            }
+
+            Console.WriteLine($"═══════════════════════════════════════════════════");
+            Console.WriteLine($"INVOICE SYNC STARTING: {invoices.Count} invoices to process");
+            Console.WriteLine($"═══════════════════════════════════════════════════");
+
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                try
+                {
+                    await connection.OpenAsync();
+
+                    foreach (var invoice in invoices)
+                    {
+                        try
+                        {
+                            var remoteCustomerId = await GetRemoteCustomerIdForInvoiceAsync(connection, invoice);
+                            if (!remoteCustomerId.HasValue)
+                            {
+                                Console.WriteLine($"  ✗ Skipping invoice {invoice.InvoiceNumber}: no matching remote customer for email '{invoice.CustomerEmail}'");
+                                continue;
+                            }
+
+                            int? existingInvoiceId = null;
+                            string checkQuery = "SELECT invoice_id FROM tbl_Invoices WHERE invoice_number = @invoice_number";
+
+                            using (SqlCommand checkCmd = new SqlCommand(checkQuery, connection))
+                            {
+                                checkCmd.Parameters.AddWithValue("@invoice_number", invoice.InvoiceNumber ?? string.Empty);
+                                var result = await checkCmd.ExecuteScalarAsync();
+                                if (result != null && result != DBNull.Value)
+                                {
+                                    existingInvoiceId = Convert.ToInt32(result);
+                                }
+                            }
+
+                            SqlCommand command;
+                            int invoiceIdForItems;
+
+                            if (existingInvoiceId.HasValue)
+                            {
+                                Console.WriteLine($"  Updating invoice: {invoice.InvoiceNumber} (ID: {existingInvoiceId.Value})");
+                                string updateQuery = @"UPDATE tbl_Invoices SET
+                                                customer_id = @customer_id,
+                                                created_by = @created_by,
+                                                invoice_date = @invoice_date,
+                                                due_date = @due_date,
+                                                payment_terms = @payment_terms,
+                                                subtotal = @subtotal,
+                                                tax_rate = @tax_rate,
+                                                tax_amount = @tax_amount,
+                                                discount_amount = @discount_amount,
+                                                total_amount = @total_amount,
+                                                payment_status = @payment_status,
+                                                notes = @notes,
+                                                pdf_path = @pdf_path,
+                                                is_archived = @is_archived,
+                                                modified_date = GETDATE()
+                                            WHERE invoice_id = @invoice_id";
+
+                                command = new SqlCommand(updateQuery, connection);
+                                command.Parameters.AddWithValue("@invoice_id", existingInvoiceId.Value);
+                                invoiceIdForItems = existingInvoiceId.Value;
+                            }
+                            else
+                            {
+                                Console.WriteLine($"  Inserting invoice: {invoice.InvoiceNumber}");
+                                string insertQuery = @"INSERT INTO tbl_Invoices (
+                                                customer_id, created_by, invoice_number, invoice_date, due_date,
+                                                payment_terms, subtotal, tax_rate, tax_amount, discount_amount,
+                                                total_amount, payment_status, notes, pdf_path, is_archived,
+                                                created_date, modified_date
+                                            ) OUTPUT INSERTED.invoice_id
+                                            VALUES (
+                                                @customer_id, @created_by, @invoice_number, @invoice_date, @due_date,
+                                                @payment_terms, @subtotal, @tax_rate, @tax_amount, @discount_amount,
+                                                @total_amount, @payment_status, @notes, @pdf_path, @is_archived,
+                                                GETDATE(), GETDATE()
+                                            )";
+
+                                command = new SqlCommand(insertQuery, connection);
+                            }
+
+                            command.Parameters.AddWithValue("@customer_id", remoteCustomerId.Value);
+                            command.Parameters.AddWithValue("@created_by", invoice.CreatedBy);
+                            command.Parameters.AddWithValue("@invoice_number", invoice.InvoiceNumber ?? string.Empty);
+                            command.Parameters.AddWithValue("@invoice_date", invoice.InvoiceDate);
+                            command.Parameters.AddWithValue("@due_date", invoice.DueDate);
+                            command.Parameters.AddWithValue("@payment_terms", invoice.PaymentTerms ?? "Net 30");
+                            command.Parameters.AddWithValue("@subtotal", invoice.Subtotal);
+                            command.Parameters.AddWithValue("@tax_rate", invoice.TaxRate);
+                            command.Parameters.AddWithValue("@tax_amount", invoice.TaxAmount);
+                            command.Parameters.AddWithValue("@discount_amount", invoice.DiscountAmount);
+                            command.Parameters.AddWithValue("@total_amount", invoice.TotalAmount);
+                            command.Parameters.AddWithValue("@payment_status", invoice.PaymentStatus ?? "Draft");
+                            command.Parameters.AddWithValue("@notes", string.IsNullOrWhiteSpace(invoice.Notes) ? DBNull.Value : invoice.Notes);
+                            command.Parameters.AddWithValue("@pdf_path", string.IsNullOrWhiteSpace(invoice.PdfPath) ? DBNull.Value : invoice.PdfPath);
+                            command.Parameters.AddWithValue("@is_archived", invoice.IsArchived);
+
+                            if (existingInvoiceId.HasValue)
+                            {
+                                int rowsAffected = await command.ExecuteNonQueryAsync();
+                                if (rowsAffected > 0)
+                                {
+                                    syncedCount++;
+                                    Console.WriteLine("    ✓ Invoice updated");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("    ✗ Invoice update affected 0 rows");
+                                }
+                            }
+                            else
+                            {
+                                var insertedId = await command.ExecuteScalarAsync();
+                                invoiceIdForItems = Convert.ToInt32(insertedId);
+                                syncedCount++;
+                                Console.WriteLine($"    ✓ Invoice inserted (ID: {invoiceIdForItems})");
+                            }
+                        }
+                        catch (SqlException sqlEx)
+                        {
+                            Console.WriteLine($"    ✗ SQL Error for invoice {invoice.InvoiceNumber}: {sqlEx.Number} - {sqlEx.Message}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"✗ Invoice sync connection error: {ex.Message}");
+                    Console.WriteLine($"  Stack: {ex.StackTrace}");
+                }
+            }
+
+            Console.WriteLine($"═══════════════════════════════════════════════════");
+            Console.WriteLine($"INVOICE SYNC COMPLETE: {syncedCount} of {invoices.Count} invoices synced");
+            Console.WriteLine($"═══════════════════════════════════════════════════");
+
+            return syncedCount;
+        }
+
+        private async Task<int?> GetRemoteCustomerIdForInvoiceAsync(SqlConnection connection, Invoice invoice)
+        {
+            string email = invoice.CustomerEmail ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return null;
+            }
+
+            string query = "SELECT customer_id FROM tbl_Customers WHERE email = @Email";
+
+            using (SqlCommand cmd = new SqlCommand(query, connection))
+            {
+                cmd.Parameters.AddWithValue("@Email", email);
+                var result = await cmd.ExecuteScalarAsync();
+                if (result != null && result != DBNull.Value)
+                {
+                    return Convert.ToInt32(result);
+                }
+            }
+
+            return null;
+        }
+
         // Helper: Ensure at least one segment exists
         private async Task EnsureSegmentExistsAsync(SqlConnection connection)
         {
@@ -390,7 +562,7 @@ namespace MarFin_Final.Database.Services
                 if (invoices != null && invoices.Count > 0)
                 {
                     result.InvoicesAttempted = invoices.Count;
-                    // result.InvoicesSynced = await SyncInvoicesToRemoteAsync(invoices);
+                    result.InvoicesSynced = await SyncInvoicesToRemoteAsync(invoices);
                 }
 
                 result.TotalSynced = result.CustomersSynced + result.InvoicesSynced;

@@ -164,10 +164,14 @@
                             <div class="form-group">
                                 <label>Postal Code</label>
                                 <input type="text"
-                                       class="form-control"
+                                       class="form-control @(validationErrors.ContainsKey("PostalCode") ? "is-invalid" : "")"
                                        @bind="customer.PostalCode"
                                        disabled="@(!isEditing)"
                                        placeholder="N/A" />
+                                @if (validationErrors.ContainsKey("PostalCode"))
+                                {
+                                    <span class="validation-error">@validationErrors["PostalCode"]</span>
+                                }
                             </div>
                         </div>
 
@@ -370,7 +374,7 @@
                         </div>
                     </div>
 
-                    @* Right Column - Revenue & Actions *@
+                    @* Right Column - Revenue, Invoice History & Actions *@
                     <div class="details-card">
                         <div class="revenue-section">
                             <div class="revenue-icon">
@@ -416,7 +420,7 @@
                             @* Only Finance and Admin can create invoices *@
                             @if (AuthService.IsFinance() || AuthService.IsAdmin())
                             {
-                                <button class="btn-action">
+                                <button class="btn-action" @onclick="CreateInvoiceForCustomer">
                                     <i class="bi bi-file-text"></i> Create Invoice
                                 </button>
                             }
@@ -429,6 +433,55 @@
                                 </button>
                             }
                         </div>
+
+                        <div class="card-header mt-3">
+                            <h3>Invoice History</h3>
+                        </div>
+
+                        @if (isInvoicesLoading)
+                        {
+                            <div class="loading-state">
+                                <div class="spinner"></div>
+                                <p>Loading invoice history...</p>
+                            </div>
+                        }
+                        else if (!customerInvoices.Any())
+                        {
+                            <div class="empty-state text-center">
+                                <i class="bi bi-receipt fs-2 text-muted"></i>
+                                <p>No invoices found for this customer</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="invoice-history-table">
+                                <div class="table-header small">
+                                    <span>Invoice #</span>
+                                    <span>Date</span>
+                                    <span>Status</span>
+                                    <span class="text-end">Amount</span>
+                                </div>
+                                @foreach (var inv in customerInvoices.Take(5))
+                                {
+                                    <div class="table-row small" @onclick="() => NavigateToInvoice(inv.InvoiceId)">
+                                        <span>@inv.InvoiceNumber</span>
+                                        <span>@inv.InvoiceDate.ToString("MM/dd/yyyy")</span>
+                                        <span>
+                                            <span class="status-badge @inv.StatusBadgeClass">
+                                                @(inv.IsOverdue ? "Overdue" : inv.PaymentStatus)
+                                            </span>
+                                        </span>
+                                        <span class="text-end">₱@inv.TotalAmount.ToString("N2")</span>
+                                    </div>
+                                }
+                                @if (customerInvoices.Count > 5)
+                                {
+                                    <div class="text-end mt-1">
+                                        <small>@(customerInvoices.Count - 5) more invoice(s)...</small>
+                                    </div>
+                                }
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -471,16 +524,24 @@
     public int CustomerId { get; set; }
 
     private readonly CustomerService customerService = new();
+    private readonly InvoiceService invoiceService = new();
+
     private Customer? customer = null;
+
     private Customer? originalCustomer = null;
     private bool isLoading = true;
+    private bool isInvoicesLoading = true;
+
     private bool isSaving = false;
     private bool showArchiveModal = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
+
     private bool isEditing = false;
     private Dictionary<string, string> validationErrors = new();
     private int currentUserId => AuthService.CurrentUserId ?? 1;
+
+    private List<Invoice> customerInvoices = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -503,6 +564,7 @@
             await Task.Run(() =>
             {
                 customer = customerService.GetCustomerById(CustomerId);
+                customerInvoices = invoiceService.GetInvoicesByCustomerId(CustomerId);
             });
 
             if (customer == null)
@@ -522,6 +584,7 @@
         finally
         {
             isLoading = false;
+            isInvoicesLoading = false;
             StateHasChanged();
         }
     }
@@ -578,6 +641,12 @@
         else if (!IsValidEmail(customer.Email))
         {
             validationErrors["Email"] = "Please enter a valid email address";
+        }
+
+        // Postal code: allow empty, but if provided must be numeric only
+        if (!string.IsNullOrWhiteSpace(customer.PostalCode) && customer.PostalCode.Any(c => !char.IsDigit(c)))
+        {
+            validationErrors["PostalCode"] = "Postal code must contain numbers only";
         }
 
         return !validationErrors.Any();
@@ -715,6 +784,21 @@
     private void NavigateBack()
     {
         Navigation.NavigateTo("/customers");
+    }
+
+    private void CreateInvoiceForCustomer()
+    {
+        if (customer == null)
+        {
+            return;
+        }
+
+        Navigation.NavigateTo($"/financial?customerId={customer.CustomerId}");
+    }
+
+    private void NavigateToInvoice(int invoiceId)
+    {
+        Navigation.NavigateTo($"/financial?invoiceId={invoiceId}");
     }
 
     private Customer CloneCustomer(Customer source)

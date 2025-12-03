@@ -418,9 +418,13 @@
                         <div class="form-group">
                             <label>Postal Code</label>
                             <input type="text"
-                                   class="form-control"
+                                   class="form-control @(validationErrors.ContainsKey("PostalCode") ? "is-invalid" : "")"
                                    @bind="editingCustomer.PostalCode"
                                    placeholder="Enter postal code" />
+                            @if (validationErrors.ContainsKey("PostalCode"))
+                            {
+                                <span class="validation-error">@validationErrors["PostalCode"]</span>
+                            }
                         </div>
                         <div class="form-group">
                             <label>Country</label>
@@ -445,10 +449,16 @@
 
                     <div class="form-group">
                         <label>Source</label>
-                        <input type="text"
-                               class="form-control"
-                               @bind="editingCustomer.Source"
-                               placeholder="How did you find us?" />
+                        <select class="form-control" @bind="editingCustomer.Source">
+                            <option value="">Select source...</option>
+                            <option value="Website">Website</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Email Campaign">Email Campaign</option>
+                            <option value="Event">Event</option>
+                            <option value="Search Engine">Search Engine</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
 
                     <div class="form-group">
@@ -759,6 +769,12 @@
         else if (!IsValidEmail(editingCustomer.Email))
         {
             validationErrors["Email"] = "Please enter a valid email address";
+        }
+
+        // Postal code: allow empty, but if provided must be numeric only
+        if (!string.IsNullOrWhiteSpace(editingCustomer.PostalCode) && editingCustomer.PostalCode.Any(c => !char.IsDigit(c)))
+        {
+            validationErrors["PostalCode"] = "Postal code must contain numbers only";
         }
 
         return !validationErrors.Any();

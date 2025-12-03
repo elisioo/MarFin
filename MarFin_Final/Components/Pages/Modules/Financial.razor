@@ -549,6 +549,7 @@
             return;
         }
         await LoadInvoices();
+        ApplyQueryContext();
     }
 
     private async Task LoadInvoices()
@@ -574,6 +575,69 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private void ApplyQueryContext()
+    {
+        try
+        {
+            var uri = new Uri(Navigation.Uri);
+            var query = uri.Query;
+
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return;
+            }
+
+            if (query.StartsWith("?"))
+            {
+                query = query.Substring(1);
+            }
+
+            var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = pair.Split('=', 2);
+                if (parts.Length == 2)
+                {
+                    var key = Uri.UnescapeDataString(parts[0]);
+                    var value = Uri.UnescapeDataString(parts[1]);
+                    parameters[key] = value;
+                }
+            }
+
+            if (parameters.TryGetValue("invoiceId", out var invoiceIdValue) &&
+                int.TryParse(invoiceIdValue, out var invoiceId) &&
+                invoiceId > 0)
+            {
+                selectedInvoice = invoiceService.GetInvoiceById(invoiceId);
+                if (selectedInvoice != null)
+                {
+                    showViewModal = true;
+                }
+                return;
+            }
+
+            if (parameters.TryGetValue("customerId", out var customerIdValue) &&
+                int.TryParse(customerIdValue, out var customerId) &&
+                customerId > 0)
+            {
+                selectedCustomer = customerService.GetCustomerById(customerId);
+                if (selectedCustomer != null)
+                {
+                    ToggleInvoiceModal();
+                    newInvoice.CustomerId = selectedCustomer.CustomerId;
+                    customerSearchTerm = string.IsNullOrEmpty(selectedCustomer.CompanyName)
+                        ? selectedCustomer.FullName
+                        : selectedCustomer.CompanyName;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore query parsing errors
         }
     }
 

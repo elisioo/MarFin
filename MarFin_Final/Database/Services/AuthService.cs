@@ -172,7 +172,7 @@ namespace MarFin_Final.Database.Services
                     return new AuthResponse
                     {
                         Success = false,
-                        Message = "Password must be at least 8 characters and contain uppercase, lowercase, number, and special character"
+                        Message = "Password must be at least 12 characters and contain uppercase, lowercase, number, and special character"
                     };
                 }
 
@@ -268,7 +268,7 @@ namespace MarFin_Final.Database.Services
 
         private bool IsPasswordStrong(string password)
         {
-            if (password.Length < 8) return false;
+            if (password.Length < 12) return false;
 
             bool hasUpper = password.Any(char.IsUpper);
             bool hasLower = password.Any(char.IsLower);

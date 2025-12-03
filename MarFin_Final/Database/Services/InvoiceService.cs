@@ -20,6 +20,9 @@ namespace MarFin_Final.Data
                     {
                         try
                         {
+                            // Always generate a fresh invoice number to avoid duplicates
+                            invoice.InvoiceNumber = GenerateInvoiceNumber();
+
                             // Insert invoice
                             string invoiceQuery = @"INSERT INTO tbl_Invoices 
                                 (customer_id, created_by, invoice_number, invoice_date, due_date, 
@@ -118,6 +121,52 @@ namespace MarFin_Final.Data
             catch (Exception ex)
             {
                 Console.WriteLine("Error getting invoices: " + ex.Message);
+            }
+
+            return invoices;
+        }
+
+        // READ - Get invoices by customer ID (for customer invoice history)
+        public List<Invoice> GetInvoicesByCustomerId(int customerId)
+        {
+            List<Invoice> invoices = new List<Invoice>();
+
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    string query = @"SELECT i.invoice_id, i.customer_id, i.created_by, i.invoice_number,
+                                    i.invoice_date, i.due_date, i.payment_terms, i.subtotal, i.tax_rate,
+                                    i.tax_amount, i.discount_amount, i.total_amount, i.payment_status,
+                                    i.notes, i.pdf_path, i.is_archived, i.archived_date,
+                                    i.created_date, i.modified_date,
+                                    c.first_name + ' ' + c.last_name AS customer_name,
+                                    c.email AS customer_email,
+                                    c.company_name AS customer_company,
+                                    u.first_name + ' ' + u.last_name AS created_by_name
+                                FROM tbl_Invoices i
+                                INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                                INNER JOIN tbl_Users u ON i.created_by = u.user_id
+                                WHERE i.is_archived = 0 AND i.customer_id = @CustomerId
+                                ORDER BY i.invoice_date DESC, i.invoice_number DESC";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@CustomerId", customerId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                invoices.Add(MapInvoiceFromReader(reader));
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error getting invoices by customer: " + ex.Message);
             }
 
             return invoices;

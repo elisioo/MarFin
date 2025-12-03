@@ -1,4 +1,5 @@
 using System.Text;
+using MarFin_Final.Models;
 
 namespace MarFin_Final.Database.Services;
 
@@ -13,7 +14,8 @@ public class PdfExportService
         List<ReportService.TopCustomerData>? topCustomers = null,
         ReportService.SalesOpportunitiesData? salesData = null,
         List<ReportService.CustomerSegmentData>? segments = null,
-        List<ReportService.RevenueSourceData>? revenueSources = null)
+        List<ReportService.RevenueSourceData>? revenueSources = null,
+        List<Invoice>? invoices = null)
     {
         var html = new StringBuilder();
         
@@ -52,7 +54,7 @@ public class PdfExportService
                 html.Append(GenerateCustomerReportContent(topCustomers, segments));
                 break;
             case "invoice":
-                html.Append(GenerateInvoiceReportContent());
+                html.Append(GenerateInvoiceReportContent(invoices));
                 break;
             default:
                 html.AppendLine("<p>Report type not recognized.</p>");
@@ -252,15 +254,57 @@ public class PdfExportService
         return html.ToString();
     }
 
-    private string GenerateInvoiceReportContent()
+    private string GenerateInvoiceReportContent(List<Invoice>? invoices)
     {
         var html = new StringBuilder();
 
         html.AppendLine("<div class='section'>");
         html.AppendLine("<h3>Invoice Summary</h3>");
-        html.AppendLine("<p>Invoice report data will be displayed here with payment status and aging analysis.</p>");
-        html.AppendLine("</div>");
 
+        if (invoices != null && invoices.Any())
+        {
+            var totalAmount = invoices.Sum(i => i.TotalAmount);
+            var paidAmount = invoices.Where(i => string.Equals(i.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase)).Sum(i => i.TotalAmount);
+            var overdueAmount = invoices.Where(i => i.IsOverdue).Sum(i => i.TotalAmount);
+
+            html.AppendLine("<div class='metrics-grid'>");
+            html.AppendLine($"<div class='metric'><strong>Total Invoices:</strong> {invoices.Count}</div>");
+            html.AppendLine($"<div class='metric'><strong>Total Amount:</strong> ₱{totalAmount:N2}</div>");
+            html.AppendLine($"<div class='metric'><strong>Paid Amount:</strong> ₱{paidAmount:N2}</div>");
+            html.AppendLine($"<div class='metric'><strong>Overdue Amount:</strong> ₱{overdueAmount:N2}</div>");
+            html.AppendLine("</div>");
+
+            html.AppendLine("<h4>Invoice List</h4>");
+            html.AppendLine("<table>");
+            html.AppendLine("<thead><tr><th>Invoice #</th><th>Date</th><th>Customer</th><th>Status</th><th>Due Date</th><th>Total</th></tr></thead>");
+            html.AppendLine("<tbody>");
+
+            foreach (var inv in invoices.OrderByDescending(i => i.InvoiceDate))
+            {
+                var status = inv.IsOverdue && !string.Equals(inv.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase)
+                    ? "Overdue"
+                    : inv.PaymentStatus;
+
+                html.AppendLine(
+                    $"<tr>" +
+                    $"<td>{inv.InvoiceNumber}</td>" +
+                    $"<td>{inv.InvoiceDate:MMM dd, yyyy}</td>" +
+                    $"<td>{(string.IsNullOrEmpty(inv.CustomerCompany) ? inv.CustomerName : inv.CustomerCompany)}</td>" +
+                    $"<td>{status}</td>" +
+                    $"<td>{inv.DueDate:MMM dd, yyyy}</td>" +
+                    $"<td>₱{inv.TotalAmount:N2}</td>" +
+                    "</tr>");
+            }
+
+            html.AppendLine("</tbody>");
+            html.AppendLine("</table>");
+        }
+        else
+        {
+            html.AppendLine("<p>No invoices found for the selected period.</p>");
+        }
+
+        html.AppendLine("</div>");
         return html.ToString();
     }
 
