@@ -14,12 +14,12 @@
     padding: 0;
 }
 
-.dashboard-header h1 {
-    font-size: 32px;
-    font-weight: 700;
-    margin: 0 0 0.5rem 0;
-    color: #1a1a1a;
-}
+    .dashboard-header h1 {
+        font-size: 32px;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+        color: #1a1a1a;
+    }
 
 .subtitle {
     color: #666;
@@ -48,14 +48,14 @@
     transition: background-color 0.2s;
 }
 
-.refresh-btn:hover:not(:disabled) {
-    background-color: #0f2138;
-}
+    .refresh-btn:hover:not(:disabled) {
+        background-color: #0f2138;
+    }
 
-.refresh-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
+    .refresh-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
 
 /* Date Filters */
 .date-filters {
@@ -78,16 +78,16 @@
     transition: all 0.2s;
 }
 
-.filter-btn.active {
-    background-color: #0A1828;
-    color: white;
-    border-color: #0A1828;
-}
+    .filter-btn.active {
+        background-color: #0A1828;
+        color: white;
+        border-color: #0A1828;
+    }
 
-.filter-btn:hover:not(.active) {
-    background-color: #f8f9fa;
-    border-color: #d0d0d0;
-}
+    .filter-btn:hover:not(.active) {
+        background-color: #f8f9fa;
+        border-color: #d0d0d0;
+    }
 
 .date-inputs {
     display: flex;
@@ -105,10 +105,10 @@
     background: white;
 }
 
-.date-input:focus {
-    border-color: #0A1828;
-    box-shadow: 0 0 0 3px rgba(10, 24, 40, 0.1);
-}
+    .date-input:focus {
+        border-color: #0A1828;
+        box-shadow: 0 0 0 3px rgba(10, 24, 40, 0.1);
+    }
 
 /* KPI Cards */
 .kpi-row {
@@ -130,10 +130,10 @@
     border: 1px solid #f0f0f0;
 }
 
-.kpi-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-}
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
 
 .kpi-icon {
     width: 70px;
@@ -146,40 +146,40 @@
     flex-shrink: 0;
 }
 
-.kpi-icon.revenue {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
+    .kpi-icon.revenue {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
 
-.kpi-icon.conversion {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-}
+    .kpi-icon.conversion {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
 
-.kpi-icon.active {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: white;
-}
+    .kpi-icon.active {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
 
-.kpi-icon.pending {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    color: white;
-}
+    .kpi-icon.pending {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        color: white;
+    }
 
-.kpi-icon.campaigns {
-    background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
-    color: white;
-}
+    .kpi-icon.campaigns {
+        background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+        color: white;
+    }
 
-.kpi-icon.engagement {
-    background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-    color: #333;
-}
+    .kpi-icon.engagement {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        color: #333;
+    }
 
-.kpi-icon.invoices {
-    background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);
-    color: white;
-}
+    .kpi-icon.invoices {
+        background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);
+        color: white;
+    }
 
 .kpi-content {
     flex: 1;
@@ -209,13 +209,13 @@
     gap: 4px;
 }
 
-.kpi-change.positive {
-    color: #10b981;
-}
+    .kpi-change.positive {
+        color: #10b981;
+    }
 
-.kpi-change.negative {
-    color: #ef4444;
-}
+    .kpi-change.negative {
+        color: #ef4444;
+    }
 
 /* Charts Grid */
 .charts-grid {
@@ -233,9 +233,9 @@
     border: 1px solid #f0f0f0;
 }
 
-.chart-card.large {
-    grid-column: span 2;
-}
+    .chart-card.large {
+        grid-column: span 2;
+    }
 
 .card-header {
     display: flex;
@@ -246,12 +246,12 @@
     border-bottom: 1px solid #f0f0f0;
 }
 
-.card-header h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-    color: #1a1a1a;
-}
+    .card-header h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+        color: #1a1a1a;
+    }
 
 .chart-filter {
     display: flex;
@@ -270,16 +270,16 @@
     transition: all 0.2s;
 }
 
-.mini-filter-btn.active {
-    background-color: #0A1828;
-    color: white;
-    border-color: #0A1828;
-}
+    .mini-filter-btn.active {
+        background-color: #0A1828;
+        color: white;
+        border-color: #0A1828;
+    }
 
-.mini-filter-btn:hover:not(.active) {
-    background-color: #f8f9fa;
-    border-color: #d0d0d0;
-}
+    .mini-filter-btn:hover:not(.active) {
+        background-color: #f8f9fa;
+        border-color: #d0d0d0;
+    }
 
 .refresh-icon {
     background: none;
@@ -291,10 +291,10 @@
     transition: transform 0.2s;
 }
 
-.refresh-icon:hover {
-    transform: rotate(180deg);
-    color: #0A1828;
-}
+    .refresh-icon:hover {
+        transform: rotate(180deg);
+        color: #0A1828;
+    }
 
 /* Activity List */
 .activity-list {
@@ -314,9 +314,9 @@
     transition: background-color 0.2s;
 }
 
-.activity-item:hover {
-    background-color: #f9fafb;
-}
+    .activity-item:hover {
+        background-color: #f9fafb;
+    }
 
 .activity-icon-dot {
     width: 12px;
@@ -326,17 +326,17 @@
     flex-shrink: 0;
 }
 
-.activity-icon-dot.success {
-    background-color: #10b981;
-}
+    .activity-icon-dot.success {
+        background-color: #10b981;
+    }
 
-.activity-icon-dot.info {
-    background-color: #3b82f6;
-}
+    .activity-icon-dot.info {
+        background-color: #3b82f6;
+    }
 
-.activity-icon-dot.warning {
-    background-color: #f59e0b;
-}
+    .activity-icon-dot.warning {
+        background-color: #f59e0b;
+    }
 
 .activity-details {
     flex: 1;
@@ -379,12 +379,12 @@
     border-bottom: 1px solid #f0f0f0;
 }
 
-.section-header h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin: 0;
-    color: #1a1a1a;
-}
+    .section-header h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+        color: #1a1a1a;
+    }
 
 .view-all-link {
     display: flex;
@@ -397,9 +397,9 @@
     transition: gap 0.2s;
 }
 
-.view-all-link:hover {
-    gap: 0.75rem;
-}
+    .view-all-link:hover {
+        gap: 0.75rem;
+    }
 
 /* Transactions Table */
 .transactions-table {
@@ -431,13 +431,13 @@
     transition: background-color 0.2s;
 }
 
-.table-row:hover {
-    background-color: #f9fafb;
-}
+    .table-row:hover {
+        background-color: #f9fafb;
+    }
 
-.table-row:last-child {
-    border-bottom: none;
-}
+    .table-row:last-child {
+        border-bottom: none;
+    }
 
 .transaction-invoice {
     font-weight: 600;
@@ -468,20 +468,20 @@
     width: fit-content;
 }
 
-.transaction-status.paid {
-    background-color: #D1FAE5;
-    color: #065F46;
-}
+    .transaction-status.paid {
+        background-color: #D1FAE5;
+        color: #065F46;
+    }
 
-.transaction-status.pending {
-    background-color: #FEF3C7;
-    color: #92400E;
-}
+    .transaction-status.pending {
+        background-color: #FEF3C7;
+        color: #92400E;
+    }
 
-.transaction-status.overdue {
-    background-color: #FEE2E2;
-    color: #991B1B;
-}
+    .transaction-status.overdue {
+        background-color: #FEE2E2;
+        color: #991B1B;
+    }
 
 /* Loading Spinner */
 .loading-spinner {
@@ -493,10 +493,10 @@
     color: #666;
 }
 
-.loading-spinner i {
-    font-size: 48px;
-    margin-bottom: 1rem;
-}
+    .loading-spinner i {
+        font-size: 48px;
+        margin-bottom: 1rem;
+    }
 
 .spin {
     animation: spin 1s linear infinite;
@@ -506,6 +506,7 @@
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }
@@ -528,9 +529,9 @@
     font-weight: 500;
 }
 
-.refresh-indicator i {
-    font-size: 16px;
-}
+    .refresh-indicator i {
+        font-size: 16px;
+    }
 
 .alert {
     padding: 1rem;
@@ -628,13 +629,13 @@
         margin-bottom: 0.5rem;
     }
 
-    .table-row span::before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: #666;
-        display: block;
-        margin-bottom: 0.25rem;
-    }
+        .table-row span::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #666;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
 }
 
 @media (max-width: 480px) {

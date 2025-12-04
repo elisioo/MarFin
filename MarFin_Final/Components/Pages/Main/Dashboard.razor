@@ -1,6 +1,7 @@
 @page "/dashboard"
 @using MarFin_Final.Database.Services
 @using MarFin_Final.Database.Models
+@using Microsoft.JSInterop
 
 @if (isLoading)
 {
@@ -30,19 +31,23 @@ else
                     @{
                         if (AuthService.IsFinance())
                         {
-                            <text>Finance Dashboard</text>;
+                            <text>Finance Dashboard</text>
+                            ;
                         }
                         else if (AuthService.IsMarketing())
                         {
-                            <text>Marketing Dashboard</text>;
+                            <text>Marketing Dashboard</text>
+                            ;
                         }
                         else if (AuthService.IsSalesRep())
                         {
-                            <text>Sales Dashboard</text>;
+                            <text>Sales Dashboard</text>
+                            ;
                         }
                         else
                         {
-                            <text>Admin Dashboard</text>;
+                            <text>Admin Dashboard</text>
+                            ;
                         }
                     }
                 </h1>
@@ -54,7 +59,6 @@ else
                 </button>
             </div>
         </div>
-        
 
         <div class="date-filters">
             <button class="filter-btn @(selectedFilter == "thisMonth" ? "active" : "")" @onclick='async () => await SetFilter("thisMonth")'>This Month</button>
@@ -187,24 +191,8 @@ else
                 <div class="card-header"><h3>Revenue Trend</h3></div>
                 @if (monthlyRevenueData?.Any() == true)
                 {
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
-                                    <th style="padding: 12px; text-align: left;">Month</th>
-                                    <th style="padding: 12px; text-align: right;">Revenue</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in monthlyRevenueData)
-                                {
-                                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                                        <td style="padding: 12px;">@item.Month</td>
-                                        <td style="padding: 12px; text-align: right;">₱@item.Revenue.ToString("N0")</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                    <div style="height: 300px;">
+                        <canvas id="revenueChart"></canvas>
                     </div>
                 }
                 else
@@ -217,24 +205,8 @@ else
                 <div class="card-header"><h3>Lead Sources</h3></div>
                 @if (leadSourcesData?.Any() == true)
                 {
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
-                                    <th style="padding: 12px; text-align: left;">Source</th>
-                                    <th style="padding: 12px; text-align: right;">Count</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in leadSourcesData)
-                                {
-                                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                                        <td style="padding: 12px;">@item.Category</td>
-                                        <td style="padding: 12px; text-align: right;">@item.Value</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                    <div style="height: 300px;">
+                        <canvas id="leadSourcesChart"></canvas>
                     </div>
                 }
                 else
@@ -247,24 +219,8 @@ else
                 <div class="card-header"><h3>Revenue by Segment</h3></div>
                 @if (revenueBySegmentData?.Any() == true)
                 {
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
-                                    <th style="padding: 12px; text-align: left;">Segment</th>
-                                    <th style="padding: 12px; text-align: right;">Revenue</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in revenueBySegmentData)
-                                {
-                                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                                        <td style="padding: 12px;">@item.Category</td>
-                                        <td style="padding: 12px; text-align: right;">₱@item.Value.ToString("N0")</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                    <div style="height: 300px;">
+                        <canvas id="segmentChart"></canvas>
                     </div>
                 }
                 else
@@ -279,24 +235,8 @@ else
                     <div class="card-header"><h3>Pipeline by Stage</h3></div>
                     @if (salesPipelineData?.Any() == true)
                     {
-                        <div style="overflow-x: auto;">
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
-                                        <th style="padding: 12px; text-align: left;">Stage</th>
-                                        <th style="padding: 12px; text-align: right;">Opportunities</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var item in salesPipelineData)
-                                    {
-                                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                                            <td style="padding: 12px;">@item.Category</td>
-                                            <td style="padding: 12px; text-align: right;">@item.Value</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+                        <div style="height: 300px;">
+                            <canvas id="pipelineChart"></canvas>
                         </div>
                     }
                     else
@@ -312,28 +252,8 @@ else
                     <div class="card-header"><h3>Campaign Performance</h3></div>
                     @if (campaignMetricsData?.Any() == true)
                     {
-                        <div style="overflow-x: auto;">
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
-                                        <th style="padding: 12px; text-align: left;">Campaign</th>
-                                        <th style="padding: 12px; text-align: right;">Sent</th>
-                                        <th style="padding: 12px; text-align: right;">Opened</th>
-                                        <th style="padding: 12px; text-align: right;">Converted</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var item in campaignMetricsData)
-                                    {
-                                        <tr style="border-bottom: 1px solid #e5e7eb;">
-                                            <td style="padding: 12px;">@item.CampaignName</td>
-                                            <td style="padding: 12px; text-align: right;">@item.Sent</td>
-                                            <td style="padding: 12px; text-align: right;">@item.Opened</td>
-                                            <td style="padding: 12px; text-align: right;">@item.Converted</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+                        <div style="height: 300px;">
+                            <canvas id="campaignChart"></canvas>
                         </div>
                     }
                     else
@@ -350,35 +270,8 @@ else
                 <div class="card-header"><h3>Financial Overview - OHLC</h3></div>
                 @if (financialData?.Any() == true)
                 {
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
-                                    <th style="padding: 12px; text-align: left;">Date</th>
-                                    <th style="padding: 12px; text-align: right;">Open</th>
-                                    <th style="padding: 12px; text-align: right; color: #10b981;">High</th>
-                                    <th style="padding: 12px; text-align: right; color: #ef4444;">Low</th>
-                                    <th style="padding: 12px; text-align: right; font-weight: bold;">Close</th>
-                                    <th style="padding: 12px; text-align: right;">Change %</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var point in financialData.OrderByDescending(x => x.Date))
-                                {
-                                    var change = point.Close - point.Open;
-                                    var changePercent = point.Open > 0 ? (change / point.Open) * 100 : 0;
-                                    var changeColor = change >= 0 ? "#10b981" : "#ef4444";
-                                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                                        <td style="padding: 12px;">@point.Date.ToString("MMM dd, yyyy")</td>
-                                        <td style="padding: 12px; text-align: right;">₱@point.Open.ToString("N0")</td>
-                                        <td style="padding: 12px; text-align: right; color: #10b981;">₱@point.High.ToString("N0")</td>
-                                        <td style="padding: 12px; text-align: right; color: #ef4444;">₱@point.Low.ToString("N0")</td>
-                                        <td style="padding: 12px; text-align: right; font-weight: bold;">₱@point.Close.ToString("N0")</td>
-                                        <td style="padding: 12px; text-align: right; color: @changeColor;">@changePercent.ToString("F2")%</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                    <div style="height: 350px;">
+                        <canvas id="ohlcChart"></canvas>
                     </div>
                 }
                 else
@@ -446,6 +339,7 @@ else
 @inject NavigationManager Navigation
 @inject AuthService AuthService
 @inject DashboardService DashboardService
+@inject IJSRuntime JSRuntime
 
 @code {
     private bool isLoading = true;
@@ -484,6 +378,143 @@ else
         _refreshTimer = new System.Threading.Timer(async _ => await RefreshDashboard(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender && !isLoading)
+        {
+            await RenderChartsAsync();
+        }
+    }
+
+    private async Task RenderChartsAsync()
+    {
+        try
+        {
+            // Revenue Trend Chart
+            if (monthlyRevenueData?.Any() == true)
+            {
+                var labels = monthlyRevenueData.Select(x => x.Month).ToArray();
+                var data = monthlyRevenueData.Select(x => x.Revenue).ToArray();
+
+                await JSRuntime.InvokeVoidAsync("chartJsInterop.createLineChart",
+                    "revenueChart",
+                    labels,
+                    new object[] {
+                        new {
+                            label = "Revenue",
+                            data = data,
+                            borderColor = "#667eea",
+                            backgroundColor = "rgba(102, 126, 234, 0.1)",
+                            tension = 0.4,
+                            fill = true
+                        }
+                    });
+            }
+
+            // Lead Sources Chart
+            if (leadSourcesData?.Any() == true)
+            {
+                var labels = leadSourcesData.Select(x => x.Category).ToArray();
+                var data = leadSourcesData.Select(x => x.Value).ToArray();
+
+                await JSRuntime.InvokeVoidAsync("chartJsInterop.createPieChart",
+                    "leadSourcesChart",
+                    labels,
+                    data);
+            }
+
+            // Revenue by Segment Chart
+            if (revenueBySegmentData?.Any() == true)
+            {
+                var labels = revenueBySegmentData.Select(x => x.Category).ToArray();
+                var data = revenueBySegmentData.Select(x => x.Value).ToArray();
+
+                await JSRuntime.InvokeVoidAsync("chartJsInterop.createBarChart",
+                    "segmentChart",
+                    labels,
+                    new object[] {
+                        new {
+                            label = "Revenue",
+                            data = data,
+                            backgroundColor = new[] { "#667eea", "#764ba2", "#f093fb", "#f5576c", "#4facfe" },
+                            borderWidth = 0
+                        }
+                    });
+            }
+
+            // Sales Pipeline Chart
+            if (AuthService.IsSalesRep() && salesPipelineData?.Any() == true)
+            {
+                var labels = salesPipelineData.Select(x => x.Category).ToArray();
+                var data = salesPipelineData.Select(x => x.Value).ToArray();
+
+                await JSRuntime.InvokeVoidAsync("chartJsInterop.createBarChart",
+                    "pipelineChart",
+                    labels,
+                    new object[] {
+                        new {
+                            label = "Opportunities",
+                            data = data,
+                            backgroundColor = new[] { "#4facfe", "#00f2fe", "#667eea", "#764ba2" },
+                            borderWidth = 0
+                        }
+                    });
+            }
+
+            // Campaign Performance Chart
+            if (AuthService.IsMarketing() && campaignMetricsData?.Any() == true)
+            {
+                var labels = campaignMetricsData.Select(x => x.CampaignName).ToArray();
+                var sentData = campaignMetricsData.Select(x => x.Sent).ToArray();
+                var openedData = campaignMetricsData.Select(x => x.Opened).ToArray();
+                var convertedData = campaignMetricsData.Select(x => x.Converted).ToArray();
+
+                await JSRuntime.InvokeVoidAsync("chartJsInterop.createBarChart",
+                    "campaignChart",
+                    labels,
+                    new object[] {
+                        new {
+                            label = "Sent",
+                            data = sentData,
+                            backgroundColor = "#667eea"
+                        },
+                        new {
+                            label = "Opened",
+                            data = openedData,
+                            backgroundColor = "#4facfe"
+                        },
+                        new {
+                            label = "Converted",
+                            data = convertedData,
+                            backgroundColor = "#10b981"
+                        }
+                    },
+                    new { plugins = new { legend = new { display = true } } });
+            }
+
+            // OHLC Chart
+            if ((AuthService.IsAdmin() || AuthService.IsFinance()) && financialData?.Any() == true)
+            {
+                var ohlcData = financialData.Select(x => new
+                {
+                    date = x.Date.ToString("MMM dd"),
+                    open = x.Open,
+                    high = x.High,
+                    low = x.Low,
+                    close = x.Close
+                }).ToArray();
+
+                await JSRuntime.InvokeVoidAsync("chartJsInterop.createOHLCChart",
+                    "ohlcChart",
+                    ohlcData);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rendering charts: {ex.Message}");
+        }
+    }
+
     private async Task RefreshDashboard()
     {
         if (_isRefreshing) return;
@@ -493,6 +524,7 @@ else
             await InvokeAsync(async () =>
             {
                 await LoadDashboardDataAsync();
+                await RenderChartsAsync();
                 StateHasChanged();
             });
         }

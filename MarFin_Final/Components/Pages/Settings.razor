@@ -446,6 +446,14 @@
 
             syncStatus = "connected";
 
+            // Ensure at least one applicable data type is selected
+            if (!syncCustomers && !syncInvoices)
+            {
+                syncSuccess = false;
+                syncMessage = "Please select at least one data type (Customers or Invoices) to sync.";
+                return;
+            }
+
             // Fetch all data from local database
             syncProgress = "(Fetching data from local database...)";
             StateHasChanged();
@@ -453,21 +461,24 @@
             var customers = await LocalDbService.GetAllCustomersAsync();
             var invoices = await LocalDbService.GetAllInvoicesAsync();
 
-            // Check if there's data to sync
-            if ((customers?.Count ?? 0) == 0 && (invoices?.Count ?? 0) == 0)
+            var selectedCustomerCount = syncCustomers ? (customers?.Count ?? 0) : 0;
+            var selectedInvoiceCount = syncInvoices ? (invoices?.Count ?? 0) : 0;
+
+            // Check if there's data to sync based on selected options
+            if (selectedCustomerCount == 0 && selectedInvoiceCount == 0)
             {
                 syncSuccess = false;
-                syncMessage = " No data found in local database to sync. Please add customers or invoices first.";
-                isSyncing = false;
-                StateHasChanged();
+                syncMessage = "No selected data found in local database to sync.";
                 return;
             }
 
-            syncProgress = $"(Syncing {customers?.Count ?? 0} customers and {invoices?.Count ?? 0} invoices...)";
+            syncProgress = $"(Syncing {selectedCustomerCount} customers and {selectedInvoiceCount} invoices...)";
             StateHasChanged();
 
-            // Use comprehensive sync function
-            var syncResult = await RemoteDbService.SyncAllDataAsync(customers ?? new List<Customer>(), invoices ?? new List<Invoice>());
+            // Use comprehensive sync function with filtered data
+            var syncResult = await RemoteDbService.SyncAllDataAsync(
+                syncCustomers ? (customers ?? new List<Customer>()) : new List<Customer>(),
+                syncInvoices ? (invoices ?? new List<Invoice>()) : new List<Invoice>());
 
             syncSuccess = syncResult.IsSuccess;
             syncMessage = syncResult.Message;
