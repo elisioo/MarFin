@@ -447,6 +447,79 @@ namespace MarFin_Final.Database.Services
                 }
             }
 
+            // If there is no data at all, return as-is so the UI can show the empty state
+            if (data.Count == 0)
+            {
+                return data;
+            }
+
+            // Fill missing months between startDate and endDate with zero revenue so
+            // the Chart.js line has multiple points and draws a visible line.
+            var filled = new List<LineChartData>();
+
+            var currentMonth = new DateTime(startDate.Year, startDate.Month, 1);
+            var endMonth = new DateTime(endDate.Year, endDate.Month, 1);
+
+            var lookup = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in data)
+            {
+                lookup[item.Month] = item.Revenue;
+            }
+
+            while (currentMonth <= endMonth)
+            {
+                var label = currentMonth.ToString("MMM");
+                if (!lookup.TryGetValue(label, out var revenue))
+                {
+                    revenue = 0;
+                }
+
+                filled.Add(new LineChartData
+                {
+                    Month = label,
+                    Revenue = revenue
+                });
+
+                currentMonth = currentMonth.AddMonths(1);
+            }
+
+            return filled;
+        }
+
+        // Get Monthly Customers Count
+        public async Task<List<MonthlyCustomersData>> GetMonthlyCustomersAsync(DateTime startDate, DateTime endDate)
+        {
+            var data = new List<MonthlyCustomersData>();
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                var cmd = new SqlCommand(@"
+                    SELECT 
+                        FORMAT(created_date, 'MMM') as Month,
+                        COUNT(*) as Customers
+                    FROM tbl_Customers
+                    WHERE is_archived = 0 
+                    AND created_date BETWEEN @StartDate AND @EndDate
+                    GROUP BY YEAR(created_date), MONTH(created_date), FORMAT(created_date, 'MMM')
+                    ORDER BY YEAR(created_date), MONTH(created_date)", connection);
+                cmd.Parameters.AddWithValue("@StartDate", startDate);
+                cmd.Parameters.AddWithValue("@EndDate", endDate);
+
+                using (var reader = await cmd.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        data.Add(new MonthlyCustomersData
+                        {
+                            Month = reader.GetString(0),
+                            Customers = reader.GetInt32(1)
+                        });
+                    }
+                }
+            }
+
             return data;
         }
 
@@ -543,7 +616,7 @@ namespace MarFin_Final.Database.Services
                     FROM tbl_Sales_Pipeline sp
                     LEFT JOIN tbl_Pipeline_Stages ps ON sp.stage_id = ps.stage_id
                     WHERE sp.assigned_to = @UserId AND sp.is_archived = 0
-                    GROUP BY ps.stage_name
+                    GROUP BY ps.stage_name, ps.stage_order
                     ORDER BY ps.stage_order", connection);
                 cmd.Parameters.AddWithValue("@UserId", userId);
 
@@ -725,6 +798,12 @@ namespace MarFin_Final.Database.Services
         public double Revenue { get; set; }
     }
 
+    public class MonthlyCustomersData
+    {
+        public string Month { get; set; }
+        public int Customers { get; set; }
+    }
+
     public class BarChartData
     {
         public string Category { get; set; }
@@ -738,5 +817,14 @@ namespace MarFin_Final.Database.Services
         public int Opened { get; set; }
         public int Clicked { get; set; }
         public int Converted { get; set; }
+    }
+    public class FinancialPoint
+    {
+        public DateTime Date { get; set; }
+        public decimal Open { get; set; }
+        public decimal High { get; set; }
+        public decimal Low { get; set; }
+        public decimal Close { get; set; }
+        public int Volume { get; set; }
     }
 }

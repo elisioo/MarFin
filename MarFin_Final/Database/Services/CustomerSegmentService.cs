@@ -54,9 +54,9 @@ namespace MarFin_Final.Data
         }
 
         // Get segment by ID
-        public CustomerSegment GetSegmentById(int segmentId)
+        public CustomerSegment? GetSegmentById(int segmentId)
         {
-            CustomerSegment segment = null;
+            CustomerSegment? segment = null;
 
             try
             {

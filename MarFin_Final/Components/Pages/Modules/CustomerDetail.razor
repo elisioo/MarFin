@@ -1,6 +1,8 @@
 ﻿@page "/customer-details/{CustomerId:int}"
 @inject NavigationManager Navigation
 @inject AuthService AuthService
+@inject CustomerService CustomerService
+@inject InvoiceService InvoiceService
 @using MarFin_Final.Data
 @using MarFin_Final.Database.Services
 @using MarFin_Final.Models
@@ -471,7 +473,7 @@
                                                 @(inv.IsOverdue ? "Overdue" : inv.PaymentStatus)
                                             </span>
                                         </span>
-                                        <span class="text-end">₱@inv.TotalAmount.ToString("N2")</span>
+                                        <span class="text-end">₱@(inv.TotalAmount.HasValue? inv.TotalAmount.Value.ToString("N2") : "0.00")</span>
                                     </div>
                                 }
                                 @if (customerInvoices.Count > 5)
@@ -523,9 +525,6 @@
     [Parameter]
     public int CustomerId { get; set; }
 
-    private readonly CustomerService customerService = new();
-    private readonly InvoiceService invoiceService = new();
-
     private Customer? customer = null;
 
     private Customer? originalCustomer = null;
@@ -561,11 +560,8 @@
             isLoading = true;
             StateHasChanged();
 
-            await Task.Run(() =>
-            {
-                customer = customerService.GetCustomerById(CustomerId);
-                customerInvoices = invoiceService.GetInvoicesByCustomerId(CustomerId);
-            });
+            customer = await CustomerService.GetCustomerByIdAsync(CustomerId);
+            customerInvoices = await InvoiceService.GetInvoicesByCustomerIdAsync(CustomerId);
 
             if (customer == null)
             {
@@ -691,7 +687,7 @@
             bool success = false;
             await Task.Run(() =>
             {
-                success = customerService.UpdateCustomer(customer);
+                success = CustomerService.UpdateCustomer(customer);
             });
 
             if (success)
@@ -755,7 +751,7 @@
             bool success = false;
             await Task.Run(() =>
             {
-                success = customerService.ArchiveCustomer(customer.CustomerId, currentUserId);
+                success = CustomerService.ArchiveCustomer(customer.CustomerId, currentUserId);
             });
 
             if (success)

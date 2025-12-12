@@ -1,10 +1,11 @@
 ﻿@page "/customers"
 @inject NavigationManager Navigation
 @inject AuthService AuthService
+@inject CustomerService CustomerService
 @using MarFin_Final.Data
 @using MarFin_Final.Database.Services
 @using MarFin_Final.Models
-@using static MarFin_Final.Data.CustomerService
+@using MarFin_Final.Helpers
 
 <AuthorizeRoute RequiredPermission="@RolePermissions.Permissions.ViewCustomers">
     <div class="customers-container" @onclick="CloseDropdowns">
@@ -33,12 +34,13 @@
         <div class="customers-toolbar">
             @if (!showArchivedView)
             {
-                @* Only Admin and Marketing can add new customers *@
                 @if (AuthService.IsAdmin() || AuthService.IsMarketing())
                 {
                     <button class="btn-primary" @onclick="OpenAddModal">
                         <span><i class="bi bi-plus-lg"></i></span> New Customer
                     </button>
+
+                    
                 }
                 else
                 {
@@ -50,7 +52,6 @@
                 <div></div>
             }
             <div class="toolbar-right">
-                @* Only Admin and Marketing can view archived customers *@
                 @if (AuthService.IsAdmin() || AuthService.IsMarketing())
                 {
                     <button class="@(showArchivedView ? "btn-primary" : "btn-secondary")" @onclick="ToggleArchivedView">
@@ -110,9 +111,11 @@
                     <span class="search-icon"><i class="bi bi-search"></i></span>
                     <input type="text"
                            placeholder="Search customers..."
+                           maxlength="200"
                            @bind="searchTerm"
                            @bind:event="oninput"
                            @onkeyup="SearchCustomers" />
+
                     @if (!string.IsNullOrEmpty(searchTerm))
                     {
                         <button class="search-clear" @onclick="ClearSearch">×</button>
@@ -161,18 +164,25 @@
                             <tr>
                                 <td>
                                     <div class="customer-name-cell">
-                                        <span class="customer-avatar">@customer.FirstName[0]@customer.LastName[0]</span>
+                                        <span class="customer-avatar">@GetCustomerInitials(customer)</span>
                                         <span class="customer-name">@customer.FullName</span>
                                     </div>
                                 </td>
                                 <td>@(string.IsNullOrEmpty(customer.CompanyName) ? "—" : customer.CompanyName)</td>
                                 <td>
-                                    <a href="mailto:@customer.Email" class="email-link">@customer.Email</a>
+                                    @if (string.IsNullOrWhiteSpace(customer.Email))
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                    else
+                                    {
+                                        <a href="mailto:@customer.Email" class="email-link">@customer.Email</a>
+                                    }
                                 </td>
                                 <td>@(string.IsNullOrEmpty(customer.Phone) ? "—" : customer.Phone)</td>
                                 <td>
-                                    <span class="status-badge status-@customer.CustomerStatus.ToLower()">
-                                        @customer.CustomerStatus
+                                    <span class="status-badge status-@((customer.CustomerStatus ?? "Unknown").ToLower())">
+                                        @(string.IsNullOrWhiteSpace(customer.CustomerStatus) ? "Unknown" : customer.CustomerStatus)
                                     </span>
                                 </td>
                                 <td>
@@ -340,8 +350,10 @@
                             <label>First Name <span class="required">*</span></label>
                             <input type="text"
                                    class="form-control @(validationErrors.ContainsKey("FirstName") ? "is-invalid" : "")"
+                                   maxlength="100"
                                    @bind="editingCustomer.FirstName"
                                    placeholder="Enter first name" />
+
                             @if (validationErrors.ContainsKey("FirstName"))
                             {
                                 <span class="validation-error">@validationErrors["FirstName"]</span>
@@ -351,8 +363,10 @@
                             <label>Last Name <span class="required">*</span></label>
                             <input type="text"
                                    class="form-control @(validationErrors.ContainsKey("LastName") ? "is-invalid" : "")"
+                                   maxlength="100"
                                    @bind="editingCustomer.LastName"
                                    placeholder="Enter last name" />
+
                             @if (validationErrors.ContainsKey("LastName"))
                             {
                                 <span class="validation-error">@validationErrors["LastName"]</span>
@@ -364,8 +378,10 @@
                         <label>Email Address <span class="required">*</span></label>
                         <input type="email"
                                class="form-control @(validationErrors.ContainsKey("Email") ? "is-invalid" : "")"
+                               maxlength="254"
                                @bind="editingCustomer.Email"
                                placeholder="email@example.com" />
+
                         @if (validationErrors.ContainsKey("Email"))
                         {
                             <span class="validation-error">@validationErrors["Email"]</span>
@@ -374,18 +390,80 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Phone</label>
-                            <input type="text"
-                                   class="form-control"
-                                   @bind="editingCustomer.Phone"
-                                   placeholder="Enter phone number" />
+                            <label>Phone Number</label>
+                            <div class="phone-input-wrapper">
+
+                                <select class="phone-country-select" @bind="PhoneCountryCode">
+                                    <option value="+63">🇵🇭 +63</option>
+                                    <option value="+1">🇺🇸 +1</option>
+                                    <option value="+44">🇬🇧 +44</option>
+                                    <option value="+61">🇦🇺 +61</option>
+                                    <option value="+65">🇸🇬 +65</option>
+                                    <option value="+60">🇲🇾 +60</option>
+                                    <option value="+91">🇮🇳 +91</option>
+                                    <option value="+81">🇯🇵 +81</option>
+                                    <option value="+86">🇨🇳 +86</option>
+                                    <option value="+49">🇩🇪 +49</option>
+                                    <option value="+33">🇫🇷 +33</option>
+                                    <option value="+82">🇰🇷 +82</option>
+                                </select>
+                                <input type="tel"
+                                    class="form-control phone-number-input @(validationErrors.ContainsKey("Phone") ? "is-invalid" : "")"
+                                    @bind="phoneNumberDigits"
+                                    @bind:event="oninput"
+                                    maxlength="20"
+                                    placeholder="@GetPhonePlaceholder()" />
+
+                            </div>
+                            @if (validationErrors.ContainsKey("Phone"))
+                            {
+                                <span class="validation-error">@validationErrors["Phone"]</span>
+                            }
                         </div>
+
+                        <style>
+                            .phone-input-wrapper {
+                                display: flex;
+                                gap: 8px;
+                            }
+
+                            .phone-country-select {
+                                min-width: 100px;
+                                padding: 10px 12px;
+                                border: 1px solid #e0e0e0;
+                                border-radius: 8px;
+                                background: white;
+                                font-size: 14px;
+                                cursor: pointer;
+                                transition: border-color 0.2s;
+                            }
+
+                            .phone-country-select:hover {
+                                border-color: #2563eb;
+                            }
+
+                            .phone-country-select:focus {
+                                outline: none;
+                                border-color: #2563eb;
+                                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+                            }
+
+                            .phone-number-input {
+                                flex: 1;
+                            }
+
+                            .phone-input-wrapper .form-control.is-invalid {
+                                border-color: #dc2626;
+                            }
+                        </style>
                         <div class="form-group">
                             <label>Company Name</label>
                             <input type="text"
                                    class="form-control"
+                                   maxlength="200"
                                    @bind="editingCustomer.CompanyName"
                                    placeholder="Enter company name" />
+
                         </div>
                     </div>
 
@@ -393,8 +471,10 @@
                         <label>Address</label>
                         <input type="text"
                                class="form-control"
+                               maxlength="200"
                                @bind="editingCustomer.Address"
                                placeholder="Enter address" />
+
                     </div>
 
                     <div class="form-row">
@@ -402,6 +482,7 @@
                             <label>City</label>
                             <input type="text"
                                    class="form-control"
+                                   maxlength="100"
                                    @bind="editingCustomer.City"
                                    placeholder="Enter city" />
                         </div>
@@ -409,8 +490,10 @@
                             <label>State/Province</label>
                             <input type="text"
                                    class="form-control"
+                                   maxlength="100"
                                    @bind="editingCustomer.StateProvince"
                                    placeholder="Enter state or province" />
+
                         </div>
                     </div>
 
@@ -419,8 +502,10 @@
                             <label>Postal Code</label>
                             <input type="text"
                                    class="form-control @(validationErrors.ContainsKey("PostalCode") ? "is-invalid" : "")"
+                                   maxlength="20"
                                    @bind="editingCustomer.PostalCode"
                                    placeholder="Enter postal code" />
+
                             @if (validationErrors.ContainsKey("PostalCode"))
                             {
                                 <span class="validation-error">@validationErrors["PostalCode"]</span>
@@ -432,6 +517,16 @@
                                 <option value="Philippines">Philippines</option>
                                 <option value="United States">United States</option>
                                 <option value="Canada">Canada</option>
+                                <option value="United Kingdom">United Kingdom</option>
+                                <option value="Australia">Australia</option>
+                                <option value="Singapore">Singapore</option>
+                                <option value="Malaysia">Malaysia</option>
+                                <option value="India">India</option>
+                                <option value="Japan">Japan</option>
+                                <option value="China">China</option>
+                                <option value="Germany">Germany</option>
+                                <option value="France">France</option>
+                                <option value="South Korea">South Korea</option>
                                 <option value="Other">Other</option>
                             </select>
                         </div>
@@ -466,7 +561,9 @@
                         <textarea class="form-control"
                                   @bind="editingCustomer.Notes"
                                   placeholder="Additional notes..."
-                                  rows="3"></textarea>
+                                  rows="3"
+                                  maxlength="1000"></textarea>
+
                     </div>
                 </div>
             </div>
@@ -533,10 +630,9 @@
     }
 </AuthorizeRoute>
 
-    @code {
+@code {
+    private CustomerService.PaginatedResult<Customer> customersResult = new CustomerService.PaginatedResult<Customer>();
 
-    private readonly CustomerService customerService = new();
-    private PaginatedResult<Customer> customersResult = new PaginatedResult<Customer>();
     private List<Models.Customer> filteredCustomers = new();
     private string searchTerm = string.Empty;
     private string statusFilter = string.Empty;
@@ -558,11 +654,55 @@
     private bool showArchivedView = false;
     private int currentPage = 1;
 
-   
+    // Phone input state
+    private string phoneCountryCode = "+63";
+    private string phoneNumberDigits = string.Empty;
+
     private int DisplayStart => customersResult.TotalCount == 0 ? 0 : (currentPage - 1) * pageSize + 1;
     private int DisplayEnd => Math.Min(currentPage * pageSize, customersResult.TotalCount);
 
     private int _pageSize = 5;
+
+    private const int MaxNameLength = 100;
+    private const int MaxEmailLength = 254;
+    private const int MaxCompanyLength = 200;
+    private const int MaxAddressLength = 200;
+    private const int MaxCityLength = 100;
+    private const int MaxStateLength = 100;
+    private const int MaxPostalCodeLength = 20;
+    private const int MaxNotesLength = 1000;
+
+    // Property wrapper so we can react when the country code changes
+    private string PhoneCountryCode
+    {
+        get => phoneCountryCode;
+        set
+        {
+            if (phoneCountryCode != value)
+            {
+                phoneCountryCode = value;
+                // Clear digits when switching countries to avoid format confusion
+                phoneNumberDigits = string.Empty;
+            }
+        }
+    }
+
+    // Country-aware phone rules: required local digits and example formats
+    private readonly Dictionary<string, (int RequiredDigits, string Sample, string CountryName)> phoneCountryRules = new()
+    {
+        ["+63"] = (10, "912 345 6789", "Philippines"),
+        ["+1"] = (10, "201 555 0123", "United States/Canada"),
+        ["+44"] = (10, "7123 456 789", "United Kingdom"),
+        ["+61"] = (9, "412 345 678", "Australia"),
+        ["+65"] = (8, "8123 4567", "Singapore"),
+        ["+60"] = (9, "12 345 6789", "Malaysia"),
+        ["+91"] = (10, "91234 56789", "India"),
+        ["+81"] = (9, "70 1234 567", "Japan"),
+        ["+86"] = (11, "139 1234 5678", "China"),
+        ["+49"] = (10, "1512 345 678", "Germany"),
+        ["+33"] = (9, "6 12 34 56 78", "France"),
+        ["+82"] = (9, "10 1234 567", "South Korea"),
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -574,7 +714,6 @@
 
         await LoadCustomers();
     }
-
 
     private int pageSize
     {
@@ -589,6 +728,7 @@
             }
         }
     }
+
     private async Task GoToPage(int page)
     {
         if (page >= 1 && page <= customersResult.TotalPages && page != currentPage)
@@ -597,6 +737,7 @@
             await LoadCustomers();
         }
     }
+
     private async Task LoadCustomers()
     {
         try
@@ -604,12 +745,19 @@
             isLoading = true;
             StateHasChanged();
 
+            var safeSearchTerm = (searchTerm ?? string.Empty).Trim();
+            if (safeSearchTerm.Length > 200)
+            {
+                safeSearchTerm = safeSearchTerm.Substring(0, 200);
+            }
+            searchTerm = safeSearchTerm;
+
             await Task.Run(() =>
             {
-                customersResult = customerService.GetCustomersPaginated(
+                customersResult = CustomerService.GetCustomersPaginated(
                     pageNumber: currentPage,
                     pageSize: pageSize,
-                    searchTerm: searchTerm,
+                    searchTerm: safeSearchTerm,
                     statusFilter: statusFilter,
                     isArchived: showArchivedView
                 );
@@ -667,7 +815,6 @@
 
     private void OpenAddModal()
     {
-        // Only Admin and Marketing can add customers
         if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
         {
             errorMessage = "You don't have permission to add customers";
@@ -683,6 +830,9 @@
             CustomerStatus = "Lead",
             IsActive = true
         };
+        phoneCountryCode = "+63";
+        phoneNumberDigits = string.Empty;
+        editingCustomer.Phone = string.Empty;
         validationErrors.Clear();
         errorMessage = string.Empty;
         showModal = true;
@@ -690,7 +840,6 @@
 
     private void OpenEditModal(Customer customer)
     {
-        // Only Admin and Marketing can edit customers
         if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
         {
             errorMessage = "You don't have permission to edit customers";
@@ -723,9 +872,57 @@
             IsActive = customer.IsActive
         };
 
+        InitializePhoneFromCustomer();
+
         validationErrors.Clear();
         errorMessage = string.Empty;
         showModal = true;
+    }
+
+    private void InitializePhoneFromCustomer()
+    {
+        phoneCountryCode = "+63";
+        phoneNumberDigits = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(editingCustomer.Phone))
+        {
+            return;
+        }
+
+        var digits = System.Text.RegularExpressions.Regex.Replace(editingCustomer.Phone, "[^0-9]", "");
+        if (string.IsNullOrEmpty(digits))
+        {
+            return;
+        }
+
+        var codeMap = new Dictionary<string, string>
+        {
+            ["+63"] = "63",
+            ["+1"] = "1",
+            ["+44"] = "44",
+            ["+61"] = "61",
+            ["+65"] = "65",
+            ["+60"] = "60",
+            ["+91"] = "91",
+            ["+81"] = "81",
+            ["+86"] = "86",
+            ["+49"] = "49",
+            ["+33"] = "33",
+            ["+82"] = "82"
+        };
+
+        foreach (var kvp in codeMap)
+        {
+            var codeDigits = kvp.Value;
+            if (digits.StartsWith(codeDigits))
+            {
+                phoneCountryCode = kvp.Key;
+                phoneNumberDigits = digits.Substring(codeDigits.Length);
+                return;
+            }
+        }
+
+        phoneNumberDigits = digits;
     }
 
     private void CloseModal()
@@ -734,123 +931,76 @@
         isEditMode = false;
         validationErrors.Clear();
         errorMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private void ShowSaveConfirmation()
+    {
+        if (!ValidateCustomer())
+        {
+            return;
+        }
+
+        confirmTitle = isEditMode ? "Update Customer" : "Create Customer";
+        confirmMessage = isEditMode
+            ? $"Are you sure you want to update {editingCustomer.FirstName} {editingCustomer.LastName}?"
+            : $"Are you sure you want to create customer {editingCustomer.FirstName} {editingCustomer.LastName}?";
+        showConfirmModal = true;
     }
 
     private void CloseConfirmModal()
     {
         showConfirmModal = false;
-        confirmTitle = string.Empty;
-        confirmMessage = string.Empty;
     }
 
     private async Task ConfirmSaveCustomer()
     {
         await SaveCustomer();
-    }
-
-    private bool ValidateCustomer()
-    {
-        validationErrors.Clear();
-
-        if (string.IsNullOrWhiteSpace(editingCustomer.FirstName))
-        {
-            validationErrors["FirstName"] = "First name is required";
-        }
-
-        if (string.IsNullOrWhiteSpace(editingCustomer.LastName))
-        {
-            validationErrors["LastName"] = "Last name is required";
-        }
-
-        if (string.IsNullOrWhiteSpace(editingCustomer.Email))
-        {
-            validationErrors["Email"] = "Email is required";
-        }
-        else if (!IsValidEmail(editingCustomer.Email))
-        {
-            validationErrors["Email"] = "Please enter a valid email address";
-        }
-
-        // Postal code: allow empty, but if provided must be numeric only
-        if (!string.IsNullOrWhiteSpace(editingCustomer.PostalCode) && editingCustomer.PostalCode.Any(c => !char.IsDigit(c)))
-        {
-            validationErrors["PostalCode"] = "Postal code must contain numbers only";
-        }
-
-        return !validationErrors.Any();
-    }
-
-    private bool IsValidEmail(string email)
-    {
-        try
-        {
-            var addr = new System.Net.Mail.MailAddress(email);
-            return addr.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private void ShowSaveConfirmation()
-    {
-        // Only Admin and Marketing can save customers
-        if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
-        {
-            errorMessage = "You don't have permission to modify customers";
-            return;
-        }
-
-        if (!ValidateCustomer())
-        {
-            errorMessage = "Please correct the validation errors";
-            return;
-        }
-
-        confirmTitle = isEditMode ? "Update Customer" : "Add Customer";
-        confirmMessage = isEditMode
-            ? $"Are you sure you want to update {editingCustomer.FullName}? This will modify their information in the system."
-            : $"Are you sure you want to add {editingCustomer.FullName} as a new customer?";
-        showConfirmModal = true;
+        CloseConfirmModal();
     }
 
     private async Task SaveCustomer()
     {
-        if (!showConfirmModal) return;
+        if (!ValidateCustomer())
+        {
+            return;
+        }
 
         try
         {
             isSaving = true;
-            errorMessage = string.Empty;
-            successMessage = string.Empty;
             StateHasChanged();
 
-            bool success = false;
+            // Phone is already formatted in ValidateCustomer()
 
-            await Task.Run(() =>
+            bool success = false;
+            if (isEditMode)
             {
-                if (isEditMode)
+                editingCustomer.ModifiedBy = currentUserId;
+                await Task.Run(() =>
                 {
-                    success = customerService.UpdateCustomer(editingCustomer);
-                }
-                else
+                    success = CustomerService.UpdateCustomer(editingCustomer);
+                });
+                successMessage = success ? "Customer updated successfully" : string.Empty;
+            }
+            else
+            {
+                editingCustomer.CreatedBy = currentUserId;
+                await Task.Run(() =>
                 {
-                    success = customerService.AddCustomer(editingCustomer);
-                }
-            });
+                    success = CustomerService.AddCustomer(editingCustomer);
+                });
+                successMessage = success ? "Customer created successfully" : string.Empty;
+            }
 
             if (success)
             {
-                successMessage = isEditMode ? "Customer updated successfully!" : "Customer added successfully!";
                 CloseModal();
                 await LoadCustomers();
             }
             else
             {
-                errorMessage = isEditMode
-                    ? "Failed to update customer. Please check your data and try again."
-                    : "Failed to add customer. This email may already be in use.";
+                errorMessage = "Failed to save customer";
             }
         }
         catch (Exception ex)
@@ -861,14 +1011,179 @@
         finally
         {
             isSaving = false;
-            showConfirmModal = false;
             StateHasChanged();
         }
     }
 
+    private bool ValidateCustomer()
+    {
+        validationErrors.Clear();
+        bool isValid = true;
+
+        if (editingCustomer == null)
+        {
+            errorMessage = "No customer record to validate.";
+            StateHasChanged();
+            return false;
+        }
+
+        // Normalize and constrain string inputs
+        editingCustomer.FirstName = (editingCustomer.FirstName ?? string.Empty).Trim();
+        editingCustomer.LastName = (editingCustomer.LastName ?? string.Empty).Trim();
+        editingCustomer.Email = (editingCustomer.Email ?? string.Empty).Trim();
+        editingCustomer.CompanyName = (editingCustomer.CompanyName ?? string.Empty).Trim();
+        editingCustomer.Address = (editingCustomer.Address ?? string.Empty).Trim();
+        editingCustomer.City = (editingCustomer.City ?? string.Empty).Trim();
+        editingCustomer.StateProvince = (editingCustomer.StateProvince ?? string.Empty).Trim();
+        editingCustomer.PostalCode = (editingCustomer.PostalCode ?? string.Empty).Trim();
+        editingCustomer.Country = string.IsNullOrWhiteSpace(editingCustomer.Country)
+            ? "Philippines"
+            : editingCustomer.Country.Trim();
+        editingCustomer.Source = (editingCustomer.Source ?? string.Empty).Trim();
+        editingCustomer.Notes = (editingCustomer.Notes ?? string.Empty).Trim();
+        phoneNumberDigits = (phoneNumberDigits ?? string.Empty).Trim();
+
+        if (editingCustomer.CompanyName.Length > MaxCompanyLength)
+        {
+            editingCustomer.CompanyName = editingCustomer.CompanyName.Substring(0, MaxCompanyLength);
+        }
+
+        if (editingCustomer.Address.Length > MaxAddressLength)
+        {
+            editingCustomer.Address = editingCustomer.Address.Substring(0, MaxAddressLength);
+        }
+
+        if (editingCustomer.City.Length > MaxCityLength)
+        {
+            editingCustomer.City = editingCustomer.City.Substring(0, MaxCityLength);
+        }
+
+        if (editingCustomer.StateProvince.Length > MaxStateLength)
+        {
+            editingCustomer.StateProvince = editingCustomer.StateProvince.Substring(0, MaxStateLength);
+        }
+
+        if (editingCustomer.Notes.Length > MaxNotesLength)
+        {
+            editingCustomer.Notes = editingCustomer.Notes.Substring(0, MaxNotesLength);
+        }
+
+        if (string.IsNullOrWhiteSpace(editingCustomer.CustomerStatus))
+        {
+            editingCustomer.CustomerStatus = "Lead";
+        }
+
+        // First name
+        if (string.IsNullOrWhiteSpace(editingCustomer.FirstName))
+        {
+            validationErrors["FirstName"] = "First name is required";
+            isValid = false;
+        }
+        else if (editingCustomer.FirstName.Length > MaxNameLength)
+        {
+            validationErrors["FirstName"] = $"First name must be {MaxNameLength} characters or less";
+            isValid = false;
+        }
+
+        // Last name
+        if (string.IsNullOrWhiteSpace(editingCustomer.LastName))
+        {
+            validationErrors["LastName"] = "Last name is required";
+            isValid = false;
+        }
+        else if (editingCustomer.LastName.Length > MaxNameLength)
+        {
+            validationErrors["LastName"] = $"Last name must be {MaxNameLength} characters or less";
+            isValid = false;
+        }
+
+        // Email
+        if (string.IsNullOrWhiteSpace(editingCustomer.Email))
+        {
+            validationErrors["Email"] = "Email is required";
+            isValid = false;
+        }
+        else if (editingCustomer.Email.Length > MaxEmailLength)
+        {
+            validationErrors["Email"] = $"Email must be {MaxEmailLength} characters or less";
+            isValid = false;
+        }
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(editingCustomer.Email,
+            @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+        {
+            validationErrors["Email"] = "Please enter a valid email address";
+            isValid = false;
+        }
+
+        // Postal code
+        if (!string.IsNullOrWhiteSpace(editingCustomer.PostalCode))
+        {
+            if (editingCustomer.PostalCode.Length > MaxPostalCodeLength)
+            {
+                validationErrors["PostalCode"] = $"Postal code must be {MaxPostalCodeLength} characters or less";
+                isValid = false;
+            }
+            else if (!System.Text.RegularExpressions.Regex.IsMatch(editingCustomer.PostalCode, @"^[0-9A-Za-z\- ]+$"))
+            {
+                validationErrors["PostalCode"] = "Postal code contains invalid characters";
+                isValid = false;
+            }
+        }
+
+        // Country-aware phone validation
+        if (!string.IsNullOrWhiteSpace(phoneNumberDigits))
+        {
+            // Remove all non-digit characters
+            var digits = System.Text.RegularExpressions.Regex.Replace(phoneNumberDigits, "[^0-9]", "");
+
+            if (string.IsNullOrEmpty(digits))
+            {
+                validationErrors["Phone"] = "Phone number must contain digits";
+                isValid = false;
+            }
+            else if (phoneCountryRules.TryGetValue(phoneCountryCode, out var rule))
+            {
+                if (digits.Length != rule.RequiredDigits)
+                {
+                    validationErrors["Phone"] = $"Phone number must be {rule.RequiredDigits} digits for {rule.CountryName} ({phoneCountryCode}).";
+                    isValid = false;
+                }
+                else
+                {
+                    // Store the formatted phone number using the selected country code
+                    editingCustomer.Phone = phoneCountryCode + digits;
+                }
+            }
+            else
+            {
+                // Fallback: generic 7-15 digit rule
+                if (digits.Length < 7)
+                {
+                    validationErrors["Phone"] = "Phone number is too short (minimum 7 digits)";
+                    isValid = false;
+                }
+                else if (digits.Length > 15)
+                {
+                    validationErrors["Phone"] = "Phone number is too long (maximum 15 digits)";
+                    isValid = false;
+                }
+                else
+                {
+                    editingCustomer.Phone = phoneCountryCode + digits;
+                }
+            }
+        }
+        else
+        {
+            editingCustomer.Phone = string.Empty;
+        }
+
+        StateHasChanged();
+        return isValid;
+    }
+
     private void ConfirmArchive(Customer customer)
     {
-        // Only Admin and Marketing can archive customers
         if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
         {
             errorMessage = "You don't have permission to archive customers";
@@ -897,7 +1212,7 @@
             bool success = false;
             await Task.Run(() =>
             {
-                success = customerService.ArchiveCustomer(customerToArchive.CustomerId, currentUserId);
+                success = CustomerService.ArchiveCustomer(customerToArchive.CustomerId, currentUserId);
             });
 
             if (success)
@@ -928,14 +1243,6 @@
         Navigation.NavigateTo($"/customer-details/{customerId}");
     }
 
-    private Dictionary<string, List<Customer>> GetGroupedCustomers()
-    {
-        return filteredCustomers
-            .GroupBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? "Individual Customers" : c.CompanyName)
-            .OrderBy(g => g.Key)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CreatedDate).ToList());
-    }
-
     private async Task ToggleArchivedView()
     {
         showArchivedView = !showArchivedView;
@@ -948,7 +1255,6 @@
 
     private async Task RestoreCustomer(Customer customer)
     {
-        // Only Admin and Marketing can restore customers
         if (!AuthService.IsAdmin() && !AuthService.IsMarketing())
         {
             errorMessage = "You don't have permission to restore customers";
@@ -963,7 +1269,7 @@
             bool success = false;
             await Task.Run(() =>
             {
-                success = customerService.RestoreCustomer(customer.CustomerId);
+                success = CustomerService.RestoreCustomer(customer.CustomerId);
             });
 
             if (success)
@@ -1010,5 +1316,31 @@
     {
         showStatusFilter = !showStatusFilter;
         StateHasChanged();
+    }
+
+    private string GetCustomerInitials(Customer customer)
+    {
+        if (customer == null)
+        {
+            return "?";
+        }
+
+        var first = (customer.FirstName ?? string.Empty).Trim();
+        var last = (customer.LastName ?? string.Empty).Trim();
+
+        var firstInitial = !string.IsNullOrEmpty(first) ? char.ToUpperInvariant(first[0]) : '?';
+        char? lastInitial = !string.IsNullOrEmpty(last) ? char.ToUpperInvariant(last[0]) : (char?)null;
+
+        return lastInitial.HasValue ? $"{firstInitial}{lastInitial.Value}" : firstInitial.ToString();
+    }
+
+    private string GetPhonePlaceholder()
+    {
+        if (phoneCountryRules.TryGetValue(phoneCountryCode, out var rule))
+        {
+            return rule.Sample;
+        }
+
+        return "Enter phone number";
     }
 }

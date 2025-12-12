@@ -1,8 +1,8 @@
 ﻿@page "/financial"
 @inject NavigationManager Navigation
 @inject AuthService AuthService
-@using MarFin_Final.Data
-@using MarFin_Final.Database.Services
+@inject InvoiceService InvoiceService
+@inject CustomerService CustomerService
 @using MarFin_Final.Models
 
 <div class="financial-container">
@@ -12,7 +12,6 @@
             <span class="transaction-count">@filteredInvoices.Count transactions</span>
         </div>
     </div>
-
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="alert alert-danger">
@@ -27,7 +26,6 @@
             <button class="alert-close" @onclick="() => successMessage = string.Empty">×</button>
         </div>
     }
-
     <!-- Financial Summary -->
     <div class="financial-summary">
         <h3>Financial Summary</h3>
@@ -35,7 +33,7 @@
             <div class="summary-card revenue">
                 <div class="card-icon"><i class="bi bi-cash-stack"></i></div>
                 <div class="card-content">
-                    <h2>Php @totalRevenue.ToString("N2")</h2>
+                    <h2>Php @((totalRevenue ?? 0m).ToString("N2"))</h2>
                     <p>Total Revenue</p>
                     <span class="card-badge positive"><i class="bi bi-graph-up"></i> +12.5%</span>
                 </div>
@@ -43,7 +41,7 @@
             <div class="summary-card pending">
                 <div class="card-icon"><i class="bi bi-hourglass-split"></i></div>
                 <div class="card-content">
-                    <h2>Php @totalPending.ToString("N2")</h2>
+                    <h2>Php @((totalPending ?? 0m).ToString("N2"))</h2>
                     <p>Pending</p>
                     <span class="card-badge info"><i class="bi bi-file-earmark-text"></i> @pendingCount inv.</span>
                 </div>
@@ -51,14 +49,13 @@
             <div class="summary-card overdue">
                 <div class="card-icon"><i class="bi bi-exclamation-triangle"></i></div>
                 <div class="card-content">
-                    <h2>Php @totalOverdue.ToString("N2")</h2>
+                    <h2>Php @((totalOverdue ?? 0m).ToString("N2"))</h2>
                     <p>Overdue</p>
                     <span class="card-badge warning"><i class="bi bi-clock-history"></i> @overdueCount inv.</span>
                 </div>
             </div>
         </div>
     </div>
-
     <!-- Toolbar -->
     <div class="financial-toolbar">
         <button class="btn-primary" @onclick="ToggleInvoiceModal">
@@ -79,7 +76,6 @@
                     </div>
                 }
             </div>
-
             <div class="dropdown-filter">
                 <button class="btn-filter" @onclick="ToggleStatusFilter">
                     <i class="bi bi-funnel"></i> Filter by
@@ -100,7 +96,6 @@
                     </div>
                 }
             </div>
-
             <div class="search-box">
                 <i class="bi bi-search search-icon"></i>
                 <input type="text"
@@ -108,11 +103,9 @@
                        @bind="searchTerm"
                        @bind:event="oninput" />
             </div>
-
             <button class="btn-filter"><i class="bi bi-download"></i> Export</button>
         </div>
     </div>
-
     <!-- Transactions Table -->
     @if (isLoading)
     {
@@ -142,8 +135,12 @@
             {
                 <div class="table-row" @onclick="() => ViewInvoice(invoice)">
                     <span>@invoice.InvoiceNumber</span>
-                    <span>@(string.IsNullOrEmpty(invoice.CustomerCompany) ? invoice.CustomerName : invoice.CustomerCompany)</span>
-                    <span>Php @invoice.TotalAmount.ToString("N2")</span>
+                    <span class="clickable text-primary"
+                          @onclick="() => NavigateToCustomer(invoice.CustomerId)"
+                          @onclick:stopPropagation>
+                        @(string.IsNullOrEmpty(invoice.CustomerCompany) ? invoice.CustomerName : invoice.CustomerCompany)
+                    </span>
+                    <span>Php @((invoice.TotalAmount ?? 0m).ToString("N2"))</span>
                     <span>@invoice.InvoiceDate.ToString("MM/dd/yyyy")</span>
                     <span>
                         <span class="status-badge @invoice.StatusBadgeClass">
@@ -153,13 +150,11 @@
                 </div>
             }
         </div>
-
         <!-- Pagination Controls -->
         <div class="pagination-section">
             <div class="pagination-info">
                 <span>Showing <strong>@((currentPage - 1) * pageSize + 1)</strong> to <strong>@Math.Min(currentPage * pageSize, totalRecords)</strong> of <strong>@totalRecords</strong> invoices</span>
             </div>
-
             <div class="pagination-controls">
                 <div class="page-size-selector">
                     <label>Rows per page:</label>
@@ -170,7 +165,6 @@
                         <option value="50">50</option>
                     </select>
                 </div>
-
                 <div class="pagination-buttons">
                     <button class="pagination-btn" @onclick="() => ChangePage(1)" disabled="@(currentPage == 1)">
                         <i class="bi bi-chevron-double-left"></i>
@@ -178,7 +172,6 @@
                     <button class="pagination-btn" @onclick="() => ChangePage(currentPage - 1)" disabled="@(currentPage == 1)">
                         <i class="bi bi-chevron-left"></i>
                     </button>
-
                     @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(TotalPages, currentPage + 2); i++)
                     {
                         int pageNum = i;
@@ -186,7 +179,6 @@
                             @pageNum
                         </button>
                     }
-
                     <button class="pagination-btn" @onclick="() => ChangePage(currentPage + 1)" disabled="@(currentPage == TotalPages)">
                         <i class="bi bi-chevron-right"></i>
                     </button>
@@ -218,14 +210,12 @@
                     </button>
                 </div>
             </div>
-
             <div class="invoice-modal-body">
                 <div class="invoice-form-section">
                     <h3>Invoice Information</h3>
                     <div class="form-row">
                         <div class="form-group">
                             <label>Select Customer <span class="text-danger">*</span></label>
-
                             <div class="position-relative">
                                 <input type="text"
                                        class="form-control"
@@ -233,7 +223,6 @@
                                        @bind="customerSearchTerm"
                                        @oninput="HandleCustomerInput"
                                        autocomplete="off" />
-
                                 @if (showCustomerDropdown && searchResults.Any())
                                 {
                                     <div class="dropdown-menu show w-100" style="max-height: 300px; overflow-y: auto;">
@@ -249,7 +238,6 @@
                                         }
                                     </div>
                                 }
-
                                 @if (selectedCustomer != null && !showCustomerDropdown)
                                 {
                                     <div class="selected-customer mt-2 p-2 border rounded bg-light">
@@ -266,7 +254,6 @@
                             <input type="text" class="form-control" @bind="newInvoice.InvoiceNumber" readonly />
                         </div>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label>Invoice Date <span class="text-danger">*</span></label>
@@ -277,7 +264,6 @@
                             <input type="date" class="form-control" @bind="newInvoice.DueDate" />
                         </div>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label>Payment Terms</label>
@@ -297,7 +283,6 @@
                                    step="0.01" />
                         </div>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label>Discount Amount</label>
@@ -308,13 +293,11 @@
                                    step="0.01" placeholder="0.00" />
                         </div>
                     </div>
-
                     <div class="form-group">
                         <label>Notes / Payment Instructions</label>
                         <textarea class="form-control" rows="3" @bind="newInvoice.Notes"></textarea>
                     </div>
                 </div>
-
                 <div class="invoice-items-section">
                     <div class="section-header">
                         <h3>Line Items</h3>
@@ -322,7 +305,6 @@
                             <i class="bi bi-plus-lg"></i> Add Item
                         </button>
                     </div>
-
                     <div class="line-items-table">
                         <div class="items-table-header">
                             <span>Description</span>
@@ -345,7 +327,7 @@
                                        @bind:event="oninput"
                                        @onchange="CalculateTotals"
                                        step="0.01" min="0" />
-                                <span class="item-amount">Php @((item.Quantity * item.UnitPrice).ToString("N2"))</span>
+                                <span class="item-amount">Php @(((item.Quantity ?? 0m) * (item.UnitPrice ?? 0m)).ToString("N2"))</span>
                                 <button class="btn-remove" @onclick="() => RemoveLineItem(item)"
                                         disabled="@(newInvoice.LineItems.Count <= 1)">
                                     <i class="bi bi-trash"></i>
@@ -353,12 +335,11 @@
                             </div>
                         }
                     </div>
-
                     <div class="invoice-summary">
-                        <div class="summary-row"><span>Subtotal</span> <span>Php @newInvoice.Subtotal.ToString("N2")</span></div>
-                        <div class="summary-row"><span>Tax (@newInvoice.TaxRate%)</span> <span>Php @newInvoice.TaxAmount.ToString("N2")</span></div>
-                        <div class="summary-row"><span>Discount</span> <span>-Php @newInvoice.DiscountAmount.ToString("N2")</span></div>
-                        <div class="summary-row total"><span>Total</span> <span>Php @newInvoice.TotalAmount.ToString("N2")</span></div>
+                        <div class="summary-row"><span>Subtotal</span> <span>Php @((newInvoice.Subtotal ?? 0m).ToString("N2"))</span></div>
+                        <div class="summary-row"><span>Tax (@(newInvoice.TaxRate ?? 0m)%)</span> <span>Php @((newInvoice.TaxAmount ?? 0m).ToString("N2"))</span></div>
+                        <div class="summary-row"><span>Discount</span> <span>-Php @((newInvoice.DiscountAmount ?? 0m).ToString("N2"))</span></div>
+                        <div class="summary-row total"><span>Total</span> <span>Php @((newInvoice.TotalAmount ?? 0m).ToString("N2"))</span></div>
                     </div>
                 </div>
             </div>
@@ -390,7 +371,6 @@
                     </button>
                 </div>
             </div>
-
             <div class="view-invoice-body">
                 <div class="invoice-preview">
                     <div class="invoice-preview-header">
@@ -404,7 +384,6 @@
                             <div class="badge-number">@selectedInvoice.InvoiceNumber</div>
                         </div>
                     </div>
-
                     <div class="invoice-preview-details">
                         <div class="bill-to">
                             <h4>Bill to:</h4>
@@ -427,7 +406,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="invoice-items-preview">
                         <table class="preview-table">
                             <thead>
@@ -444,20 +422,18 @@
                                     <tr>
                                         <td>@item.Description</td>
                                         <td>@item.Quantity</td>
-                                        <td>Php @item.UnitPrice.ToString("N2")</td>
-                                        <td>Php @item.Amount.ToString("N2")</td>
+                                        <td>Php @((item.UnitPrice ?? 0m).ToString("N2"))</td>
+                                        <td>Php @((item.Amount ?? 0m).ToString("N2"))</td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
-
                     <div class="invoice-totals">
-                        <div class="totals-row"><span>Subtotal</span> <span>Php @selectedInvoice.Subtotal.ToString("N2")</span></div>
-                        <div class="totals-row"><span>Tax (@selectedInvoice.TaxRate%)</span> <span>Php @selectedInvoice.TaxAmount.ToString("N2")</span></div>
-                        <div class="totals-row total"><span>Total</span> <span>Php @selectedInvoice.TotalAmount.ToString("N2")</span></div>
+                        <div class="totals-row"><span>Subtotal</span> <span>Php @((selectedInvoice.Subtotal ?? 0m).ToString("N2"))</span></div>
+                        <div class="totals-row"><span>Tax (@(selectedInvoice.TaxRate ?? 0m)%)</span> <span>Php @((selectedInvoice.TaxAmount ?? 0m).ToString("N2"))</span></div>
+                        <div class="totals-row total"><span>Total</span> <span>Php @((selectedInvoice.TotalAmount ?? 0m).ToString("N2"))</span></div>
                     </div>
-
                     <div class="payment-info">
                         <h4>PAYMENT INFORMATION:</h4>
                         <p>
@@ -471,12 +447,11 @@
         </div>
     </div>
 }
-
 <!-- Confirmation Modal -->
 @if (showConfirmModal)
 {
-    <div class="modal-overlay" @onclick="CloseConfirmModal">
-        <div class="modal-content confirm-modal" @onclick:stopPropagation>
+    <div class="modal-overlay p-3" @onclick="CloseConfirmModal">
+        <div class="modal-content confirm-modal p-3" @onclick:stopPropagation>
             <div class="modal-header">
                 <div class="modal-title">
                     <span class="user-icon info"><i class="bi bi-question-circle"></i></span>
@@ -485,8 +460,7 @@
             </div>
             <div class="modal-body">
                 <p>@confirmMessage</p>
-
-                <div class="modal-footer">
+                <div class="modal-footer gap-3">
                     <button class="btn-cancel" @onclick="CloseConfirmModal">Cancel</button>
                     <button class="btn-primary" @onclick="ConfirmInvoiceSave" disabled="@isSaving">
                         @if (isSaving)
@@ -500,21 +474,15 @@
         </div>
     </div>
 }
-
 @code {
-    private readonly InvoiceService invoiceService = new();
-    private readonly CustomerService customerService = new();
-
-    private List<Invoice> allInvoices = new();
-    private List<Invoice> filteredInvoices = new();
-    private List<Customer> searchResults = new();
+    private List<Invoice> allInvoices = [];
+    private List<Invoice> filteredInvoices = [];
+    private List<Customer> searchResults = [];
     private Customer? selectedCustomer;
-
     private string searchTerm = "";
     private string customerSearchTerm = "";
     private string statusFilter = "";
     private string selectedDateFilter = "This Month";
-
     private bool showInvoiceModal = false;
     private bool showViewModal = false;
     private bool showStatusFilter = false;
@@ -523,23 +491,25 @@
     private bool showConfirmModal = false;
     private bool isLoading = true;
     private bool isSaving = false;
-
     private Invoice? selectedInvoice;
     private Invoice newInvoice = new();
-
     private string errorMessage = "";
     private string successMessage = "";
     private string confirmTitle = "";
     private string confirmMessage = "";
-    private string pendingInvoiceAction = ""; // "draft" or "issue"
-
+    private string pendingInvoiceAction = "";
     private int currentUserId = 1;
 
-    private decimal totalRevenue = 0;
-    private decimal totalPending = 0;
-    private decimal totalOverdue = 0;
+    private decimal? totalRevenue = 0;
+    private decimal? totalPending = 0;
+    private decimal? totalOverdue = 0;
     private int pendingCount = 0;
     private int overdueCount = 0;
+
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalRecords = 0;
+    private int TotalPages => (int)Math.Ceiling((double)totalRecords / pageSize);
 
     protected override async Task OnInitializedAsync()
     {
@@ -548,8 +518,9 @@
             Navigation.NavigateTo("/login", true);
             return;
         }
+
         await LoadInvoices();
-        ApplyQueryContext();
+        await ApplyQueryContext();  
     }
 
     private async Task LoadInvoices()
@@ -557,15 +528,10 @@
         try
         {
             isLoading = true;
-            await Task.Run(() =>
-            {
-                allInvoices = invoiceService.GetAllInvoices() ?? new List<Invoice>();
-            });
-
-            filteredInvoices = new List<Invoice>(allInvoices);
+            allInvoices = await InvoiceService.GetAllInvoicesAsync() ?? [];
+            filteredInvoices = [.. allInvoices];
             ApplyFilters();
             CalculateSummary();
-            currentPage = 1;
             totalRecords = filteredInvoices.Count;
         }
         catch (Exception ex)
@@ -578,147 +544,76 @@
         }
     }
 
-    private void ApplyQueryContext()
-    {
-        try
-        {
-            var uri = new Uri(Navigation.Uri);
-            var query = uri.Query;
-
-            if (string.IsNullOrWhiteSpace(query))
-            {
-                return;
-            }
-
-            if (query.StartsWith("?"))
-            {
-                query = query.Substring(1);
-            }
-
-            var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var parts = pair.Split('=', 2);
-                if (parts.Length == 2)
-                {
-                    var key = Uri.UnescapeDataString(parts[0]);
-                    var value = Uri.UnescapeDataString(parts[1]);
-                    parameters[key] = value;
-                }
-            }
-
-            if (parameters.TryGetValue("invoiceId", out var invoiceIdValue) &&
-                int.TryParse(invoiceIdValue, out var invoiceId) &&
-                invoiceId > 0)
-            {
-                selectedInvoice = invoiceService.GetInvoiceById(invoiceId);
-                if (selectedInvoice != null)
-                {
-                    showViewModal = true;
-                }
-                return;
-            }
-
-            if (parameters.TryGetValue("customerId", out var customerIdValue) &&
-                int.TryParse(customerIdValue, out var customerId) &&
-                customerId > 0)
-            {
-                selectedCustomer = customerService.GetCustomerById(customerId);
-                if (selectedCustomer != null)
-                {
-                    ToggleInvoiceModal();
-                    newInvoice.CustomerId = selectedCustomer.CustomerId;
-                    customerSearchTerm = string.IsNullOrEmpty(selectedCustomer.CompanyName)
-                        ? selectedCustomer.FullName
-                        : selectedCustomer.CompanyName;
-                }
-            }
-        }
-        catch
-        {
-            // Ignore query parsing errors
-        }
-    }
-
     private void CalculateSummary()
     {
-        totalRevenue = allInvoices.Where(i => i.PaymentStatus == "Paid").Sum(i => i.TotalAmount);
-        totalPending = allInvoices.Where(i => i.PaymentStatus is "Issued" or "Partial").Sum(i => i.TotalAmount);
-        totalOverdue = allInvoices.Where(i => i.IsOverdue).Sum(i => i.TotalAmount);
+        totalRevenue = allInvoices.Where(i => i.PaymentStatus == "Paid").Sum(i => i.TotalAmount ?? 0m);
+        totalPending = allInvoices.Where(i => i.PaymentStatus is "Issued" or "Partial").Sum(i => i.TotalAmount ?? 0m);
+        totalOverdue = allInvoices.Where(i => i.IsOverdue).Sum(i => i.TotalAmount ?? 0m);
         pendingCount = allInvoices.Count(i => i.PaymentStatus is "Issued" or "Partial");
         overdueCount = allInvoices.Count(i => i.IsOverdue);
     }
 
-    private void ToggleInvoiceModal()
+    private async Task ToggleInvoiceModal()
     {
         showInvoiceModal = !showInvoiceModal;
-        if (!showInvoiceModal)
+        if (showInvoiceModal)
         {
-            ResetInvoiceForm();
-        }
-        else
-        {
+            // Reset form
+            selectedCustomer = null;
+            customerSearchTerm = "";
+            searchResults.Clear();
+            showCustomerDropdown = false;
+
+            // Create new invoice with default values
             newInvoice = new Invoice
             {
                 CreatedBy = currentUserId,
-                InvoiceNumber = invoiceService.GenerateInvoiceNumber(),
-                InvoiceDate = DateTime.Now,
-                DueDate = DateTime.Now.AddDays(30),
+                InvoiceDate = DateTime.Today,
+                DueDate = DateTime.Today.AddDays(30),
                 PaymentTerms = "Net 30",
-                CreatedDate = DateTime.Now,
-                ModifiedDate = DateTime.Now,
                 TaxRate = 12.00m,
                 PaymentStatus = "Draft",
-                LineItems = new List<InvoiceItem> { new() { Description = "", Quantity = 1, UnitPrice = 0, ItemOrder = 1 } }
+                LineItems = [new InvoiceItem
+            {
+                Description = "",
+                Quantity = 1m,
+                UnitPrice = 0m,
+                ItemOrder = 1
+            }]
             };
-            selectedCustomer = null;
-            customerSearchTerm = "";
+
+            // Generate and show the invoice number immediately
+            try
+            {
+                newInvoice.InvoiceNumber = await InvoiceService.GenerateInvoiceNumberAsync();
+            }
+            catch
+            {
+                newInvoice.InvoiceNumber = "INV-XXXX-XXX"; // fallback
+            }
+
+            StateHasChanged(); // Ensures the UI updates with the number
+        }
+        else
+        {
+            ResetInvoiceForm();
         }
     }
 
     private void ResetInvoiceForm()
     {
-        newInvoice = new Invoice();
+        newInvoice = new();
         selectedCustomer = null;
         customerSearchTerm = "";
         searchResults.Clear();
         showCustomerDropdown = false;
     }
 
-    private async Task SearchCustomersAsync()
-    {
-        if (string.IsNullOrWhiteSpace(customerSearchTerm))
-        {
-            searchResults.Clear();
-            showCustomerDropdown = false;
-            return;
-        }
-
-        if (customerSearchTerm.Length < 2)
-        {
-            showCustomerDropdown = false;
-            return;
-        }
-
-        try
-        {
-            searchResults = await customerService.SearchCustomersAsync(customerSearchTerm, maxResults: 20);
-            showCustomerDropdown = searchResults.Any();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error searching customers: {ex.Message}";
-            showCustomerDropdown = false;
-        }
-    }
     private Timer? _debounceTimer;
 
     private async Task HandleCustomerInput(ChangeEventArgs e)
     {
         customerSearchTerm = e.Value?.ToString() ?? "";
-
-        // Clear previous timer
         _debounceTimer?.Dispose();
 
         if (string.IsNullOrWhiteSpace(customerSearchTerm) || customerSearchTerm.Length < 2)
@@ -728,20 +623,19 @@
             return;
         }
 
-        // Debounce: wait 300ms after user stops typing
         _debounceTimer = new Timer(async _ =>
         {
             await InvokeAsync(async () =>
             {
                 try
                 {
-                    searchResults = await customerService.SearchCustomersAsync(customerSearchTerm, maxResults: 20);
+                    searchResults = await CustomerService.SearchCustomersAsync(customerSearchTerm, maxResults: 20);
                     showCustomerDropdown = searchResults.Any();
                     StateHasChanged();
                 }
                 catch (Exception ex)
                 {
-                    errorMessage = "Error searching customers: " + ex.Message;
+                    errorMessage = $"Error searching customers: {ex.Message}";
                     showCustomerDropdown = false;
                 }
             });
@@ -755,10 +649,9 @@
         customerSearchTerm = string.IsNullOrEmpty(customer.CompanyName)
             ? customer.FullName
             : customer.CompanyName;
-
         showCustomerDropdown = false;
         searchResults.Clear();
-        StateHasChanged(); // Important!
+        StateHasChanged();
     }
 
     private void ClearCustomerSelection()
@@ -768,10 +661,11 @@
         customerSearchTerm = "";
         showCustomerDropdown = false;
     }
+
     private void AddLineItem()
     {
         var nextOrder = newInvoice.LineItems.Any() ? newInvoice.LineItems.Max(i => i.ItemOrder) + 1 : 1;
-        newInvoice.LineItems.Add(new InvoiceItem { Description = "", Quantity = 1, UnitPrice = 0, ItemOrder = nextOrder });
+        newInvoice.LineItems.Add(new InvoiceItem { Description = "", Quantity = 1m, UnitPrice = 0m, ItemOrder = nextOrder });
     }
 
     private void RemoveLineItem(InvoiceItem item)
@@ -785,13 +679,14 @@
 
     private void CalculateTotals()
     {
-        newInvoice.Subtotal = newInvoice.LineItems.Sum(i => i.Quantity * i.UnitPrice);
-        newInvoice.TaxAmount = newInvoice.Subtotal * (newInvoice.TaxRate / 100m);
-        newInvoice.TotalAmount = newInvoice.Subtotal + newInvoice.TaxAmount - newInvoice.DiscountAmount;
+        var subtotal = newInvoice.LineItems.Sum(i => (i.Quantity ?? 0m) * (i.UnitPrice ?? 0m));
+        newInvoice.Subtotal = subtotal;
+        newInvoice.TaxAmount = subtotal * ((newInvoice.TaxRate ?? 0m) / 100m);
+        newInvoice.TotalAmount = subtotal + (newInvoice.TaxAmount ?? 0m) - (newInvoice.DiscountAmount ?? 0m);
 
         foreach (var item in newInvoice.LineItems)
         {
-            item.Amount = item.Quantity * item.UnitPrice;
+            item.Amount = (item.Quantity ?? 0m) * (item.UnitPrice ?? 0m);
         }
         StateHasChanged();
     }
@@ -829,9 +724,18 @@
 
     private async Task SaveInvoice(string status)
     {
-        if (newInvoice.CustomerId == 0)
+        errorMessage = "";
+        successMessage = "";
+
+        if (selectedCustomer == null || newInvoice.CustomerId == 0)
         {
             errorMessage = "Please select a customer";
+            return;
+        }
+
+        if (newInvoice.LineItems == null || !newInvoice.LineItems.Any())
+        {
+            errorMessage = "Please add at least one line item";
             return;
         }
 
@@ -841,29 +745,45 @@
             return;
         }
 
+        newInvoice.LineItems = newInvoice.LineItems
+            .Where(i => !string.IsNullOrWhiteSpace(i.Description))
+            .ToList();
+
+        if (!newInvoice.LineItems.Any())
+        {
+            errorMessage = "Please add at least one valid line item";
+            return;
+        }
+
         newInvoice.PaymentStatus = status;
         CalculateTotals();
 
         try
         {
             isSaving = true;
+
             bool success = newInvoice.InvoiceId > 0
-                ? invoiceService.UpdateInvoice(newInvoice)
-                : invoiceService.AddInvoice(newInvoice);  // This now throws real exception
+                ? await InvoiceService.UpdateInvoiceAsync(newInvoice)
+                : await InvoiceService.AddInvoiceAsync(newInvoice);
 
             if (success)
             {
-                successMessage = status == "Draft" ? "Invoice saved as draft!" : "Invoice generated successfully!";
-                ToggleInvoiceModal();
+                successMessage = status == "Draft"
+                    ? "Invoice saved as draft successfully!"
+                    : "Invoice generated and issued successfully!";
+
+                showInvoiceModal = false;
                 await LoadInvoices();
+            }
+            else
+            {
+                errorMessage = "Failed to save invoice. Please try again.";
             }
         }
         catch (Exception ex)
         {
-            // This will now show the REAL SQL error!
-            errorMessage = ex.Message;
-            if (ex.InnerException != null)
-                errorMessage += " → " + ex.InnerException.Message;
+            errorMessage = $"Database Error: {ex.Message}";
+            Console.WriteLine(ex.ToString());
         }
         finally
         {
@@ -871,17 +791,20 @@
         }
     }
 
-    private void ViewInvoice(Invoice invoice)
+    private async Task ViewInvoice(Invoice invoice)
     {
-        selectedInvoice = invoiceService.GetInvoiceById(invoice.InvoiceId);
+        selectedInvoice = await InvoiceService.GetInvoiceByIdAsync(invoice.InvoiceId);
         showViewModal = true;
     }
 
-    private void EditInvoice(Invoice invoice)
+    private async Task EditInvoice(Invoice invoice)
     {
-        newInvoice = invoiceService.GetInvoiceById(invoice.InvoiceId) ?? new Invoice();
-        selectedCustomer = customerService.GetCustomerById(newInvoice.CustomerId);
-        customerSearchTerm = string.IsNullOrEmpty(selectedCustomer?.CompanyName) ? selectedCustomer?.FullName : selectedCustomer?.CompanyName;
+        newInvoice = await InvoiceService.GetInvoiceByIdAsync(invoice.InvoiceId) ?? new();
+        selectedCustomer = await CustomerService.GetCustomerByIdAsync(newInvoice.CustomerId);
+        customerSearchTerm = string.IsNullOrEmpty(selectedCustomer?.CompanyName)
+            ? selectedCustomer?.FullName
+            : selectedCustomer?.CompanyName;
+
         showViewModal = false;
         showInvoiceModal = true;
     }
@@ -890,7 +813,7 @@
     {
         try
         {
-            if (invoiceService.ArchiveInvoice(invoiceId))
+            if (await InvoiceService.ArchiveInvoiceAsync(invoiceId))
             {
                 successMessage = "Invoice archived successfully!";
                 CloseViewModal();
@@ -929,7 +852,7 @@
 
     private void ApplyFilters()
     {
-        filteredInvoices = new List<Invoice>(allInvoices);
+        filteredInvoices = [.. allInvoices];
 
         if (selectedDateFilter != "All Time")
         {
@@ -976,16 +899,8 @@
         showStatusFilter = false;
     }
 
-    // Pagination properties
-    private int currentPage = 1;
-    private int pageSize = 10;
-    private int totalRecords = 0;
-
-    private int TotalPages => (int)Math.Ceiling((double)totalRecords / pageSize);
-
     private List<Invoice> GetPaginatedInvoices()
     {
-        totalRecords = filteredInvoices.Count;
         var skip = (currentPage - 1) * pageSize;
         return filteredInvoices.Skip(skip).Take(pageSize).ToList();
     }
@@ -1002,7 +917,71 @@
     private async Task ReloadWithNewPageSize()
     {
         currentPage = 1;
-        totalRecords = filteredInvoices.Count;
         await Task.CompletedTask;
+    }
+
+    private void NavigateToCustomer(int customerId)
+    {
+        Navigation.NavigateTo($"/customer-details/{customerId}");
+    }
+
+    private async Task ApplyQueryContext()
+    {
+        try
+        {
+            var uri = new Uri(Navigation.Uri);
+            var query = uri.Query;
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return;
+            }
+            if (query.StartsWith("?"))
+            {
+                query = query.Substring(1);
+            }
+
+            var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = pair.Split('=', 2);
+                if (parts.Length == 2)
+                {
+                    var key = Uri.UnescapeDataString(parts[0]);
+                    var value = Uri.UnescapeDataString(parts[1]);
+                    parameters[key] = value;
+                }
+            }
+
+            if (parameters.TryGetValue("invoiceId", out var invoiceIdValue) &&
+                int.TryParse(invoiceIdValue, out var invoiceId) &&
+                invoiceId > 0)
+            {
+                selectedInvoice = await InvoiceService.GetInvoiceByIdAsync(invoiceId);
+                if (selectedInvoice != null)
+                {
+                    showViewModal = true;
+                }
+                return;
+            }
+
+            if (parameters.TryGetValue("customerId", out var customerIdValue) &&
+                int.TryParse(customerIdValue, out var customerId) &&
+                customerId > 0)
+            {
+                selectedCustomer = await CustomerService.GetCustomerByIdAsync(customerId);
+                if (selectedCustomer != null)
+                {
+                    ToggleInvoiceModal();
+                    newInvoice.CustomerId = selectedCustomer.CustomerId;
+                    customerSearchTerm = string.IsNullOrEmpty(selectedCustomer.CompanyName)
+                        ? selectedCustomer.FullName
+                        : selectedCustomer.CompanyName;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore query parsing errors
+        }
     }
 }

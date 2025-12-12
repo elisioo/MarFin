@@ -47,6 +47,71 @@ window.chartJsInterop = {
         });
     },
 
+    // Create or update a multi-axis line chart (e.g. revenue vs customers)
+    createMultiAxisLineChart: function (canvasId, labels, datasets, options = {}) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+
+        // Destroy existing chart if it exists
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+
+        const defaultOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            stacked: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    ticks: {
+                        callback: function (value) {
+                            return '₱' + value.toLocaleString();
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    ticks: {
+                        callback: function (value) {
+                            return value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        };
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: { ...defaultOptions, ...options }
+        });
+    },
+
     // Create or update a bar chart
     createBarChart: function (canvasId, labels, datasets, options = {}) {
         const ctx = document.getElementById(canvasId);

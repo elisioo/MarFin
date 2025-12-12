@@ -1,9 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using System.Reflection;
-using MarFin_Final.Services;
+﻿using MarFin_Final.Data;
 using MarFin_Final.Database.Services;
-using MarFin_Final.Data;
+using MarFin_Final.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace MarFin_Final
 {
@@ -53,7 +54,10 @@ namespace MarFin_Final
             builder.Services.AddScoped<CustomerService>();
             builder.Services.AddScoped<DashboardService>();
             builder.Services.AddSingleton<RemoteDatabaseService>();
-            builder.Services.AddSingleton<LocalDatabaseService>();
+            builder.Services.AddScoped<LocalDatabaseService>();
+            builder.Services.AddDbContextFactory<AppDbContext>(options =>
+    options.UseSqlServer(connectionString));
+            builder.Services.AddScoped<InvoiceService>();
 
 
             builder.Services.AddBlazorWebViewDeveloperTools();

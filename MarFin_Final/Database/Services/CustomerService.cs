@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Threading.Tasks;
 
 namespace MarFin_Final.Data
 {
@@ -321,7 +322,7 @@ namespace MarFin_Final.Data
         }
 
         // READ - Get customer by ID
-        public Customer GetCustomerById(int customerId)
+        public Customer? GetCustomerById(int customerId)
         {
             Customer customer = null;
 
@@ -353,6 +354,7 @@ namespace MarFin_Final.Data
                             }
                         }
                     }
+                    // ... (rest of the method remains the same)
                 }
             }
             catch (Exception ex)
@@ -361,6 +363,12 @@ namespace MarFin_Final.Data
             }
 
             return customer;
+        }
+
+        // Async wrapper for getting customer by ID
+        public Task<Customer?> GetCustomerByIdAsync(int customerId)
+        {
+            return Task.Run(() => GetCustomerById(customerId));
         }
 
         // UPDATE - Update existing customer

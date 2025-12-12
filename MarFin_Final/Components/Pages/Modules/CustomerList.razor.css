@@ -1052,3 +1052,186 @@ height: 28px;
 font-size: 12px;
 }
 }
+
+/* Add these styles to your CustomerList.razor.css file */
+
+/* Info Icon Button */
+.info-icon {
+    background: none;
+    border: none;
+    color: #0A1828;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 6px;
+    font-size: 14px;
+    transition: color 0.2s;
+    vertical-align: middle;
+}
+
+    .info-icon:hover {
+        color: #667eea;
+    }
+
+/* Validation Success Message */
+.validation-success {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #10b981;
+    font-size: 12px;
+    margin-top: 0.25rem;
+    font-weight: 500;
+}
+
+    .validation-success i {
+        font-size: 14px;
+    }
+
+/* Phone Help Box */
+.phone-help-box {
+    margin-top: 0.75rem;
+    background: #f8f9fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.phone-help-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #e8f5e9;
+    border-bottom: 1px solid #c8e6c9;
+}
+
+    .phone-help-header strong {
+        color: #1a1a1a;
+        font-size: 13px;
+    }
+
+.close-help {
+    background: none;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+    .close-help:hover {
+        color: #1a1a1a;
+    }
+
+.phone-help-content {
+    padding: 0.75rem 1rem;
+}
+
+.phone-example {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+
+    .phone-example:last-of-type {
+        margin-bottom: 0.75rem;
+    }
+
+.country-code {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 45px;
+    padding: 4px 8px;
+    background: #0A1828;
+    color: white;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.example-text {
+    color: #666;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+}
+
+.phone-help-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: #fff3e0;
+    border-radius: 6px;
+    border: 1px solid #ffe0b2;
+}
+
+    .phone-help-note i {
+        color: #f57c00;
+        font-size: 16px;
+        margin-top: 2px;
+    }
+
+    .phone-help-note span {
+        color: #666;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+/* Enhanced Form Control States */
+.form-control:focus {
+    border-color: #0A1828;
+    box-shadow: 0 0 0 3px rgba(10, 24, 40, 0.1);
+}
+
+.form-control.is-invalid:focus {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+/* Animation for help box */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.phone-help-box {
+    animation: slideDown 0.2s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .phone-example {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .country-code {
+        min-width: auto;
+    }
+
+    .example-text {
+        font-size: 12px;
+    }
+}

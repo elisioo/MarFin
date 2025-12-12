@@ -507,6 +507,11 @@
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
+/* Compact confirmation dialog inside the finance module */
+.confirm-modal {
+    max-width: 420px;
+}
+
 /* Invoice Modal */
 .invoice-modal {
     max-width: 1200px;
@@ -1155,3 +1160,9 @@ textarea.form-control {
         opacity: 0.5;
         cursor: not-allowed;
     }
+
+.clickable {
+    cursor: pointer;
+    text-decoration: underline;
+}
+

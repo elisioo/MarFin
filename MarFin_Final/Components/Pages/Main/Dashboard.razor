@@ -1,6 +1,5 @@
 @page "/dashboard"
 @using MarFin_Final.Database.Services
-@using MarFin_Final.Database.Models
 @using Microsoft.JSInterop
 
 @if (isLoading)
@@ -357,11 +356,12 @@ else
     private SalesDashboardStats? salesStats;
 
     private List<LineChartData>? monthlyRevenueData;
+    private List<MonthlyCustomersData>? monthlyCustomersData;
     private List<BarChartData>? leadSourcesData;
     private List<BarChartData>? revenueBySegmentData;
     private List<BarChartData>? salesPipelineData;
     private List<CampaignMetrics>? campaignMetricsData;
-    private List<FinancialPoint>? financialData;
+    private List<MarFin_Final.Database.Services.FinancialPoint>? financialData;
 
     private List<ActivityItem>? activities;
     private List<TransactionItem>? recentTransactions;
@@ -378,11 +378,17 @@ else
         _refreshTimer = new System.Threading.Timer(async _ => await RefreshDashboard(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
     }
 
+    private bool _chartsRendered = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender && !isLoading)
+        if (!isLoading && !_chartsRendered && 
+            (monthlyRevenueData?.Any() == true || 
+             leadSourcesData?.Any() == true || 
+             revenueBySegmentData?.Any() == true))
         {
             await RenderChartsAsync();
+            _chartsRendered = true;
         }
     }
 
@@ -390,28 +396,64 @@ else
     {
         try
         {
-            // Revenue Trend Chart
+            await Task.Delay(100);
+
             if (monthlyRevenueData?.Any() == true)
             {
                 var labels = monthlyRevenueData.Select(x => x.Month).ToArray();
-                var data = monthlyRevenueData.Select(x => x.Revenue).ToArray();
+                var revenueData = monthlyRevenueData.Select(x => x.Revenue).ToArray();
 
-                await JSRuntime.InvokeVoidAsync("chartJsInterop.createLineChart",
+                // Optional second axis: monthly customers, aligned by month label
+                double[]? customerData = null;
+                if (monthlyCustomersData?.Any() == true)
+                {
+                    var customerLookup = monthlyCustomersData
+                        .GroupBy(x => x.Month)
+                        .ToDictionary(g => g.Key, g => (double)g.Sum(x => x.Customers));
+
+                    customerData = labels
+                        .Select(label => customerLookup.TryGetValue(label, out var value) ? value : 0d)
+                        .ToArray();
+                }
+
+                var datasets = new List<object>
+                {
+                    new {
+                        label = "Revenue",
+                        data = revenueData,
+                        borderColor = "#667eea",
+                        backgroundColor = "rgba(102, 126, 234, 0.15)",
+                        tension = 0.4,
+                        fill = true,
+                        yAxisID = "y",
+                        borderWidth = 2,
+                        pointRadius = 4,
+                        pointHoverRadius = 6
+                    }
+                };
+
+                if (customerData != null)
+                {
+                    datasets.Add(new {
+                        label = "Customers",
+                        data = customerData,
+                        borderColor = "#10b981",
+                        backgroundColor = "rgba(16, 185, 129, 0.15)",
+                        tension = 0.4,
+                        fill = false,
+                        yAxisID = "y1",
+                        borderWidth = 2,
+                        pointRadius = 4,
+                        pointHoverRadius = 6
+                    });
+                }
+
+                await JSRuntime.InvokeVoidAsync("chartJsInterop.createMultiAxisLineChart",
                     "revenueChart",
                     labels,
-                    new object[] {
-                        new {
-                            label = "Revenue",
-                            data = data,
-                            borderColor = "#667eea",
-                            backgroundColor = "rgba(102, 126, 234, 0.1)",
-                            tension = 0.4,
-                            fill = true
-                        }
-                    });
+                    datasets.ToArray());
             }
 
-            // Lead Sources Chart
             if (leadSourcesData?.Any() == true)
             {
                 var labels = leadSourcesData.Select(x => x.Category).ToArray();
@@ -423,7 +465,6 @@ else
                     data);
             }
 
-            // Revenue by Segment Chart
             if (revenueBySegmentData?.Any() == true)
             {
                 var labels = revenueBySegmentData.Select(x => x.Category).ToArray();
@@ -442,7 +483,6 @@ else
                     });
             }
 
-            // Sales Pipeline Chart
             if (AuthService.IsSalesRep() && salesPipelineData?.Any() == true)
             {
                 var labels = salesPipelineData.Select(x => x.Category).ToArray();
@@ -461,7 +501,6 @@ else
                     });
             }
 
-            // Campaign Performance Chart
             if (AuthService.IsMarketing() && campaignMetricsData?.Any() == true)
             {
                 var labels = campaignMetricsData.Select(x => x.CampaignName).ToArray();
@@ -492,16 +531,15 @@ else
                     new { plugins = new { legend = new { display = true } } });
             }
 
-            // OHLC Chart
             if ((AuthService.IsAdmin() || AuthService.IsFinance()) && financialData?.Any() == true)
             {
                 var ohlcData = financialData.Select(x => new
                 {
                     date = x.Date.ToString("MMM dd"),
-                    open = x.Open,
-                    high = x.High,
-                    low = x.Low,
-                    close = x.Close
+                    open = (double)x.Open,
+                    high = (double)x.High,
+                    low = (double)x.Low,
+                    close = (double)x.Close
                 }).ToArray();
 
                 await JSRuntime.InvokeVoidAsync("chartJsInterop.createOHLCChart",
@@ -512,33 +550,15 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Error rendering charts: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
     }
-
-    private async Task RefreshDashboard()
-    {
-        if (_isRefreshing) return;
-        _isRefreshing = true;
-        try
-        {
-            await InvokeAsync(async () =>
-            {
-                await LoadDashboardDataAsync();
-                await RenderChartsAsync();
-                StateHasChanged();
-            });
-        }
-        finally
-        {
-            _isRefreshing = false;
-        }
-    }
-
-    public void Dispose() => _refreshTimer?.Dispose();
 
     private async Task LoadDashboardDataAsync()
     {
         isLoading = true;
+        _chartsRendered = false;
+
         try
         {
             var role = AuthService.GetUserRole();
@@ -550,6 +570,8 @@ else
             else if (role == "SalesRep") salesStats = await DashboardService.GetSalesStatsAsync(userId, startDate, endDate);
 
             monthlyRevenueData = await DashboardService.GetMonthlyRevenueComparisonAsync(startDate, endDate);
+            monthlyCustomersData = await DashboardService.GetMonthlyCustomersAsync(startDate, endDate);
+
             leadSourcesData = await DashboardService.GetLeadSourcesAsync(startDate, endDate);
             revenueBySegmentData = await DashboardService.GetRevenueBySegmentAsync(startDate, endDate);
 
@@ -567,10 +589,30 @@ else
         catch (Exception ex)
         {
             errorMessage = $"Error loading dashboard: {ex.Message}";
+            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"Stack: {ex.StackTrace}");
         }
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task RefreshDashboard()
+    {
+        if (_isRefreshing) return;
+        _isRefreshing = true;
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadDashboardDataAsync();
+                StateHasChanged();
+            });
+        }
+        finally
+        {
+            _isRefreshing = false;
         }
     }
 
