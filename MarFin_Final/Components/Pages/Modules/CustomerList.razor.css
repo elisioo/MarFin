@@ -387,9 +387,9 @@
     }
 
 .btn-icon-danger:hover {
-    background-color: #fee;
-    border-color: #dc2626;
-    color: #dc2626;
+    background-color: #fef3c7;
+    border-color: #f59e0b;
+    color: #b45309;
 }
 
 .btn-icon-success:hover {
@@ -560,7 +560,8 @@
     }
 
 .btn-danger {
-    background-color: #dc2626;
+
+    background-color: #f59e0b;
     color: white;
     border: none;
     padding: 10px 32px;
@@ -574,11 +575,12 @@
 }
 
     .btn-danger:hover:not(:disabled) {
-        background-color: #b91c1c;
+        background-color: #d97706;
     }
 
     .btn-danger:disabled {
-        background-color: #fca5a5;
+        background-color: #fef3c7;
+        color: #92400e;
         cursor: not-allowed;
     }
 
@@ -992,15 +994,16 @@ color: #667eea;
 }
 
 .btn-icon-danger {
-color: #dc3545;
-border-color: #f5c6cb;
+  background-color: #fffbeb;
+  border-color: #fbbf24;
+  color: #d97706;
 }
 
-.btn-icon-danger:hover {
-background: #f8d7da;
-border-color: #dc3545;
-color: #dc3545;
-}
+    .btn-icon-danger:hover {
+        background-color: #fffbeb;
+        border-color: #fbbf24;
+        color: #d97706;
+    }
 
 .btn-icon-success {
 color: #28a745;

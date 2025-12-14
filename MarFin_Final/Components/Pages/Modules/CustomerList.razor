@@ -70,8 +70,8 @@
 
                 @if (!showArchivedView)
                 {
-                    <div class="filter-group">
-                        <button class="btn-secondary" @onclick="ToggleStatusFilter">
+                    <div class="filter-group" @onclick:stopPropagation>
+                        <button class="btn-secondary" @onclick="ToggleStatusFilter" @onclick:stopPropagation>
                             <span><i class="bi bi-funnel"></i></span>
                             Filter by
                             @if (!string.IsNullOrEmpty(statusFilter))
@@ -81,24 +81,24 @@
                         </button>
                         @if (showStatusFilter)
                         {
-                            <div class="dropdown-menu show">
-                                <button class="@(string.IsNullOrEmpty(statusFilter) ? "active" : "")"
+                            <div class="dropdown-menu show" @onclick:stopPropagation>
+                                <button type="button" class="@(string.IsNullOrEmpty(statusFilter) ? "active" : "")"
                                         @onclick="() => ApplyStatusFilter(string.Empty)">
                                     All Statuses
                                 </button>
-                                <button class="@(statusFilter == "Lead" ? "active" : "")"
+                                <button type="button" class="@(statusFilter == "Lead" ? "active" : "")"
                                         @onclick='() => ApplyStatusFilter("Lead")'>
                                     Lead
                                 </button>
-                                <button class="@(statusFilter == "Active" ? "active" : "")"
+                                <button type="button" class="@(statusFilter == "Active" ? "active" : "")"
                                         @onclick='() => ApplyStatusFilter("Active")'>
                                     Active
                                 </button>
-                                <button class="@(statusFilter == "Inactive" ? "active" : "")"
+                                <button type="button" class="@(statusFilter == "Inactive" ? "active" : "")"
                                         @onclick='() => ApplyStatusFilter("Inactive")'>
                                     Inactive
                                 </button>
-                                <button class="@(statusFilter == "Dormant" ? "active" : "")"
+                                <button type="button" class="@(statusFilter == "Dormant" ? "active" : "")"
                                         @onclick='() => ApplyStatusFilter("Dormant")'>
                                     Dormant
                                 </button>
@@ -150,6 +150,7 @@
                         <tr>
                             <th>Customer Name</th>
                             <th>Company</th>
+                            <th>Segment</th>
                             <th>Email</th>
                             <th>Phone</th>
                             <th>Status</th>
@@ -169,6 +170,7 @@
                                     </div>
                                 </td>
                                 <td>@(string.IsNullOrEmpty(customer.CompanyName) ? "—" : customer.CompanyName)</td>
+                                <td>@(string.IsNullOrEmpty(customer.CustomerSegment) ? "—" : customer.CustomerSegment)</td>
                                 <td>
                                     @if (string.IsNullOrWhiteSpace(customer.Email))
                                     {
@@ -211,7 +213,7 @@
                                                 <button class="btn-icon" @onclick="() => OpenEditModal(customer)" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
-                                                <button class="btn-icon btn-icon-danger" @onclick="() => ConfirmArchive(customer)" title="Archive">
+                                                <button class="btn-icon btn-icon-warning" @onclick="() => ConfirmArchive(customer)" title="Archive">
                                                     <i class="bi bi-archive"></i>
                                                 </button>
                                             }

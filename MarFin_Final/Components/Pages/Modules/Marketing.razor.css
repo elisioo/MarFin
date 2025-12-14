@@ -485,8 +485,12 @@
         color: #2563eb;
     }
 
+    .action-link.danger {
+        color: #d97706;
+    }
+
     .action-link.danger:hover {
-        color: #dc2626;
+        color: #b45309;
     }
 
     .action-link.restore {
@@ -611,7 +615,7 @@
     }
 
 .btn-danger {
-    background-color: #dc2626;
+    background-color: #f59e0b;
     color: white;
     border: none;
     padding: 10px 32px;
@@ -625,7 +629,7 @@
 }
 
     .btn-danger:hover:not(:disabled) {
-        background-color: #b91c1c;
+        background-color: #d97706;
     }
 
 .modal-body {
@@ -843,12 +847,12 @@ select.form-control {
     }
 
     .action-btn.danger {
-        color: #dc2626;
+        color: #d97706;
     }
 
         .action-btn.danger:hover {
-            background-color: #fee2e2;
-            color: #b91c1c;
+            background-color: #fef3c7;
+            color: #b45309;
         }
 
 /* Pagination */

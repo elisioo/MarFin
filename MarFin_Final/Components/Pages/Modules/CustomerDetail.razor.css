@@ -508,14 +508,16 @@ select.form-control {
         background-color: #0f2138;
     }
 
-.btn-action-danger {
-    color: #dc2626;
-    border-color: #fca5a5;
+.btn-action-warning {
+    background-color: #fffbeb;
+    border-color: #fbbf24;
+    color: #d97706;
 }
 
-    .btn-action-danger:hover:not(:disabled) {
-        background-color: #fee;
-        border-color: #dc2626;
+    .btn-action-warning:hover:not(:disabled) {
+        background-color: #fffbeb;
+        border-color: #fbbf24;
+        color: #d97706;
     }
 
 /* Modal Styles */
@@ -601,7 +603,7 @@ select.form-control {
 }
 
 .btn-danger {
-    background-color: #dc2626;
+    background-color: #f59e0b;
     color: white;
     border: none;
     padding: 10px 32px;
@@ -615,11 +617,12 @@ select.form-control {
 }
 
     .btn-danger:hover:not(:disabled) {
-        background-color: #b91c1c;
+        background-color: #d97706;
     }
 
     .btn-danger:disabled {
-        background-color: #fca5a5;
+        background-color: #fef3c7;
+        color: #92400e;
         cursor: not-allowed;
     }
 

@@ -31,48 +31,61 @@
     @if (!showArchivedView)
     {
         <div class="campaign-summary">
-            <h3>Campaign Performance Summary</h3>
-            <div class="summary-cards">
-                <div class="summary-card">
-                    <div class="card-icon blue">
-                        <i class="bi bi-send"></i>
+            <h6>
+                Campaign Performance Summary
+                @if (!showSummaryCards)
+                {
+                    <span class="text-primary ms-2" style="cursor: pointer;" @onclick="ToggleSummaryCards">view</span>
+                }
+                else
+                {
+                    <span class="text-primary ms-2" style="cursor: pointer;" @onclick="ToggleSummaryCards">hide</span>
+                }
+            </h6>
+            @if (showSummaryCards)
+            {
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="card-icon blue">
+                            <i class="bi bi-send"></i>
+                        </div>
+                        <div class="card-content">
+                            <h2>@MetricAsString("TotalSent")</h2>
+                            <p>Total Sent</p>
+                        </div>
                     </div>
-                    <div class="card-content">
-                        <h2>@MetricAsString("TotalSent")</h2>
-                        <p>Total Sent</p>
-                    </div>
-                </div>
 
-                <div class="summary-card">
-                    <div class="card-icon blue">
-                        <i class="bi bi-envelope-open"></i>
+                    <div class="summary-card">
+                        <div class="card-icon blue">
+                            <i class="bi bi-envelope-open"></i>
+                        </div>
+                        <div class="card-content">
+                            <h2>@MetricAsString("AvgOpen")%</h2>
+                            <p>Avg Open Rate</p>
+                        </div>
                     </div>
-                    <div class="card-content">
-                        <h2>@MetricAsString("AvgOpen")%</h2>
-                        <p>Avg Open Rate</p>
-                    </div>
-                </div>
 
-                <div class="summary-card">
-                    <div class="card-icon blue">
-                        <i class="bi bi-hand-index"></i>
+                    <div class="summary-card">
+                        <div class="card-icon blue">
+                            <i class="bi bi-hand-index"></i>
+                        </div>
+                        <div class="card-content">
+                            <h2>@MetricAsString("AvgClick")%</h2>
+                            <p>Avg Click Rate</p>
+                        </div>
                     </div>
-                    <div class="card-content">
-                        <h2>@MetricAsString("AvgClick")%</h2>
-                        <p>Avg Click Rate</p>
-                    </div>
-                </div>
 
-                <div class="summary-card">
-                    <div class="card-icon blue">
-                        <i class="bi bi-graph-up-arrow"></i>
-                    </div>
-                    <div class="card-content">
-                        <h2>₱@(Convert.ToDecimal(metrics["TotalROI"]).ToString("N0"))</h2>
-                        <p>Total Revenue</p>
+                    <div class="summary-card">
+                        <div class="card-icon blue">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
+                        <div class="card-content">
+                            <h2>₱@(Convert.ToDecimal(metrics["TotalROI"]).ToString("N0"))</h2>
+                            <p>Total Revenue</p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
         </div>
     }
 
@@ -103,8 +116,8 @@
 
             @if (!showArchivedView)
             {
-                <div class="filter-dropdown">
-                    <button class="btn-filter" @onclick="() => showStatusDropdown = !showStatusDropdown">
+                <div class="filter-dropdown" @onclick:stopPropagation>
+                    <button class="btn-filter" @onclick="ToggleStatusDropdown" @onclick:stopPropagation>
                         <i class="bi bi-funnel"></i> Status
                         @if (!string.IsNullOrEmpty(statusFilter))
                         {
@@ -113,18 +126,38 @@
                     </button>
                     @if (showStatusDropdown)
                     {
-                        <div class="dropdown-menu show">
-                            <button @onclick='() => { statusFilter = ""; showStatusDropdown = false; FilterByStatus(""); }'>All</button>
-                            <button @onclick='() => { statusFilter = "Draft"; showStatusDropdown = false; FilterByStatus("Draft"); }'>Draft</button>
-                            <button @onclick='() => { statusFilter = "Active"; showStatusDropdown = false; FilterByStatus("Active"); }'>Active</button>
-                            <button @onclick='() => { statusFilter = "Completed"; showStatusDropdown = false; FilterByStatus("Completed"); }'>Completed</button>
-                            <button @onclick='() => { statusFilter = "Paused"; showStatusDropdown = false; FilterByStatus("Paused"); }'>Paused</button>
+                        <div class="dropdown-menu show" @onclick:stopPropagation>
+                            <button type="button"
+                                    class="@(string.IsNullOrEmpty(statusFilter) ? "active" : "")"
+                                    @onclick="() => FilterByStatus(string.Empty)">
+                                All
+                            </button>
+                            <button type="button"
+                                    class="@(statusFilter == "Draft" ? "active" : "")"
+                                    @onclick='() => FilterByStatus("Draft")'>
+                                Draft
+                            </button>
+                            <button type="button"
+                                    class="@(statusFilter == "Active" ? "active" : "")"
+                                    @onclick='() => FilterByStatus("Active")'>
+                                Active
+                            </button>
+                            <button type="button"
+                                    class="@(statusFilter == "Completed" ? "active" : "")"
+                                    @onclick='() => FilterByStatus("Completed")'>
+                                Completed
+                            </button>
+                            <button type="button"
+                                    class="@(statusFilter == "Paused" ? "active" : "")"
+                                    @onclick='() => FilterByStatus("Paused")'>
+                                Paused
+                            </button>
                         </div>
                     }
                 </div>
 
-                <div class="filter-dropdown">
-                    <button class="btn-filter" @onclick="() => showTypeDropdown = !showTypeDropdown">
+                <div class="filter-dropdown" @onclick:stopPropagation>
+                    <button class="btn-filter" @onclick="ToggleTypeDropdown" @onclick:stopPropagation>
                         <i class="bi bi-tag"></i> Type
                         @if (!string.IsNullOrEmpty(typeFilter))
                         {
@@ -133,12 +166,32 @@
                     </button>
                     @if (showTypeDropdown)
                     {
-                        <div class="dropdown-menu show">
-                            <button @onclick='() => { typeFilter = ""; showTypeDropdown = false; FilterByType(""); }'>All</button>
-                            <button @onclick='() => { typeFilter = "Email"; showTypeDropdown = false; FilterByType("Email"); }'>Email</button>
-                            <button @onclick='() => { typeFilter = "SMS"; showTypeDropdown = false; FilterByType("SMS"); }'>SMS</button>
-                            <button @onclick='() => { typeFilter = "Social"; showTypeDropdown = false; FilterByType("Social"); }'>Social</button>
-                            <button @onclick='() => { typeFilter = "Other"; showTypeDropdown = false; FilterByType("Other"); }'>Other</button>
+                        <div class="dropdown-menu show" @onclick:stopPropagation>
+                            <button type="button"
+                                    class="@(string.IsNullOrEmpty(typeFilter) ? "active" : "")"
+                                    @onclick="() => FilterByType(string.Empty)">
+                                All
+                            </button>
+                            <button type="button"
+                                    class="@(typeFilter == "Email" ? "active" : "")"
+                                    @onclick='() => FilterByType("Email")'>
+                                Email
+                            </button>
+                            <button type="button"
+                                    class="@(typeFilter == "SMS" ? "active" : "")"
+                                    @onclick='() => FilterByType("SMS")'>
+                                SMS
+                            </button>
+                            <button type="button"
+                                    class="@(typeFilter == "Social" ? "active" : "")"
+                                    @onclick='() => FilterByType("Social")'>
+                                Social
+                            </button>
+                            <button type="button"
+                                    class="@(typeFilter == "Other" ? "active" : "")"
+                                    @onclick='() => FilterByType("Other")'>
+                                Other
+                            </button>
                         </div>
                     }
                 </div>
@@ -529,6 +582,7 @@
     private bool showTypeDropdown = false;
     private bool showModal = false;
     private bool showArchiveModal = false;
+    private bool showSummaryCards = false;
     private bool isEditMode = false;
     private bool isLoading = true;
     private bool isSaving = false;
@@ -731,6 +785,24 @@
         showStatusDropdown = false;
         showTypeDropdown = false;
         StateHasChanged();
+    }
+
+    private void ToggleStatusDropdown()
+    {
+        showStatusDropdown = !showStatusDropdown;
+        if (showStatusDropdown)
+        {
+            showTypeDropdown = false;
+        }
+    }
+
+    private void ToggleTypeDropdown()
+    {
+        showTypeDropdown = !showTypeDropdown;
+        if (showTypeDropdown)
+        {
+            showStatusDropdown = false;
+        }
     }
 
     private void ClearFilters()
@@ -963,5 +1035,10 @@
             return val.ToString();
         }
         return "0";
+    }
+
+    private void ToggleSummaryCards()
+    {
+        showSummaryCards = !showSummaryCards;
     }
 }

@@ -165,7 +165,7 @@
     }
 
 .btn-danger {
-    background-color: #ef4444;
+    background-color: #f59e0b;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -180,7 +180,7 @@
 }
 
     .btn-danger:hover {
-        background-color: #dc2626;
+        background-color: #d97706;
     }
 
 .btn-filter {

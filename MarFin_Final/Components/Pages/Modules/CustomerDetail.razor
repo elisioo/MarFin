@@ -430,7 +430,7 @@
                             @* Only Admin and Marketing can archive *@
                             @if (AuthService.IsAdmin() || AuthService.IsMarketing())
                             {
-                                <button class="btn-action btn-action-danger" @onclick="ConfirmArchive">
+                                <button class="btn-action btn-action-warning" @onclick="ConfirmArchive">
                                     <i class="bi bi-archive"></i> Archive Customer
                                 </button>
                             }

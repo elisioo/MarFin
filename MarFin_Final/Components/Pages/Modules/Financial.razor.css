@@ -407,7 +407,6 @@
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    border-left: 4px solid #3b82f6;
 }
 
 .table-header {
@@ -819,6 +818,18 @@ textarea.form-control {
         background-color: #f3f4f6;
         border-color: #d1d5db;
     }
+
+.btn-icon-archive {
+    background-color: #fffbeb;
+    border-color: #fbbf24;
+    color: #d97706;
+}
+
+.btn-icon.btn-icon-archive:hover {
+    background-color: #fef3c7;
+    border-color: #f59e0b;
+    color: #92400e;
+}
 
 .view-invoice-body {
     display: grid;

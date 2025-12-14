@@ -22,62 +22,76 @@
 
     @if (!showArchived)
     {
-        <!-- Pipeline Metrics -->
-        <div class="pipeline-metrics">
-            <div class="metric-card">
-                <div class="metric-icon green">
-                    <i class="bi bi-bullseye"></i>
-                </div>
-                <div class="metric-content">
-                    <h2>₱@totalPipelineValue.ToString("N0")</h2>
-                    <p>Total Pipeline Value</p>
-                    <span class="metric-badge positive">
-                        <i class="bi bi-graph-up"></i> Active
-                    </span>
-                </div>
-            </div>
+        <!-- Sales Pipeline Summary -->
+        <div class="pipeline-summary">
+            <h6>
+                Sales Pipeline Summary
+                @if (!showSummaryCards)
+                {
+                    <span class="text-primary ms-1" style="cursor: pointer;" @onclick="ToggleSummaryCards">view</span>
+                }
+                else
+                {
+                    <span class="text-primary ms-1" style="cursor: pointer;" @onclick="ToggleSummaryCards">hide</span>
+                }
+            </h6>
+            @if (showSummaryCards)
+            {
+                <div class="pipeline-metrics">
+                    <div class="metric-card">
+                        <div class="metric-icon green">
+                            <i class="bi bi-bullseye"></i>
+                        </div>
+                        <div class="metric-content">
+                            <h2>₱@totalPipelineValue.ToString("N0")</h2>
+                            <p>Total Pipeline Value</p>
+                            <span class="metric-badge positive">
+                                <i class="bi bi-graph-up"></i> Active
+                            </span>
+                        </div>
+                    </div>
 
-            <div class="metric-card">
-                <div class="metric-icon blue">
-                    <i class="bi bi-bell"></i>
-                </div>
-                <div class="metric-content">
-                    <h2>@activeDealsCount</h2>
-                    <p>Active Deals</p>
-                    <span class="metric-badge positive">
-                        <i class="bi bi-graph-up"></i> Open
-                    </span>
-                </div>
-            </div>
+                    <div class="metric-card">
+                        <div class="metric-icon blue">
+                            <i class="bi bi-bell"></i>
+                        </div>
+                        <div class="metric-content">
+                            <h2>@activeDealsCount</h2>
+                            <p>Active Deals</p>
+                            <span class="metric-badge positive">
+                                <i class="bi bi-graph-up"></i> Open
+                            </span>
+                        </div>
+                    </div>
 
-            <div class="metric-card">
-                <div class="metric-icon red">
-                    <i class="bi bi-graph-up-arrow"></i>
-                </div>
-                <div class="metric-content">
-                    <h2>₱@avgDealSize.ToString("N0")</h2>
-                    <p>Avg. Deal Size</p>
-                    <span class="metric-badge positive">
-                        <i class="bi bi-calculator"></i> Average
-                    </span>
-                </div>
-            </div>
+                    <div class="metric-card">
+                        <div class="metric-icon red">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
+                        <div class="metric-content">
+                            <h2>₱@avgDealSize.ToString("N0")</h2>
+                            <p>Avg. Deal Size</p>
+                            <span class="metric-badge positive">
+                                <i class="bi bi-calculator"></i> Average
+                            </span>
+                        </div>
+                    </div>
 
-            <div class="metric-card">
-                <div class="metric-icon teal">
-                    <i class="bi bi-check-circle"></i>
+                    <div class="metric-card">
+                        <div class="metric-icon teal">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="metric-content">
+                            <h2>@winRate.ToString("N1")%</h2>
+                            <p>Win Rate</p>
+                            <span class="metric-badge positive">
+                                <i class="bi bi-trophy"></i> Success
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div class="metric-content">
-                    <h2>@winRate.ToString("N1")%</h2>
-                    <p>Win Rate</p>
-                    <span class="metric-badge positive">
-                        <i class="bi bi-trophy"></i> Success
-                    </span>
-                </div>
-            </div>
+            }
         </div>
-
-        
     }
 
     <!-- Toolbar -->
@@ -449,6 +463,8 @@
     private bool showModal = false;
     private bool isEditMode = false;
     private bool showArchived = false;
+    private bool showSummaryCards = false;
+
     private int selectedStageFilter = 0;
     private bool showStageDropdown = false;
 
@@ -761,5 +777,10 @@
     {
         currentPage = 1;
         StateHasChanged();
+    }
+
+    private void ToggleSummaryCards()
+    {
+        showSummaryCards = !showSummaryCards;
     }
 }

@@ -31,33 +31,46 @@
     }
     <!-- Financial Summary -->
     <div class="financial-summary">
-        <h3>Financial Summary</h3>
-        <div class="summary-cards">
-            <div class="summary-card revenue">
-                <div class="card-icon"><i class="bi bi-cash-stack"></i></div>
-                <div class="card-content">
-                    <h2>Php @((totalRevenue ?? 0m).ToString("N2"))</h2>
-                    <p>Total Revenue</p>
-                    <span class="card-badge positive"><i class="bi bi-graph-up"></i> +12.5%</span>
+        <h6>
+            Financial Summary
+            @if (!showSummaryCards)
+            {
+                <span class="text-primary ms-2" style="cursor: pointer;" @onclick="ToggleSummaryCards">view</span>
+            }
+            else
+            {
+                <span class="text-primary ms-2" style="cursor: pointer;" @onclick="ToggleSummaryCards">hide</span>
+            }
+        </h6>
+        @if (showSummaryCards)
+        {
+            <div class="summary-cards">
+                <div class="summary-card revenue">
+                    <div class="card-icon"><i class="bi bi-cash-stack"></i></div>
+                    <div class="card-content">
+                        <h2>Php @((totalRevenue ?? 0m).ToString("N2"))</h2>
+                        <p>Total Revenue</p>
+                        <span class="card-badge positive"><i class="bi bi-graph-up"></i> +12.5%</span>
+                    </div>
+                </div>
+                <div class="summary-card pending">
+                    <div class="card-icon"><i class="bi bi-hourglass-split"></i></div>
+                    <div class="card-content">
+                        <h2>Php @((totalPending ?? 0m).ToString("N2"))</h2>
+                        <p>Pending</p>
+                        <span class="card-badge info"><i class="bi bi-file-earmark-text"></i> @pendingCount inv.</span>
+                    </div>
+                </div>
+                <div class="summary-card overdue">
+                    <div class="card-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div class="card-content">
+                        <h2>Php @((totalOverdue ?? 0m).ToString("N2"))</h2>
+                        <p>Overdue</p>
+                        <span class="card-badge warning"><i class="bi bi-clock-history"></i> @overdueCount inv.</span>
+                    </div>
                 </div>
             </div>
-            <div class="summary-card pending">
-                <div class="card-icon"><i class="bi bi-hourglass-split"></i></div>
-                <div class="card-content">
-                    <h2>Php @((totalPending ?? 0m).ToString("N2"))</h2>
-                    <p>Pending</p>
-                    <span class="card-badge info"><i class="bi bi-file-earmark-text"></i> @pendingCount inv.</span>
-                </div>
-            </div>
-            <div class="summary-card overdue">
-                <div class="card-icon"><i class="bi bi-exclamation-triangle"></i></div>
-                <div class="card-content">
-                    <h2>Php @((totalOverdue ?? 0m).ToString("N2"))</h2>
-                    <p>Overdue</p>
-                    <span class="card-badge warning"><i class="bi bi-clock-history"></i> @overdueCount inv.</span>
-                </div>
-            </div>
-        </div>
+        }
     </div>
     <!-- Toolbar -->
     <div class="financial-toolbar">
@@ -378,7 +391,7 @@
                     <button class="btn-icon" title="Edit" @onclick="() => EditInvoice(selectedInvoice)">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn-icon" title="Archive" @onclick="() => ShowArchiveConfirmation(selectedInvoice.InvoiceId)">
+                    <button class="btn-icon btn-icon-archive btn-icon-warning" title="Archive" @onclick="() => ShowArchiveConfirmation(selectedInvoice.InvoiceId)">
                         <i class="bi bi-archive"></i>
                     </button>
                 </div>
@@ -544,6 +557,8 @@
     private bool showDateFilter = false;
     private bool showCustomerDropdown = false;
     private bool showConfirmModal = false;
+    private bool showSummaryCards = false;
+
     private bool isLoading = true;
     private bool isSaving = false;
     private Invoice? selectedInvoice;
@@ -602,7 +617,6 @@
             isLoading = false;
         }
     }
- 
 
     private void ShowArchiveConfirmation(int invoiceId)
     {
@@ -635,6 +649,11 @@
         totalOverdue = allInvoices.Where(i => i.IsOverdue).Sum(i => i.TotalAmount ?? 0m);
         pendingCount = allInvoices.Count(i => i.PaymentStatus is "Issued" or "Partial");
         overdueCount = allInvoices.Count(i => i.IsOverdue);
+    }
+
+    private void ToggleSummaryCards()
+    {
+        showSummaryCards = !showSummaryCards;
     }
 
     private async Task ToggleInvoiceModal()
