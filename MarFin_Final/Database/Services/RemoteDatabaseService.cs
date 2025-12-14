@@ -3,24 +3,43 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using MarFin_Final.Data;
 using MarFin_Final.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace MarFin_Final.Database.Services
 {
     public class RemoteDatabaseService
     {
         private readonly string _connectionString;
+        private readonly IConfiguration _configuration;
+        private const int DefaultRemoteUserId = 1;
+        private const int DefaultRemoteSegmentId = 1;
 
-        public RemoteDatabaseService()
+        public RemoteDatabaseService(IConfiguration configuration)
         {
-            _connectionString = "Server=db33549.public.databaseasp.net;" +
-                              "Database=db33549;" +
-                              "User Id=db33549;" +
-                              "Password=marfindbit13;" +
-                              "Encrypt=True;" +
-                              "TrustServerCertificate=True;" +
-                              "Connection Timeout=30;" +
-                              "MultipleActiveResultSets=True;";
+            _configuration = configuration;
+
+            // Prefer CloudConnection from appsettings; fall back to the known remote connection if missing
+            _connectionString = _configuration.GetConnectionString("CloudConnection")
+                ?? "Server=db33549.public.databaseasp.net;" +
+                   "Database=db33549;" +
+                   "User Id=db33549;" +
+                   "Password=marfindbit13;" +
+                   "Encrypt=True;" +
+                   "TrustServerCertificate=True;" +
+                   "Connection Timeout=30;" +
+                   "MultipleActiveResultSets=True;";
+        }
+
+        private AppDbContext CreateRemoteDbContext()
+        {
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlServer(_connectionString)
+                .Options;
+
+            return new AppDbContext(options);
         }
 
         // CRITICAL: Comprehensive diagnostic method
@@ -152,7 +171,7 @@ namespace MarFin_Final.Database.Services
             return diagnostic;
         }
 
-        // IMPROVED: Sync customers with detailed logging
+        // IMPROVED: Sync customers with detailed logging using Entity Framework
         public async Task<int> SyncCustomersToRemoteAsync(List<Customer> customers)
         {
             int syncedCount = 0;
@@ -167,129 +186,116 @@ namespace MarFin_Final.Database.Services
             Console.WriteLine($"SYNC STARTING: {customers.Count} customers to process");
             Console.WriteLine($"═══════════════════════════════════════════════════");
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
+            using (var context = CreateRemoteDbContext())
             {
-                try
+                foreach (var customer in customers)
                 {
-                    await connection.OpenAsync();
-                    Console.WriteLine("Connection opened successfully");
-
-                    // First, ensure at least one segment exists
-                    await EnsureSegmentExistsAsync(connection);
-
-                    foreach (var customer in customers)
+                    try
                     {
-                        try
+                        var email = customer.Email ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(email))
                         {
-                            // Check if customer exists by email
-                            string checkQuery = "SELECT customer_id FROM tbl_Customers WHERE email = @email";
-                            int? existingCustomerId = null;
-
-                            using (SqlCommand checkCmd = new SqlCommand(checkQuery, connection))
-                            {
-                                checkCmd.Parameters.AddWithValue("@email", customer.Email ?? "");
-                                var result = await checkCmd.ExecuteScalarAsync();
-                                if (result != null && result != DBNull.Value)
-                                {
-                                    existingCustomerId = Convert.ToInt32(result);
-                                }
-                            }
-
-                            string query;
-                            SqlCommand command;
-
-                            if (existingCustomerId.HasValue)
-                            {
-                                // UPDATE existing customer
-                                Console.WriteLine($"  Updating: {customer.FirstName} {customer.LastName} (ID: {existingCustomerId.Value})");
-                                query = @"UPDATE tbl_Customers SET 
-                                            segment_id = @segment_id,
-                                            first_name = @first_name,
-                                            last_name = @last_name,
-                                            phone = @phone,
-                                            company_name = @company_name,
-                                            address = @address,
-                                            city = @city,
-                                            state_province = @state_province,
-                                            postal_code = @postal_code,
-                                            country = @country,
-                                            customer_status = @customer_status,
-                                            total_revenue = @total_revenue,
-                                            source = @source,
-                                            notes = @notes,
-                                            is_active = @is_active,
-                                            modified_date = GETDATE()
-                                        WHERE customer_id = @customer_id";
-
-                                command = new SqlCommand(query, connection);
-                                command.Parameters.AddWithValue("@customer_id", existingCustomerId.Value);
-                            }
-                            else
-                            {
-                                // INSERT new customer
-                                Console.WriteLine($"  Inserting: {customer.FirstName} {customer.LastName} ({customer.Email})");
-                                query = @"INSERT INTO tbl_Customers (
-                                            segment_id, created_by, first_name, last_name, email, 
-                                            phone, company_name, address, city, state_province, 
-                                            postal_code, country, customer_status, total_revenue, 
-                                            source, notes, is_active, is_archived, created_date, modified_date
-                                        ) VALUES (
-                                            @segment_id, @created_by, @first_name, @last_name, @email,
-                                            @phone, @company_name, @address, @city, @state_province,
-                                            @postal_code, @country, @customer_status, @total_revenue,
-                                            @source, @notes, @is_active, 0, GETDATE(), GETDATE()
-                                        )";
-
-                                command = new SqlCommand(query, connection);
-                                command.Parameters.AddWithValue("@created_by", customer.CreatedBy);
-                            }
-
-                            // Add parameters (common to both INSERT and UPDATE)
-                            command.Parameters.AddWithValue("@segment_id", customer.SegmentId);
-                            command.Parameters.AddWithValue("@first_name", customer.FirstName ?? "");
-                            command.Parameters.AddWithValue("@last_name", customer.LastName ?? "");
-                            command.Parameters.AddWithValue("@email", customer.Email ?? "");
-                            command.Parameters.AddWithValue("@phone", string.IsNullOrWhiteSpace(customer.Phone) ? DBNull.Value : customer.Phone);
-                            command.Parameters.AddWithValue("@company_name", string.IsNullOrWhiteSpace(customer.CompanyName) ? DBNull.Value : customer.CompanyName);
-                            command.Parameters.AddWithValue("@address", string.IsNullOrWhiteSpace(customer.Address) ? DBNull.Value : customer.Address);
-                            command.Parameters.AddWithValue("@city", string.IsNullOrWhiteSpace(customer.City) ? DBNull.Value : customer.City);
-                            command.Parameters.AddWithValue("@state_province", string.IsNullOrWhiteSpace(customer.StateProvince) ? DBNull.Value : customer.StateProvince);
-                            command.Parameters.AddWithValue("@postal_code", string.IsNullOrWhiteSpace(customer.PostalCode) ? DBNull.Value : customer.PostalCode);
-                            command.Parameters.AddWithValue("@country", customer.Country ?? "Philippines");
-                            command.Parameters.AddWithValue("@customer_status", customer.CustomerStatus ?? "Lead");
-                            command.Parameters.AddWithValue("@total_revenue", customer.TotalRevenue);
-                            command.Parameters.AddWithValue("@source", string.IsNullOrWhiteSpace(customer.Source) ? DBNull.Value : customer.Source);
-                            command.Parameters.AddWithValue("@notes", string.IsNullOrWhiteSpace(customer.Notes) ? DBNull.Value : customer.Notes);
-                            command.Parameters.AddWithValue("@is_active", customer.IsActive);
-
-                            int rowsAffected = await command.ExecuteNonQueryAsync();
-                            if (rowsAffected > 0)
-                            {
-                                syncedCount++;
-                                Console.WriteLine($"    ✓ Success");
-                            }
-                            else
-                            {
-                                Console.WriteLine($"    ✗ No rows affected");
-                            }
+                            Console.WriteLine("  Skipping customer with empty email");
+                            continue;
                         }
-                        catch (SqlException sqlEx)
-                        {
-                            Console.WriteLine($"    ✗ SQL Error for {customer.Email}:");
-                            Console.WriteLine($"      Error {sqlEx.Number}: {sqlEx.Message}");
 
-                            // Provide specific guidance
-                            if (sqlEx.Number == 547)
+                        // Find existing customer by email
+                        var existingCustomer = await context.Customers
+                            .FirstOrDefaultAsync(c => c.Email == email);
+
+                        if (existingCustomer == null)
+                        {
+                            Console.WriteLine($"  Inserting: {customer.FirstName} {customer.LastName} ({customer.Email})");
+
+                            var newCustomer = new Customer
                             {
-                                Console.WriteLine($"      Foreign key issue - check segment_id={customer.SegmentId} exists");
-                            }
+                                SegmentId = DefaultRemoteSegmentId,
+                                CreatedBy = DefaultRemoteUserId,
+
+                                ModifiedBy = customer.ModifiedBy,
+                                FirstName = customer.FirstName,
+                                LastName = customer.LastName,
+                                Email = customer.Email,
+                                Phone = customer.Phone,
+                                CompanyName = customer.CompanyName,
+                                Address = customer.Address,
+                                City = customer.City,
+                                StateProvince = customer.StateProvince,
+                                PostalCode = customer.PostalCode,
+                                Country = customer.Country,
+                                CustomerStatus = customer.CustomerStatus,
+                                TotalRevenue = customer.TotalRevenue,
+                                Source = customer.Source,
+                                Notes = customer.Notes,
+                                IsActive = customer.IsActive,
+                                IsArchived = customer.IsArchived,
+                                ArchivedDate = customer.ArchivedDate,
+                                ArchivedBy = customer.ArchivedBy,
+                                CreatedDate = customer.CreatedDate,
+                                ModifiedDate = customer.ModifiedDate
+                            };
+
+                            await context.Customers.AddAsync(newCustomer);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  Updating: {customer.FirstName} {customer.LastName} (Email: {customer.Email})");
+
+                            // Ensure foreign keys point to valid remote records
+                            existingCustomer.SegmentId = DefaultRemoteSegmentId;
+                            existingCustomer.CreatedBy = DefaultRemoteUserId;
+
+                            existingCustomer.FirstName = customer.FirstName;
+                            existingCustomer.LastName = customer.LastName;
+                            existingCustomer.Phone = customer.Phone;
+                            existingCustomer.CompanyName = customer.CompanyName;
+                            existingCustomer.Address = customer.Address;
+                            existingCustomer.City = customer.City;
+                            existingCustomer.StateProvince = customer.StateProvince;
+                            existingCustomer.PostalCode = customer.PostalCode;
+                            existingCustomer.Country = customer.Country;
+                            existingCustomer.CustomerStatus = customer.CustomerStatus;
+                            existingCustomer.TotalRevenue = customer.TotalRevenue;
+                            existingCustomer.Source = customer.Source;
+                            existingCustomer.Notes = customer.Notes;
+                            existingCustomer.IsActive = customer.IsActive;
+                            existingCustomer.IsArchived = customer.IsArchived;
+                            existingCustomer.ArchivedDate = customer.ArchivedDate;
+                            existingCustomer.ArchivedBy = customer.ArchivedBy;
+                            existingCustomer.ModifiedDate = customer.ModifiedDate;
+                        }
+
+                        syncedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"    ✗ Error syncing customer {customer.Email}: {ex.Message}");
+                        if (ex.InnerException != null)
+                        {
+                            Console.WriteLine($"      Inner: {ex.InnerException.Message}");
                         }
                     }
                 }
-                catch (Exception ex)
+
+                try
                 {
-                    Console.WriteLine($"✗ Connection Error: {ex.Message}");
-                    Console.WriteLine($"  Stack: {ex.StackTrace}");
+                    await context.SaveChangesAsync();
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    Console.WriteLine("✗ DbUpdateException during customer sync SaveChangesAsync:");
+                    Console.WriteLine($"  Error: {dbEx.Message}");
+                    if (dbEx.InnerException != null)
+                    {
+                        Console.WriteLine($"  Inner: {dbEx.InnerException.Message}");
+                    }
+
+                    foreach (var entry in dbEx.Entries)
+                    {
+                        Console.WriteLine($"  Entity: {entry.Entity.GetType().Name}, State: {entry.State}");
+                    }
+
+                    throw;
                 }
             }
 
@@ -314,130 +320,114 @@ namespace MarFin_Final.Database.Services
             Console.WriteLine($"INVOICE SYNC STARTING: {invoices.Count} invoices to process");
             Console.WriteLine($"═══════════════════════════════════════════════════");
 
-            using (SqlConnection connection = new SqlConnection(_connectionString))
+            using (var context = CreateRemoteDbContext())
             {
-                try
+                foreach (var invoice in invoices)
                 {
-                    await connection.OpenAsync();
-
-                    foreach (var invoice in invoices)
+                    try
                     {
-                        try
+                        var email = invoice.CustomerEmail;
+                        if (string.IsNullOrWhiteSpace(email))
                         {
-                            var remoteCustomerId = await GetRemoteCustomerIdForInvoiceAsync(connection, invoice);
-                            if (!remoteCustomerId.HasValue)
-                            {
-                                Console.WriteLine($"  ✗ Skipping invoice {invoice.InvoiceNumber}: no matching remote customer for email '{invoice.CustomerEmail}'");
-                                continue;
-                            }
-
-                            int? existingInvoiceId = null;
-                            string checkQuery = "SELECT invoice_id FROM tbl_Invoices WHERE invoice_number = @invoice_number";
-
-                            using (SqlCommand checkCmd = new SqlCommand(checkQuery, connection))
-                            {
-                                checkCmd.Parameters.AddWithValue("@invoice_number", invoice.InvoiceNumber ?? string.Empty);
-                                var result = await checkCmd.ExecuteScalarAsync();
-                                if (result != null && result != DBNull.Value)
-                                {
-                                    existingInvoiceId = Convert.ToInt32(result);
-                                }
-                            }
-
-                            SqlCommand command;
-                            int invoiceIdForItems;
-
-                            if (existingInvoiceId.HasValue)
-                            {
-                                Console.WriteLine($"  Updating invoice: {invoice.InvoiceNumber} (ID: {existingInvoiceId.Value})");
-                                string updateQuery = @"UPDATE tbl_Invoices SET
-                                                customer_id = @customer_id,
-                                                created_by = @created_by,
-                                                invoice_date = @invoice_date,
-                                                due_date = @due_date,
-                                                payment_terms = @payment_terms,
-                                                subtotal = @subtotal,
-                                                tax_rate = @tax_rate,
-                                                tax_amount = @tax_amount,
-                                                discount_amount = @discount_amount,
-                                                total_amount = @total_amount,
-                                                payment_status = @payment_status,
-                                                notes = @notes,
-                                                pdf_path = @pdf_path,
-                                                is_archived = @is_archived,
-                                                modified_date = GETDATE()
-                                            WHERE invoice_id = @invoice_id";
-
-                                command = new SqlCommand(updateQuery, connection);
-                                command.Parameters.AddWithValue("@invoice_id", existingInvoiceId.Value);
-                                invoiceIdForItems = existingInvoiceId.Value;
-                            }
-                            else
-                            {
-                                Console.WriteLine($"  Inserting invoice: {invoice.InvoiceNumber}");
-                                string insertQuery = @"INSERT INTO tbl_Invoices (
-                                                customer_id, created_by, invoice_number, invoice_date, due_date,
-                                                payment_terms, subtotal, tax_rate, tax_amount, discount_amount,
-                                                total_amount, payment_status, notes, pdf_path, is_archived,
-                                                created_date, modified_date
-                                            ) OUTPUT INSERTED.invoice_id
-                                            VALUES (
-                                                @customer_id, @created_by, @invoice_number, @invoice_date, @due_date,
-                                                @payment_terms, @subtotal, @tax_rate, @tax_amount, @discount_amount,
-                                                @total_amount, @payment_status, @notes, @pdf_path, @is_archived,
-                                                GETDATE(), GETDATE()
-                                            )";
-
-                                command = new SqlCommand(insertQuery, connection);
-                            }
-
-                            command.Parameters.AddWithValue("@customer_id", remoteCustomerId.Value);
-                            command.Parameters.AddWithValue("@created_by", invoice.CreatedBy);
-                            command.Parameters.AddWithValue("@invoice_number", invoice.InvoiceNumber ?? string.Empty);
-                            command.Parameters.AddWithValue("@invoice_date", invoice.InvoiceDate);
-                            command.Parameters.AddWithValue("@due_date", invoice.DueDate);
-                            command.Parameters.AddWithValue("@payment_terms", invoice.PaymentTerms ?? "Net 30");
-                            command.Parameters.AddWithValue("@subtotal", invoice.Subtotal);
-                            command.Parameters.AddWithValue("@tax_rate", invoice.TaxRate);
-                            command.Parameters.AddWithValue("@tax_amount", invoice.TaxAmount);
-                            command.Parameters.AddWithValue("@discount_amount", invoice.DiscountAmount);
-                            command.Parameters.AddWithValue("@total_amount", invoice.TotalAmount);
-                            command.Parameters.AddWithValue("@payment_status", invoice.PaymentStatus ?? "Draft");
-                            command.Parameters.AddWithValue("@notes", string.IsNullOrWhiteSpace(invoice.Notes) ? DBNull.Value : invoice.Notes);
-                            command.Parameters.AddWithValue("@pdf_path", string.IsNullOrWhiteSpace(invoice.PdfPath) ? DBNull.Value : invoice.PdfPath);
-                            command.Parameters.AddWithValue("@is_archived", invoice.IsArchived);
-
-                            if (existingInvoiceId.HasValue)
-                            {
-                                int rowsAffected = await command.ExecuteNonQueryAsync();
-                                if (rowsAffected > 0)
-                                {
-                                    syncedCount++;
-                                    Console.WriteLine("    ✓ Invoice updated");
-                                }
-                                else
-                                {
-                                    Console.WriteLine("    ✗ Invoice update affected 0 rows");
-                                }
-                            }
-                            else
-                            {
-                                var insertedId = await command.ExecuteScalarAsync();
-                                invoiceIdForItems = Convert.ToInt32(insertedId);
-                                syncedCount++;
-                                Console.WriteLine($"    ✓ Invoice inserted (ID: {invoiceIdForItems})");
-                            }
+                            Console.WriteLine($"  ✗ Skipping invoice {invoice.InvoiceNumber}: no customer email available");
+                            continue;
                         }
-                        catch (SqlException sqlEx)
+
+                        var remoteCustomer = await context.Customers
+                            .FirstOrDefaultAsync(c => c.Email == email);
+
+                        if (remoteCustomer == null)
                         {
-                            Console.WriteLine($"    ✗ SQL Error for invoice {invoice.InvoiceNumber}: {sqlEx.Number} - {sqlEx.Message}");
+                            Console.WriteLine($"  ✗ Skipping invoice {invoice.InvoiceNumber}: no matching remote customer for email '{email}'");
+                            continue;
+                        }
+
+                        var remoteInvoice = await context.Invoices
+                            .FirstOrDefaultAsync(i => i.InvoiceNumber == invoice.InvoiceNumber);
+
+                        if (remoteInvoice == null)
+                        {
+                            Console.WriteLine($"  Inserting invoice: {invoice.InvoiceNumber}");
+
+                            remoteInvoice = new Invoice
+                            {
+                                CustomerId = remoteCustomer.CustomerId,
+                                CreatedBy = DefaultRemoteUserId,
+
+                                InvoiceNumber = invoice.InvoiceNumber ?? string.Empty,
+                                InvoiceDate = invoice.InvoiceDate,
+                                DueDate = invoice.DueDate,
+                                PaymentTerms = invoice.PaymentTerms ?? "Net 30",
+                                Subtotal = invoice.Subtotal,
+                                TaxRate = invoice.TaxRate,
+                                TaxAmount = invoice.TaxAmount,
+                                DiscountAmount = invoice.DiscountAmount,
+                                TotalAmount = invoice.TotalAmount,
+                                PaymentStatus = invoice.PaymentStatus ?? "Draft",
+                                Notes = invoice.Notes,
+                                PdfPath = invoice.PdfPath,
+                                IsArchived = invoice.IsArchived,
+                                ArchivedDate = invoice.ArchivedDate,
+                                CreatedDate = invoice.CreatedDate,
+                                ModifiedDate = invoice.ModifiedDate
+                            };
+
+                            await context.Invoices.AddAsync(remoteInvoice);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  Updating invoice: {invoice.InvoiceNumber}");
+
+                            remoteInvoice.CustomerId = remoteCustomer.CustomerId;
+                            remoteInvoice.CreatedBy = DefaultRemoteUserId;
+
+                            remoteInvoice.InvoiceDate = invoice.InvoiceDate;
+                            remoteInvoice.DueDate = invoice.DueDate;
+                            remoteInvoice.PaymentTerms = invoice.PaymentTerms ?? "Net 30";
+                            remoteInvoice.Subtotal = invoice.Subtotal;
+                            remoteInvoice.TaxRate = invoice.TaxRate;
+                            remoteInvoice.TaxAmount = invoice.TaxAmount;
+                            remoteInvoice.DiscountAmount = invoice.DiscountAmount;
+                            remoteInvoice.TotalAmount = invoice.TotalAmount;
+                            remoteInvoice.PaymentStatus = invoice.PaymentStatus ?? "Draft";
+                            remoteInvoice.Notes = invoice.Notes;
+                            remoteInvoice.PdfPath = invoice.PdfPath;
+                            remoteInvoice.IsArchived = invoice.IsArchived;
+                            remoteInvoice.ArchivedDate = invoice.ArchivedDate;
+                            remoteInvoice.ModifiedDate = invoice.ModifiedDate;
+                        }
+
+                        syncedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"    ✗ Error syncing invoice {invoice.InvoiceNumber}: {ex.Message}");
+                        if (ex.InnerException != null)
+                        {
+                            Console.WriteLine($"      Inner: {ex.InnerException.Message}");
                         }
                     }
                 }
-                catch (Exception ex)
+
+                try
                 {
-                    Console.WriteLine($"✗ Invoice sync connection error: {ex.Message}");
-                    Console.WriteLine($"  Stack: {ex.StackTrace}");
+                    await context.SaveChangesAsync();
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    Console.WriteLine("✗ DbUpdateException during invoice sync SaveChangesAsync:");
+                    Console.WriteLine($"  Error: {dbEx.Message}");
+                    if (dbEx.InnerException != null)
+                    {
+                        Console.WriteLine($"  Inner: {dbEx.InnerException.Message}");
+                    }
+
+                    foreach (var entry in dbEx.Entries)
+                    {
+                        Console.WriteLine($"  Entity: {entry.Entity.GetType().Name}, State: {entry.State}");
+                    }
+
+                    throw;
                 }
             }
 
@@ -446,91 +436,6 @@ namespace MarFin_Final.Database.Services
             Console.WriteLine($"═══════════════════════════════════════════════════");
 
             return syncedCount;
-        }
-
-        private async Task<int?> GetRemoteCustomerIdForInvoiceAsync(SqlConnection connection, Invoice invoice)
-        {
-            string email = invoice.CustomerEmail ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(email))
-            {
-                return null;
-            }
-
-            string query = "SELECT customer_id FROM tbl_Customers WHERE email = @Email";
-
-            using (SqlCommand cmd = new SqlCommand(query, connection))
-            {
-                cmd.Parameters.AddWithValue("@Email", email);
-                var result = await cmd.ExecuteScalarAsync();
-                if (result != null && result != DBNull.Value)
-                {
-                    return Convert.ToInt32(result);
-                }
-            }
-
-            return null;
-        }
-
-        // Helper: Ensure at least one segment exists
-        private async Task EnsureSegmentExistsAsync(SqlConnection connection)
-        {
-            var checkQuery = "SELECT COUNT(*) FROM tbl_Customer_Segments WHERE segment_id = 1";
-            using (SqlCommand cmd = new SqlCommand(checkQuery, connection))
-            {
-                var exists = (int)await cmd.ExecuteScalarAsync() > 0;
-
-                if (!exists)
-                {
-                    Console.WriteLine(" Default segment missing - creating segment_id=1");
-                    var insertQuery = @"INSERT INTO tbl_Customer_Segments 
-                        (segment_id, segment_name, description, min_revenue, max_revenue, is_active, created_date)
-                        VALUES (1, 'Default', 'Default customer segment', 0, NULL, 1, GETDATE())";
-
-                    using (SqlCommand insertCmd = new SqlCommand(insertQuery, connection))
-                    {
-                        await insertCmd.ExecuteNonQueryAsync();
-                        Console.WriteLine("✓ Default segment created");
-                    }
-                }
-            }
-        }
-
-        // Original methods preserved...
-        public async Task<bool> TestConnectionAsync()
-        {
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    return connection.State == ConnectionState.Open;
-                }
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
-
-        public async Task<(bool IsConnected, string Message)> GetConnectionStatusAsync()
-        {
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    return (true, "Connected to remote database");
-                }
-            }
-            catch (SqlException ex)
-            {
-                return (false, $"Connection failed: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                return (false, $"Error: {ex.Message}");
-            }
         }
 
         public async Task<SyncResult> SyncAllDataAsync(List<Customer> customers, List<Invoice> invoices)
@@ -577,14 +482,66 @@ namespace MarFin_Final.Database.Services
                     result.Message = "No records were synced. Run diagnostics to investigate.";
                 }
             }
+            catch (DbUpdateException dbEx)
+            {
+                result.IsSuccess = false;
+
+                var innerMessage = dbEx.InnerException?.Message;
+                result.Message = innerMessage != null
+                    ? $"Database update error: {dbEx.Message} | Inner: {innerMessage}"
+                    : $"Database update error: {dbEx.Message}";
+
+                Console.WriteLine(result.Message);
+            }
             catch (Exception ex)
             {
                 result.IsSuccess = false;
-                result.Message = $"Sync error: {ex.Message}";
-                Console.WriteLine($"SYNC ERROR: {ex.Message}");
+
+                var innerMessage = ex.InnerException?.Message;
+                result.Message = innerMessage != null
+                    ? $"Sync error: {ex.Message} | Inner: {innerMessage}"
+                    : $"Sync error: {ex.Message}";
+
+                Console.WriteLine($"SYNC ERROR: {result.Message}");
             }
 
             return result;
+        }
+
+        public async Task<bool> TestConnectionAsync()
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    return connection.State == ConnectionState.Open;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<(bool IsConnected, string Message)> GetConnectionStatusAsync()
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    return (true, "Connected to remote database");
+                }
+            }
+            catch (SqlException ex)
+            {
+                return (false, $"Connection failed: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error: {ex.Message}");
+            }
         }
 
         public async Task<DateTime?> GetLastSyncTimeAsync()
