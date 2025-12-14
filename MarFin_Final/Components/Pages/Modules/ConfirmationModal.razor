@@ -19,7 +19,7 @@
 
                 <div class="modal-footer">
                     <button class="btn-cancel" @onclick="OnCancel">Cancel</button>
-                    <button class="@ButtonClass" @onclick="OnConfirm" disabled="@IsLoading">
+                    <button class="@ButtonClass btn-cancel-confirm" @onclick="OnConfirm" disabled="@IsLoading">
                         @if (IsLoading)
                         {
                             <span class="spinner-small"></span>

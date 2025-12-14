@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using MarFin_Final.Models;
 
 namespace MarFin_Final.Database.Services;
@@ -8,7 +8,7 @@ public class PdfExportService
     /// <summary>
     /// Generates a simple PDF report as HTML that can be printed to PDF
     /// </summary>
-    public string GenerateReportHtml(string reportType, DateTime startDate, DateTime endDate, 
+    public string GenerateReportHtml(string reportType, DateTime startDate, DateTime endDate,
         ReportService.CampaignPerformanceData? campaignData = null,
         List<ReportService.RevenueData>? revenueData = null,
         List<ReportService.TopCustomerData>? topCustomers = null,
@@ -18,7 +18,7 @@ public class PdfExportService
         List<Invoice>? invoices = null)
     {
         var html = new StringBuilder();
-        
+
         html.AppendLine("<!DOCTYPE html>");
         html.AppendLine("<html>");
         html.AppendLine("<head>");
@@ -85,7 +85,7 @@ public class PdfExportService
         };
     }
 
-    private string GenerateFinancialReportContent(List<ReportService.RevenueData>? revenueData, 
+    private string GenerateFinancialReportContent(List<ReportService.RevenueData>? revenueData,
         List<ReportService.RevenueSourceData>? revenueSources)
     {
         var html = new StringBuilder();
@@ -171,7 +171,7 @@ public class PdfExportService
         return html.ToString();
     }
 
-    private string GenerateSalesReportContent(ReportService.SalesOpportunitiesData? salesData, 
+    private string GenerateSalesReportContent(ReportService.SalesOpportunitiesData? salesData,
         List<ReportService.TopCustomerData>? topCustomers)
     {
         var html = new StringBuilder();
@@ -210,7 +210,7 @@ public class PdfExportService
         return html.ToString();
     }
 
-    private string GenerateCustomerReportContent(List<ReportService.TopCustomerData>? topCustomers, 
+    private string GenerateCustomerReportContent(List<ReportService.TopCustomerData>? topCustomers,
         List<ReportService.CustomerSegmentData>? segments)
     {
         var html = new StringBuilder();

@@ -10,7 +10,8 @@ namespace MarFin_Final.Data
         public DbSet<Invoice> Invoices { get; set; }
         public DbSet<InvoiceItem> InvoiceItems { get; set; }
 
-        // Add this line
+        public DbSet<AppDocument> AppDocuments { get; set; } = null!;
+
         public DbSet<Customer> Customers { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -106,6 +107,43 @@ namespace MarFin_Final.Data
                       .HasForeignKey(d => d.InvoiceId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
+            // In OnModelCreating
+            modelBuilder.Entity<AppDocument>(entity =>
+            {
+                entity.ToTable("tbl_Documents");
+
+                entity.HasKey(e => e.DocumentId);
+                entity.Property(e => e.DocumentId).HasColumnName("document_id").ValueGeneratedOnAdd();
+
+                entity.Property(e => e.CustomerId).HasColumnName("customer_id");
+                entity.Property(e => e.UploadedBy).HasColumnName("uploaded_by").IsRequired();
+                entity.Property(e => e.DocumentName).HasColumnName("document_name").HasMaxLength(200).IsRequired();
+                entity.Property(e => e.DocumentType).HasColumnName("document_type").HasMaxLength(50).IsRequired();
+                entity.Property(e => e.FilePath).HasColumnName("file_path").HasMaxLength(255).IsRequired();
+                entity.Property(e => e.FileSize).HasColumnName("file_size");
+                entity.Property(e => e.MimeType).HasColumnName("mime_type").HasMaxLength(100);
+                entity.Property(e => e.IsArchived).HasColumnName("is_archived").HasDefaultValue(false);
+                entity.Property(e => e.ArchivedDate).HasColumnName("archived_date");
+                entity.Property(e => e.UploadDate).HasColumnName("upload_date").HasDefaultValueSql("GETDATE()");
+
+                entity.HasOne(d => d.Customer)
+                      .WithMany()
+                      .HasForeignKey(d => d.CustomerId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(d => d.UploadedByUser)
+                      .WithMany()
+                      .HasForeignKey(d => d.UploadedBy)
+                      .HasPrincipalKey(u => u.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Ignore(d => d.CustomerDisplayName);
+                entity.Ignore(d => d.UploadedByName);
+                entity.Ignore(d => d.FormattedFileSize);
+                entity.Ignore(d => d.FormattedUploadDate);
+            });
+
+
         }
     }
 }

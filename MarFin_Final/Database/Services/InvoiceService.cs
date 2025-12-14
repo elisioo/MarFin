@@ -167,5 +167,45 @@ namespace MarFin_Final.Data
                 }
             }
         }
+        public async Task<List<Invoice>> GetArchivedInvoicesAsync()
+        {
+            await using var context = await _dbFactory.CreateDbContextAsync();
+
+            var invoices = await context.Invoices
+                .AsNoTracking()
+                .Include(i => i.LineItems.OrderBy(item => item.ItemOrder))
+                .Where(i => i.IsArchived)
+                .OrderByDescending(i => i.ArchivedDate)
+                .ToListAsync();
+
+            await PopulateDisplayFieldsAsync(invoices, context);
+            return invoices;
+        }
+
+        public async Task<bool> RestoreInvoiceAsync(int invoiceId)
+        {
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var invoice = await context.Invoices.FindAsync(invoiceId);
+            if (invoice == null) return false;
+
+            invoice.IsArchived = false;
+            invoice.ArchivedDate = null;
+            await context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> PermanentlyDeleteInvoiceAsync(int invoiceId)
+        {
+            await using var context = await _dbFactory.CreateDbContextAsync();
+            var invoice = await context.Invoices
+                .Include(i => i.LineItems)
+                .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
+
+            if (invoice == null) return false;
+
+            context.Invoices.Remove(invoice);
+            await context.SaveChangesAsync();
+            return true;
+        }
     }
 }

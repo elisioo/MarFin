@@ -58,6 +58,8 @@ namespace MarFin_Final
             builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
             builder.Services.AddScoped<InvoiceService>();
+            builder.Services.AddScoped<AppDocumentService>();
+
 
 
             builder.Services.AddBlazorWebViewDeveloperTools();

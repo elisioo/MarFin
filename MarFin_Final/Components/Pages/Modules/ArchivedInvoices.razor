@@ -1,0 +1,174 @@
+@page "/archived-invoices"
+@using MarFin_Final.Models
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+@inject InvoiceService InvoiceService
+@inject IJSRuntime JS
+
+@if (!AuthService.IsAdmin())
+{
+    <div class="p-5 text-center">
+        <h3>Access Denied</h3>
+        <p>You do not have permission to view archived invoices.</p>
+        <button class="btn-primary" @onclick='() => Navigation.NavigateTo("/financial")'>
+            Back to Financial
+        </button>
+    </div>
+}
+else
+{
+    <div class="archived-container">
+        <div class="archived-header">
+            <h1>
+                <i class="bi bi-archive"></i> Archived Invoices
+            </h1>
+            <button class="btn-back" @onclick='() => Navigation.NavigateTo("/financial")'>
+                <i class="bi bi-arrow-left"></i> Back to Invoices
+            </button>
+        </div>
+
+        @if (!archivedInvoices.Any())
+        {
+            <div class="archived-empty">
+                <i class="bi bi-archive"></i>
+                <p>No archived invoices found</p>
+            </div>
+        }
+        else
+        {
+            <div class="archived-table-container">
+                <div class="archived-table">
+                    <div class="table-header">
+                        <span>Invoice ID</span>
+                        <span>Customer</span>
+                        <span>Amount</span>
+                        <span>Date</span>
+                        <span>Archived On</span>
+                        <span>Actions</span>
+                    </div>
+                    @foreach (var invoice in archivedInvoices)
+                    {
+                        <div class="table-row">
+                            <span>@invoice.InvoiceNumber</span>
+                            <span>@(string.IsNullOrEmpty(invoice.CustomerCompany) ? invoice.CustomerName : invoice.CustomerCompany)</span>
+                            <span>Php @((invoice.TotalAmount ?? 0m).ToString("N2"))</span>
+                            <span>@invoice.InvoiceDate.ToString("MM/dd/yyyy")</span>
+                            <span>@(invoice.ArchivedDate?.ToString("MM/dd/yyyy") ?? "N/A")</span>
+                            <div class="archived-actions">
+                                <button class="btn-icon restore-btn" title="Restore" @onclick="() => RestoreInvoice(invoice.InvoiceId)">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                                <button class="btn-icon delete-permanent-btn" title="Delete Permanently" @onclick="() => ShowPermanentDeleteConfirmation(invoice.InvoiceId)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- Simple Permanent Delete Confirmation Modal -->
+@if (showPermanentDeleteConfirm)
+{
+    <div class="modal-overlay" @onclick="ClosePermanentDeleteConfirm">
+        <div class="modal-content confirm-modal" @onclick:stopPropagation>
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="user-icon danger">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </span>
+                    <h2>Delete Invoice Permanently?</h2>
+                </div>
+            </div>
+
+            <div class="modal-body text-center">
+                <i class="bi bi-trash3-fill text-danger mb-3" style="font-size: 48px;"></i>
+                <p>This action <strong>cannot be undone</strong>.</p>
+                <p>The invoice will be permanently removed from the system.</p>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="ClosePermanentDeleteConfirm">
+                    Cancel
+                </button>
+                <button class="btn-danger" @onclick="ConfirmPermanentDelete" disabled="@isDeleting">
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+
+
+@code {
+    private List<Invoice> archivedInvoices = [];
+    private bool showPermanentDeleteConfirm = false;
+    private int invoiceToDelete = 0;
+    private bool isDeleting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAdmin())
+            return;
+
+        await LoadArchivedInvoices();
+    }
+
+    private async Task LoadArchivedInvoices()
+    {
+        archivedInvoices = await InvoiceService.GetArchivedInvoicesAsync() ?? [];
+    }
+
+    private async Task RestoreInvoice(int invoiceId)
+    {
+        if (await InvoiceService.RestoreInvoiceAsync(invoiceId))
+        {
+            await LoadArchivedInvoices();
+        }
+    }
+
+    private void ShowPermanentDeleteConfirmation(int invoiceId)
+    {
+        invoiceToDelete = invoiceId;
+        isDeleting = false;
+        showPermanentDeleteConfirm = true;
+    }
+
+    private void ClosePermanentDeleteConfirm()
+    {
+        showPermanentDeleteConfirm = false;
+        invoiceToDelete = 0;
+        isDeleting = false;
+    }
+
+    private async Task ConfirmPermanentDelete()
+    {
+        if (isDeleting) return;
+
+        isDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            if (await InvoiceService.PermanentlyDeleteInvoiceAsync(invoiceToDelete))
+            {
+                await LoadArchivedInvoices();
+                ClosePermanentDeleteConfirm();
+            }
+            else
+            {
+                isDeleting = false;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting invoice: {ex.Message}");
+            isDeleting = false;
+            StateHasChanged();
+        }
+    }
+}

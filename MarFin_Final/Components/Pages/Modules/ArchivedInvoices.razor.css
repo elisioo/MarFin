@@ -1,0 +1,228 @@
+/* Archived Invoices - Modern & Consistent Design */
+.archived-container {
+    max-width: 100%;
+    padding: 2rem;
+    background: #f9fafb;
+}
+
+.archived-header {
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+    .archived-header h1 {
+        font-size: 28px;
+        font-weight: 600;
+        color: #444;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0;
+    }
+
+        .archived-header h1 i {
+            color: #888;
+            font-size: 32px;
+        }
+
+.btn-back {
+    background-color: white;
+    color: #1a1a1a;
+    border: 1px solid #e0e0e0;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+    .btn-back:hover {
+        background-color: #f8f9fa;
+        border-color: #ccc;
+    }
+
+.archived-table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.archived-table .table-header {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1.5fr 1.5fr 1.5fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+}
+
+.archived-table .table-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1.5fr 1.5fr 1.5fr 1fr;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    color: #555;
+    transition: all 0.2s;
+    opacity: 0.85;
+    align-items: center;
+}
+
+    .archived-table .table-row:last-child {
+        border-bottom: none;
+    }
+
+    .archived-table .table-row:hover {
+        background-color: #f8f9fa;
+        opacity: 1;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+.archived-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.restore-btn {
+    background-color: #e8f5e9;
+    color: #388e3c;
+    border: 1px solid #a7f3d0;
+}
+
+    .restore-btn:hover {
+        background-color: #d4edda;
+        border-color: #388e3c;
+    }
+
+.delete-permanent-btn {
+    background-color: #fee2e2;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+}
+
+    .delete-permanent-btn:hover {
+        background-color: #fecaca;
+        border-color: #ef4444;
+    }
+
+.archived-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #888;
+}
+
+    .archived-empty i {
+        font-size: 64px;
+        margin-bottom: 1rem;
+        color: #bbb;
+    }
+
+    .archived-empty p {
+        font-size: 16px;
+        margin: 0;
+    }
+/* Enhanced Permanent Delete Modal */
+.user-icon.danger {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+.btn-danger {
+    background-color: #dc2626;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+    .btn-danger:hover:not(:disabled) {
+        background-color: #b91c1c;
+        transform: translateY(-1px);
+    }
+
+    .btn-danger:disabled {
+        background-color: #fca5a5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+.form-check-input {
+    width: 18px;
+    height: 18px;
+    margin-top: 4px;
+}
+
+.form-check-label {
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+    .archived-table .table-header,
+    .archived-table .table-row {
+        grid-template-columns: 1fr 1.8fr 1.2fr 1.2fr 1fr;
+    }
+
+        .archived-table .table-header span:nth-child(5),
+        .archived-table .table-row span:nth-child(5) {
+            display: none;
+        }
+}
+
+@media (max-width: 768px) {
+    .archived-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .archived-table .table-header,
+    .archived-table .table-row {
+        grid-template-columns: 1fr 1.5fr 1fr 0.8fr;
+    }
+
+        .archived-table .table-header span:nth-child(3),
+        .archived-table .table-header span:nth-child(4),
+        .archived-table .table-row span:nth-child(3),
+        .archived-table .table-row span:nth-child(4) {
+            display: none;
+        }
+
+    .archived-actions {
+        grid-column: span 4;
+        justify-content: center;
+    }
+}

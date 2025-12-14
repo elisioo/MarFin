@@ -3,7 +3,10 @@
 @inject AuthService AuthService
 @inject InvoiceService InvoiceService
 @inject CustomerService CustomerService
+@inject IJSRuntime JS
 @using MarFin_Final.Models
+
+@using MarFin_Final.Database.Services
 
 <div class="financial-container">
     <div class="financial-header">
@@ -62,6 +65,13 @@
             <i class="bi bi-plus-lg"></i> New Invoice
         </button>
         <div class="toolbar-filters">
+            <!-- Inside .toolbar-filters, after Export button -->
+            @if (AuthService.IsAdmin())
+            {
+                <button class="btn-filter" @onclick='() => Navigation.NavigateTo("/archived-invoices")'>
+                    <i class="bi bi-archive"></i> View Archived
+                </button>
+            }
             <div class="dropdown-filter">
                 <button class="btn-filter" @onclick="ToggleDateFilter">
                     @selectedDateFilter <i class="bi bi-chevron-down"></i>
@@ -103,7 +113,7 @@
                        @bind="searchTerm"
                        @bind:event="oninput" />
             </div>
-            <button class="btn-filter"><i class="bi bi-download"></i> Export</button>
+            <button class="btn-filter" disabled><i class="bi bi-download"></i> Export</button>
         </div>
     </div>
     <!-- Transactions Table -->
@@ -361,16 +371,28 @@
                 </div>
                 <div class="invoice-actions">
                     <button class="btn-icon" title="Email"><i class="bi bi-envelope"></i></button>
-                    <button class="btn-icon" title="Download"><i class="bi bi-download"></i></button>
+                    <button class="btn-icon" title="Download PDF" @onclick="() => DownloadPdf(selectedInvoice!)">
+                        <i class="bi bi-download"></i>
+                    </button>
                     <button class="btn-icon" title="Print"><i class="bi bi-printer"></i></button>
                     <button class="btn-icon" title="Edit" @onclick="() => EditInvoice(selectedInvoice)">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn-icon" title="Archive" @onclick="() => DeleteInvoice(selectedInvoice.InvoiceId)">
-                        <i class="bi bi-trash"></i>
+                    <button class="btn-icon" title="Archive" @onclick="() => ShowArchiveConfirmation(selectedInvoice.InvoiceId)">
+                        <i class="bi bi-archive"></i>
                     </button>
                 </div>
             </div>
+            <!-- Add this below the invoice-actions -->
+            @if (!string.IsNullOrEmpty(pdfDownloadStatus))
+            {
+                <div class="text-center mt-3">
+                    <small class="@(pdfDownloadStatus.Contains("Downloaded") ? "text-success" : "text-info")">
+                        <i class="bi @(pdfDownloadStatus.Contains("Downloaded") ? "bi-check-circle" : "bi-hourglass-split")"></i>
+                        @pdfDownloadStatus
+                    </small>
+                </div>
+            }
             <div class="view-invoice-body">
                 <div class="invoice-preview">
                     <div class="invoice-preview-header">
@@ -447,6 +469,39 @@
         </div>
     </div>
 }
+
+<!-- PDF Download Progress Modal -->
+@if (!string.IsNullOrEmpty(pdfDownloadStatus))
+{
+    <div class="modal-overlay" @onclick="() => pdfDownloadStatus = string.Empty">
+        <div class="modal-content confirm-modal text-center p-5" @onclick:stopPropagation>
+            <div class="mb-4">
+                @if (pdfDownloadStatus.Contains("Downloaded"))
+                {
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 64px;"></i>
+                }
+                else
+                {
+                    <div class="spinner" style="width: 60px; height: 60px; border-width: 5px; margin: 0 auto;"></div>
+                }
+            </div>
+            <h3 class="@(pdfDownloadStatus.Contains("Downloaded") ? "text-success" : "text-info")">
+                @pdfDownloadStatus
+            </h3>
+            @if (pdfDownloadStatus.Contains("Downloaded"))
+            {
+                <div class="text-center">
+                    <p class="text-muted mt-3">Your invoice has been downloaded successfully.</p>
+
+                    <button class="btn btn-primary mt-3"
+                            @onclick="() => pdfDownloadStatus = string.Empty">
+                        Close
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+}
 <!-- Confirmation Modal -->
 @if (showConfirmModal)
 {
@@ -506,6 +561,10 @@
     private int pendingCount = 0;
     private int overdueCount = 0;
 
+    private string pdfDownloadStatus = "";
+    private Timer? pdfStatusTimer;
+    private int invoiceToArchive = 0;
+
     private int currentPage = 1;
     private int pageSize = 10;
     private int totalRecords = 0;
@@ -520,7 +579,7 @@
         }
 
         await LoadInvoices();
-        await ApplyQueryContext();  
+        await ApplyQueryContext();
     }
 
     private async Task LoadInvoices()
@@ -542,6 +601,31 @@
         {
             isLoading = false;
         }
+    }
+ 
+
+    private void ShowArchiveConfirmation(int invoiceId)
+    {
+        confirmTitle = "Archive Invoice";
+        confirmMessage = "Are you sure you want to archive this invoice? It will be moved to archived items.";
+        invoiceToArchive = invoiceId;
+        pendingInvoiceAction = "archive";
+        showConfirmModal = true;
+    }
+
+    private async Task ConfirmInvoiceSave()
+    {
+        if (pendingInvoiceAction == "archive")
+        {
+            await DeleteInvoice(invoiceToArchive);
+            invoiceToArchive = 0;
+        }
+        else
+        {
+            string status = pendingInvoiceAction == "draft" ? "Draft" : "Issued";
+            await SaveInvoice(status);
+        }
+        CloseConfirmModal();
     }
 
     private void CalculateSummary()
@@ -713,13 +797,6 @@
         confirmTitle = "";
         confirmMessage = "";
         pendingInvoiceAction = "";
-    }
-
-    private async Task ConfirmInvoiceSave()
-    {
-        string status = pendingInvoiceAction == "draft" ? "Draft" : "Issued";
-        await SaveInvoice(status);
-        CloseConfirmModal();
     }
 
     private async Task SaveInvoice(string status)
@@ -982,6 +1059,46 @@
         catch
         {
             // Ignore query parsing errors
+        }
+    }
+    private async Task DownloadPdf(Invoice invoice)
+    {
+        try
+        {
+            pdfDownloadStatus = "Preparing PDF...";
+            StateHasChanged();
+
+            await Task.Delay(300); // Small delay for smooth UX
+
+            pdfDownloadStatus = "Generating PDF...";
+            StateHasChanged();
+
+            var pdfBytes = PdfService.GenerateInvoicePdf(invoice);
+            var fileName = $"Invoice_{invoice.InvoiceNumber}.pdf";
+
+            pdfDownloadStatus = "Downloading PDF...";
+            StateHasChanged();
+
+            await JS.InvokeVoidAsync("downloadFile", fileName, Convert.ToBase64String(pdfBytes));
+
+            pdfDownloadStatus = "PDF Downloaded!";
+
+            // Auto close after 3 seconds
+            pdfStatusTimer?.Dispose();
+            pdfStatusTimer = new Timer(_ =>
+            {
+                InvokeAsync(() =>
+                {
+                    pdfDownloadStatus = "";
+                    StateHasChanged();
+                });
+            }, null, 3000, Timeout.Infinite);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to generate PDF: {ex.Message}";
+            pdfDownloadStatus = "";
+            Console.WriteLine(ex);
         }
     }
 }

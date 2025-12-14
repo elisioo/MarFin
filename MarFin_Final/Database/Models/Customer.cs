@@ -51,6 +51,9 @@ namespace MarFin_Final.Models
         // Alias for compatibility (maps to CustomerStatus)
         public string Status => CustomerStatus;
 
+
+        public List<AppDocument> Documents { get; set; } = new List<AppDocument>();
+
         // Legacy property name for backwards compatibility
         public string SegmentName
         {
