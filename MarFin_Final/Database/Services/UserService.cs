@@ -73,6 +73,147 @@ namespace MarFin_Final.Services
             return users;
         }
 
+        // Get all users with authentication data for synchronization
+        public async Task<List<User>> GetAllUsersForSyncAsync()
+        {
+            var users = new List<User>();
+
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
+
+                var query = @"
+                    SELECT 
+                        user_id,
+                        role_id,
+                        email,
+                        password_hash,
+                        salt,
+                        first_name,
+                        last_name,
+                        phone,
+                        department,
+                        is_active,
+                        last_login,
+                        failed_login_attempts,
+                        locked_until,
+                        created_date,
+                        modified_date
+                    FROM tbl_Users";
+
+                using var command = new SqlCommand(query, connection);
+                using var reader = await command.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    var user = new User
+                    {
+                        UserId = (int)reader["user_id"],
+                        RoleId = (int)reader["role_id"],
+                        Email = reader["email"].ToString() ?? string.Empty,
+                        PasswordHash = reader["password_hash"].ToString() ?? string.Empty,
+                        Salt = reader["salt"].ToString() ?? string.Empty,
+                        FirstName = reader["first_name"].ToString() ?? string.Empty,
+                        LastName = reader["last_name"].ToString() ?? string.Empty,
+                        Phone = reader["phone"] as string,
+                        Department = reader["department"] as string,
+                        IsActive = (bool)reader["is_active"],
+                        LastLogin = reader["last_login"] as DateTime?,
+                        FailedLoginAttempts = reader["failed_login_attempts"] is DBNull ? 0 : (int)reader["failed_login_attempts"],
+                        LockedUntil = reader["locked_until"] as DateTime?,
+                        CreatedDate = (DateTime)reader["created_date"],
+                        ModifiedDate = (DateTime)reader["modified_date"]
+                    };
+
+                    users.Add(user);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching users for sync: {ex.Message}");
+            }
+
+            return users;
+        }
+
+        public async Task<int> SyncUsersFromRemoteAsync(List<User> remoteUsers)
+        {
+            if (remoteUsers == null || remoteUsers.Count == 0)
+            {
+                return 0;
+            }
+
+            var syncedCount = 0;
+
+            try
+            {
+                using var connection = new SqlConnection(_connectionString);
+                await connection.OpenAsync();
+
+                foreach (var remoteUser in remoteUsers)
+                {
+                    try
+                    {
+                        var email = remoteUser.Email ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(email))
+                        {
+                            continue;
+                        }
+
+                        var checkQuery = "SELECT COUNT(*) FROM tbl_Users WHERE email = @Email";
+                        using var checkCommand = new SqlCommand(checkQuery, connection);
+                        checkCommand.Parameters.Clear();
+                        checkCommand.Parameters.AddWithValue("@Email", email);
+
+                        var count = (int)await checkCommand.ExecuteScalarAsync();
+                        if (count > 0)
+                        {
+                            // User already exists locally, skip
+                            continue;
+                        }
+
+                        var insertQuery = @"
+                            INSERT INTO tbl_Users
+                            (role_id, email, password_hash, salt, first_name, last_name, phone, department,
+                             is_active, last_login, failed_login_attempts, locked_until, created_date, modified_date)
+                            VALUES
+                            (@RoleId, @Email, @PasswordHash, @Salt, @FirstName, @LastName, @Phone, @Department,
+                             @IsActive, @LastLogin, @FailedLoginAttempts, @LockedUntil, @CreatedDate, @ModifiedDate)";
+
+                        using var insertCommand = new SqlCommand(insertQuery, connection);
+                        insertCommand.Parameters.AddWithValue("@RoleId", remoteUser.RoleId);
+                        insertCommand.Parameters.AddWithValue("@Email", email);
+                        insertCommand.Parameters.AddWithValue("@PasswordHash", remoteUser.PasswordHash ?? string.Empty);
+                        insertCommand.Parameters.AddWithValue("@Salt", remoteUser.Salt ?? string.Empty);
+                        insertCommand.Parameters.AddWithValue("@FirstName", remoteUser.FirstName ?? string.Empty);
+                        insertCommand.Parameters.AddWithValue("@LastName", remoteUser.LastName ?? string.Empty);
+                        insertCommand.Parameters.AddWithValue("@Phone", (object?)remoteUser.Phone ?? DBNull.Value);
+                        insertCommand.Parameters.AddWithValue("@Department", (object?)remoteUser.Department ?? DBNull.Value);
+                        insertCommand.Parameters.AddWithValue("@IsActive", remoteUser.IsActive);
+                        insertCommand.Parameters.AddWithValue("@LastLogin", (object?)remoteUser.LastLogin ?? DBNull.Value);
+                        insertCommand.Parameters.AddWithValue("@FailedLoginAttempts", remoteUser.FailedLoginAttempts);
+                        insertCommand.Parameters.AddWithValue("@LockedUntil", (object?)remoteUser.LockedUntil ?? DBNull.Value);
+                        insertCommand.Parameters.AddWithValue("@CreatedDate", remoteUser.CreatedDate);
+                        insertCommand.Parameters.AddWithValue("@ModifiedDate", remoteUser.ModifiedDate);
+
+                        await insertCommand.ExecuteNonQueryAsync();
+                        syncedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error syncing remote user {remoteUser.Email}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during cloud-to-local user sync: {ex.Message}");
+            }
+
+            return syncedCount;
+        }
+
         // Get all roles for dropdown
         public async Task<List<RoleDto>> GetAllRolesAsync()
         {

@@ -171,6 +171,127 @@ namespace MarFin_Final.Database.Services
             return diagnostic;
         }
 
+        public async Task<int> SyncUsersToRemoteAsync(List<User> users)
+        {
+            int syncedCount = 0;
+
+            if (users == null || users.Count == 0)
+            {
+                Console.WriteLine("RemoteDatabaseService: No users provided to sync");
+                return 0;
+            }
+
+            Console.WriteLine("═══════════════════════════════════════════════════");
+            Console.WriteLine($"USER SYNC STARTING: {users.Count} users to process");
+            Console.WriteLine("═══════════════════════════════════════════════════");
+
+            using (var context = CreateRemoteDbContext())
+            {
+                foreach (var user in users)
+                {
+                    try
+                    {
+                        var email = user.Email ?? string.Empty;
+                        if (string.IsNullOrWhiteSpace(email))
+                        {
+                            Console.WriteLine("  Skipping user with empty email");
+                            continue;
+                        }
+
+                        var remoteUser = await context.Users
+                            .FirstOrDefaultAsync(u => u.Email == email);
+
+                        if (remoteUser == null)
+                        {
+                            Console.WriteLine($"  Inserting user: {user.FirstName} {user.LastName} ({user.Email})");
+
+                            remoteUser = new User
+                            {
+                                RoleId = user.RoleId,
+                                Email = user.Email,
+                                PasswordHash = user.PasswordHash,
+                                Salt = user.Salt,
+                                FirstName = user.FirstName,
+                                LastName = user.LastName,
+                                Phone = user.Phone,
+                                Department = user.Department,
+                                ProfileImagePath = user.ProfileImagePath,
+                                IsActive = user.IsActive,
+                                LastLogin = user.LastLogin,
+                                FailedLoginAttempts = user.FailedLoginAttempts,
+                                LockedUntil = user.LockedUntil,
+                                CreatedDate = user.CreatedDate,
+                                ModifiedDate = user.ModifiedDate
+                            };
+
+                            await context.Users.AddAsync(remoteUser);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  Updating user: {user.FirstName} {user.LastName} ({user.Email})");
+
+                            remoteUser.RoleId = user.RoleId;
+                            remoteUser.FirstName = user.FirstName;
+                            remoteUser.LastName = user.LastName;
+                            remoteUser.Phone = user.Phone;
+                            remoteUser.Department = user.Department;
+                            remoteUser.ProfileImagePath = user.ProfileImagePath;
+                            remoteUser.IsActive = user.IsActive;
+                            remoteUser.LastLogin = user.LastLogin;
+                            remoteUser.FailedLoginAttempts = user.FailedLoginAttempts;
+                            remoteUser.LockedUntil = user.LockedUntil;
+                            remoteUser.ModifiedDate = user.ModifiedDate;
+                        }
+
+                        syncedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"    ✗ Error syncing user {user.Email}: {ex.Message}");
+                        if (ex.InnerException != null)
+                        {
+                            Console.WriteLine($"      Inner: {ex.InnerException.Message}");
+                        }
+                    }
+                }
+
+                try
+                {
+                    await context.SaveChangesAsync();
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    Console.WriteLine("✗ DbUpdateException during user sync SaveChangesAsync:");
+                    Console.WriteLine($"  Error: {dbEx.Message}");
+                    if (dbEx.InnerException != null)
+                    {
+                        Console.WriteLine($"  Inner: {dbEx.InnerException.Message}");
+                    }
+
+                    foreach (var entry in dbEx.Entries)
+                    {
+                        Console.WriteLine($"  Entity: {entry.Entity.GetType().Name}, State: {entry.State}");
+                    }
+
+                    throw;
+                }
+            }
+
+            Console.WriteLine("═══════════════════════════════════════════════════");
+            Console.WriteLine($"USER SYNC COMPLETE: {syncedCount} of {users.Count} users synced");
+            Console.WriteLine("═══════════════════════════════════════════════════");
+
+            return syncedCount;
+        }
+
+        public async Task<List<User>> GetAllRemoteUsersAsync()
+        {
+            using (var context = CreateRemoteDbContext())
+            {
+                return await context.Users.AsNoTracking().ToListAsync();
+            }
+        }
+
         // IMPROVED: Sync customers with detailed logging using Entity Framework
         public async Task<int> SyncCustomersToRemoteAsync(List<Customer> customers)
         {

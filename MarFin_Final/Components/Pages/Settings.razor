@@ -3,9 +3,13 @@
 @inject AuthService AuthService
 @inject RemoteDatabaseService RemoteDbService
 @inject LocalDatabaseService LocalDbService
+@inject UserService UserService
+@inject AutoSyncService AutoSyncService
+
 @using MarFin_Final.Data
 @using MarFin_Final.Database.Services
 @using MarFin_Final.Models
+@using MarFin_Final.Services
 
 <div class="settings-container light-theme">
     <div class="settings-header">
@@ -17,11 +21,6 @@
         <!-- Settings Sidebar -->
         <div class="settings-sidebar">
             <div class="settings-menu">
-                <button class="settings-menu-item @(activeTab == "appearance" ? "active" : "")"
-                        @onclick='() => SelectTab("appearance")'>
-                    <i class="bi bi-palette"></i>
-                    <span>Appearance</span>
-                </button>
                 <button class="settings-menu-item @(activeTab == "sync" ? "active" : "")"
                         @onclick='() => SelectTab("sync")'>
                     <i class="bi bi-cloud-arrow-up"></i>
@@ -37,74 +36,7 @@
 
         <!-- Settings Content -->
         <div class="settings-main">
-            <!-- Appearance Tab -->
-            @if (activeTab == "appearance")
-            {
-                <div class="settings-section">
-                    <div class="section-header">
-                        <h2>Appearance</h2>
-                        <p>Customize how MarFin looks and feels</p>
-                    </div>
-
-                    <!-- Theme Selection -->
-                    <div class="settings-card">
-                        <div class="card-header">
-                            <h3>Theme</h3>
-                            <p>Choose your preferred color theme</p>
-                        </div>
-                        <div class="card-content">
-                            <div class="theme-selector">
-                                <div class="theme-option @(selectedTheme == "light" ? "selected" : "")"
-                                     @onclick='() => SelectTheme("light")'>
-                                    <div class="theme-preview light-preview">
-                                        <div class="preview-header"></div>
-                                        <div class="preview-content">
-                                            <div class="preview-line"></div>
-                                            <div class="preview-line short"></div>
-                                        </div>
-                                    </div>
-                                    <div class="theme-label">
-                                        <span class="theme-name">Light</span>
-                                        <span class="theme-desc">Bright and clean interface</span>
-                                    </div>
-                                    @if (selectedTheme == "light")
-                                    {
-                                        <div class="theme-check">
-                                            <i class="bi bi-check-circle-fill"></i>
-                                        </div>
-                                    }
-                                </div>
-
-                                <div class="theme-option @(selectedTheme == "dark" ? "selected" : "")"
-                                     @onclick='() => SelectTheme("dark")'>
-                                    <div class="theme-preview dark-preview">
-                                        <div class="preview-header"></div>
-                                        <div class="preview-content">
-                                            <div class="preview-line"></div>
-                                            <div class="preview-line short"></div>
-                                        </div>
-                                    </div>
-                                    <div class="theme-label">
-                                        <span class="theme-name">Dark</span>
-                                        <span class="theme-desc">Easy on the eyes</span>
-                                    </div>
-                                    @if (selectedTheme == "dark")
-                                    {
-                                        <div class="theme-check">
-                                            <i class="bi bi-check-circle-fill"></i>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                            <div class="theme-info">
-                                <i class="bi bi-info-circle"></i>
-                                <span>Your theme preference will be saved automatically</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
-
+      
             <!-- Data Sync Tab -->
             @if (activeTab == "sync")
             {
@@ -228,6 +160,23 @@
                             <p>Manage your data synchronization</p>
                         </div>
                         <div class="card-content">
+                            <div class="auto-sync-settings mb-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="autoSyncToggle" @bind="AutoSyncEnabled" />
+                                    <label class="form-check-label text-dark" for="autoSyncToggle">
+                                        Auto Sync
+                                    </label>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label text-dark">Auto Sync Interval</label>
+                                    <select class="form-select" @bind="AutoSyncIntervalMinutes">
+                                        <option value="5">Every 5 minutes</option>
+                                        <option value="15">Every 15 minutes</option>
+                                        <option value="30">Every 30 minutes</option>
+                                        <option value="60">Every 60 minutes</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="sync-actions">
                                 <button class="btn btn-primary @(isSyncing ? "disabled" : "")"
                                         @onclick="PerformSync"
@@ -337,12 +286,51 @@
     private bool syncTransactions = false;
     private bool syncReports = false;
 
+    private bool _autoSyncEnabled;
+    private int _autoSyncIntervalMinutes = 15;
+
+    private bool AutoSyncEnabled
+    {
+        get => _autoSyncEnabled;
+        set
+        {
+            if (_autoSyncEnabled == value)
+            {
+                return;
+            }
+
+            _autoSyncEnabled = value;
+            AutoSyncService.ConfigureAutoSync(value, _autoSyncIntervalMinutes, syncCustomers, syncInvoices);
+            StateHasChanged();
+        }
+    }
+
+    private int AutoSyncIntervalMinutes
+    {
+        get => _autoSyncIntervalMinutes;
+        set
+        {
+            if (_autoSyncIntervalMinutes == value)
+            {
+                return;
+            }
+
+            _autoSyncIntervalMinutes = value;
+            AutoSyncService.ConfigureAutoSync(_autoSyncEnabled, value, syncCustomers, syncInvoices);
+            StateHasChanged();
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         if (!AuthService.IsAuthenticated)
         {
             Navigation.NavigateTo("/login", true);
         }
+
+        // Initialize auto-sync UI from global service state
+        _autoSyncEnabled = AutoSyncService.AutoSyncEnabled;
+        _autoSyncIntervalMinutes = AutoSyncService.IntervalMinutes;
 
         // Load saved theme preference
         var savedTheme = GetSavedTheme();
@@ -454,6 +442,42 @@
                 return;
             }
 
+            try
+            {
+                var remoteUsers = await RemoteDbService.GetAllRemoteUsersAsync();
+                if (remoteUsers != null && remoteUsers.Count > 0)
+                {
+                    var syncedFromRemote = await UserService.SyncUsersFromRemoteAsync(remoteUsers);
+                    Console.WriteLine($"Settings.PerformSync: Synced {syncedFromRemote} users from cloud to local.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Settings.PerformSync: Cloud-to-local user sync error: {ex.Message}");
+            }
+
+            // Sync users first so remote tbl_Users is up to date
+            syncProgress = "(Syncing users...)";
+            StateHasChanged();
+
+            try
+            {
+                var users = await LocalDbService.GetAllUsersAsync();
+                if (users != null && users.Count > 0)
+                {
+                    await RemoteDbService.SyncUsersToRemoteAsync(users);
+                }
+                else
+                {
+                    Console.WriteLine("Settings.PerformSync: No local users found to sync.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Settings.PerformSync: User sync error: {ex.Message}");
+                // Continue with customers/invoices even if user sync fails
+            }
+
             // Fetch all data from local database
             syncProgress = "(Fetching data from local database...)";
             StateHasChanged();
@@ -497,7 +521,6 @@
         finally
         {
             isSyncing = false;
-            syncProgress = "";
             StateHasChanged();
         }
     }
@@ -538,5 +561,17 @@
             syncSuccess = false;
             StateHasChanged();
         }
+    }
+
+    private async Task HandleAutoSyncToggleAsync(bool enabled)
+    {
+        _autoSyncEnabled = enabled;
+        AutoSyncService.ConfigureAutoSync(enabled, _autoSyncIntervalMinutes, syncCustomers, syncInvoices);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        // Do not stop global auto sync when leaving the Settings page.
     }
 }

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MarFin_Final.Data;
+using MarFin_Final.Services;
 using Microsoft.AspNetCore.Components;
 
 namespace MarFin_Final.Database.Services
@@ -11,11 +12,13 @@ namespace MarFin_Final.Database.Services
     {
         private readonly CustomerService _customerService;
         private readonly InvoiceService _invoiceService;
+        private readonly UserService _userService;
 
-        public LocalDatabaseService(CustomerService customerService, InvoiceService invoiceService)
+        public LocalDatabaseService(CustomerService customerService, InvoiceService invoiceService, UserService userService)
         {
             _customerService = customerService;
             _invoiceService = invoiceService;
+            _userService = userService;
         }
 
         public async Task<List<MarFin_Final.Models.Customer>> GetAllCustomersAsync()
@@ -48,6 +51,22 @@ namespace MarFin_Final.Database.Services
                 Console.WriteLine($"LocalDatabaseService Error: {ex.Message}");
                 Console.WriteLine($"Stack Trace: {ex.StackTrace}");
                 return new List<Invoice>();
+            }
+        }
+
+        public async Task<List<User>> GetAllUsersAsync()
+        {
+            try
+            {
+                var users = await _userService.GetAllUsersForSyncAsync();
+                Console.WriteLine($"LocalDatabaseService: Fetched {users?.Count ?? 0} users from local database");
+                return users ?? new List<User>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"LocalDatabaseService Error: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                return new List<User>();
             }
         }
     }

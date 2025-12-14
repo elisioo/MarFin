@@ -13,6 +13,8 @@ namespace MarFin_Final.Data
         public DbSet<AppDocument> AppDocuments { get; set; } = null!;
 
         public DbSet<Customer> Customers { get; set; } = null!;
+        public DbSet<User> Users { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -144,6 +146,32 @@ namespace MarFin_Final.Data
             });
 
 
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.ToTable("tbl_Users");
+
+                entity.HasKey(e => e.UserId);
+                entity.Property(e => e.UserId).HasColumnName("user_id").ValueGeneratedOnAdd();
+
+                entity.Property(e => e.RoleId).HasColumnName("role_id");
+                entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(150).IsRequired();
+                entity.Property(e => e.PasswordHash).HasColumnName("password_hash");
+                entity.Property(e => e.Salt).HasColumnName("salt");
+                entity.Property(e => e.FirstName).HasColumnName("first_name").HasMaxLength(100);
+                entity.Property(e => e.LastName).HasColumnName("last_name").HasMaxLength(100);
+                entity.Property(e => e.Phone).HasColumnName("phone").HasMaxLength(30);
+                entity.Property(e => e.Department).HasColumnName("department").HasMaxLength(100);
+                entity.Property(e => e.ProfileImagePath).HasColumnName("profile_image_path").HasMaxLength(255);
+                entity.Property(e => e.IsActive).HasColumnName("is_active");
+                entity.Property(e => e.LastLogin).HasColumnName("last_login");
+                entity.Property(e => e.FailedLoginAttempts).HasColumnName("failed_login_attempts");
+                entity.Property(e => e.LockedUntil).HasColumnName("locked_until");
+                entity.Property(e => e.CreatedDate).HasColumnName("created_date");
+                entity.Property(e => e.ModifiedDate).HasColumnName("modified_date");
+
+                entity.Ignore(e => e.Role);
+                entity.Ignore(e => e.FullName);
+            });
         }
     }
 }
