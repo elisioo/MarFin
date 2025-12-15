@@ -49,11 +49,11 @@ wwwroot/**/*.lock.json
 node_modules/
 
 
-Database/DBConnection.cs
-Database/Services/RemoteDatabaseService.cs
-Database/Services/LocalDatabaseService.cs
-Database/Services/ReportService.cs
-appsettings.json
+MarFin_Final/Database/DBConnection.cs
+MarFin_Final/Database/Services/RemoteDatabaseService.cs
+MarFin_Final/Database/Services/LocalDatabaseService.cs
+MarFin_Final/Database/Services/ReportService.cs
+MarFin_Final/appsettings.json
 
 # =============================
 # OS generated files
