@@ -5,7 +5,7 @@ namespace MarFin_Final.Database.Services;
 
 public class ReportService
 {
-    private readonly string _connectionString = "Server=LAPTOP-FQVN9QLT\\SQLEXPRESS;Database=MarFin_DB;Trusted_Connection=true;Encrypt=false;";
+    private readonly string _connectionString = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=DB_CRM_MarFin;Integrated Security=True;Encrypt=True;";
 
     // Revenue Report Data
     public async Task<List<RevenueData>> GetRevenueByMonthAsync(DateTime startDate, DateTime endDate)
@@ -22,10 +22,11 @@ public class ReportService
                     SELECT 
                         MONTH(created_date) as Month,
                         YEAR(created_date) as Year,
-                        ISNULL(SUM(CASE WHEN transaction_type = 'Income' THEN amount ELSE 0 END), 0) as Income,
-                        ISNULL(SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END), 0) as Expense
+                        ISNULL(SUM(total_amount), 0) as Income,
+                        CAST(0 AS decimal(18,2)) as Expense
                     FROM tbl_Invoices
                     WHERE created_date BETWEEN @StartDate AND @EndDate
+                      AND is_archived = 0
                     GROUP BY MONTH(created_date), YEAR(created_date)
                     ORDER BY Year, Month";
 
@@ -118,13 +119,15 @@ public class ReportService
 
                 var query = @"
                     SELECT TOP (@Limit)
-                        ROW_NUMBER() OVER (ORDER BY SUM(amount) DESC) as Rank,
-                        customer_name,
-                        SUM(amount) as TotalAmount,
+                        ROW_NUMBER() OVER (ORDER BY SUM(i.total_amount) DESC) as Rank,
+                        COALESCE(c.company_name, c.first_name + ' ' + c.last_name, 'Unknown Customer') as CustomerName,
+                        SUM(i.total_amount) as TotalAmount,
                         COUNT(*) as TransactionCount
-                    FROM tbl_Invoices
-                    WHERE created_date BETWEEN @StartDate AND @EndDate
-                    GROUP BY customer_name
+                    FROM tbl_Invoices i
+                    LEFT JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                    WHERE i.created_date BETWEEN @StartDate AND @EndDate
+                      AND i.is_archived = 0
+                    GROUP BY COALESCE(c.company_name, c.first_name + ' ' + c.last_name, 'Unknown Customer')
                     ORDER BY TotalAmount DESC";
 
                 using (var cmd = new SqlCommand(query, connection))
@@ -170,12 +173,13 @@ public class ReportService
 
                 var query = @"
                     SELECT 
-                        COUNT(CASE WHEN opportunity_status = 'Active' THEN 1 END) as Active,
-                        COUNT(CASE WHEN opportunity_status = 'Won' THEN 1 END) as Won,
-                        COUNT(CASE WHEN opportunity_status = 'Lost' THEN 1 END) as Lost,
-                        ISNULL(SUM(opportunity_value), 0) as TotalValue
-                    FROM tbl_SalesPipeline
-                    WHERE created_date BETWEEN @StartDate AND @EndDate";
+                        COUNT(CASE WHEN stage_id IN (1,2,3,4) THEN 1 END) as Active,
+                        COUNT(CASE WHEN stage_id = 5 THEN 1 END) as Won,
+                        0 as Lost,
+                        ISNULL(SUM(deal_value), 0) as TotalValue
+                    FROM tbl_Sales_Pipeline
+                    WHERE created_date BETWEEN @StartDate AND @EndDate
+                      AND is_archived = 0";
 
                 using (var cmd = new SqlCommand(query, connection))
                 {
@@ -219,12 +223,18 @@ public class ReportService
 
                 var query = @"
                     SELECT 
-                        segment_name,
+                        cs.segment_name,
                         COUNT(*) as Count,
-                        CAST(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM tbl_Customers WHERE created_date BETWEEN @StartDate AND @EndDate) AS DECIMAL(5,2)) as Percentage
-                    FROM tbl_Customers
-                    WHERE created_date BETWEEN @StartDate AND @EndDate
-                    GROUP BY segment_name
+                        CAST(COUNT(*) * 100.0 / NULLIF((
+                            SELECT COUNT(*) 
+                            FROM tbl_Customers 
+                            WHERE created_date BETWEEN @StartDate AND @EndDate 
+                              AND is_archived = 0), 0) AS DECIMAL(5,2)) as Percentage
+                    FROM tbl_Customers c
+                    LEFT JOIN tbl_Customer_Segments cs ON c.segment_id = cs.segment_id
+                    WHERE c.created_date BETWEEN @StartDate AND @EndDate
+                      AND c.is_archived = 0
+                    GROUP BY cs.segment_name
                     ORDER BY Count DESC";
 
                 using (var cmd = new SqlCommand(query, connection))
@@ -268,12 +278,18 @@ public class ReportService
 
                 var query = @"
                     SELECT 
-                        invoice_source,
-                        CAST(SUM(amount) * 100.0 / (SELECT SUM(amount) FROM tbl_Invoices WHERE created_date BETWEEN @StartDate AND @EndDate) AS DECIMAL(5,2)) as Percentage,
-                        SUM(amount) as TotalAmount
-                    FROM tbl_Invoices
-                    WHERE created_date BETWEEN @StartDate AND @EndDate
-                    GROUP BY invoice_source
+                        COALESCE(c.source, 'Unknown') as SourceName,
+                        CAST(SUM(i.total_amount) * 100.0 / NULLIF((
+                            SELECT SUM(total_amount) 
+                            FROM tbl_Invoices i2 
+                            WHERE i2.created_date BETWEEN @StartDate AND @EndDate 
+                              AND i2.is_archived = 0), 0) AS DECIMAL(5,2)) as Percentage,
+                        SUM(i.total_amount) as TotalAmount
+                    FROM tbl_Invoices i
+                    LEFT JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                    WHERE i.created_date BETWEEN @StartDate AND @EndDate
+                      AND i.is_archived = 0
+                    GROUP BY COALESCE(c.source, 'Unknown')
                     ORDER BY TotalAmount DESC";
 
                 using (var cmd = new SqlCommand(query, connection))

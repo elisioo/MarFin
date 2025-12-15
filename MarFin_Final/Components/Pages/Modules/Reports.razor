@@ -4,10 +4,13 @@
 @inject IJSRuntime JS
 @using MarFin_Final.Database.Services
 @using System.Globalization
+@using MarFin_Final.Services
+@using Microsoft.Maui.Storage
+@using Microsoft.Maui.ApplicationModel
+@using System.IO
 
 @code {
     private ReportService reportService = new ReportService();
-    private PdfExportService pdfExportService = new PdfExportService();
     private bool isLoading = true;
     private string errorMessage = "";
 
@@ -364,7 +367,7 @@
                     <h4>Customer Report</h4>
                     <p>Complete customer data with interactions, segments, and revenue breakdown</p>
                 </div>
-                <button class="btn-generate" @onclick='() => GenerateReport("customer")'>
+                <button class="btn-generate" @onclick='() => OpenConfirmModal("customer", "Customer Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -381,7 +384,7 @@
                     <h4>Financial Report</h4>
                     <p>Revenue, expenses, invoices, and transaction details with P&L statement</p>
                 </div>
-                <button class="btn-generate" @onclick='() => GenerateReport("financial")'>
+                <button class="btn-generate" @onclick='() => OpenConfirmModal("financial", "Financial Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -398,7 +401,7 @@
                     <h4>Campaign Report</h4>
                     <p>Marketing campaign performance, ROI, engagement metrics, and conversions</p>
                 </div>
-                <button class="btn-generate" @onclick='() => GenerateReport("campaign")'>
+                <button class="btn-generate" @onclick='() => OpenConfirmModal("campaign", "Campaign Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -415,7 +418,7 @@
                     <h4>Sales Pipeline Report</h4>
                     <p>Opportunity tracking, win rates, pipeline health, and forecast analysis</p>
                 </div>
-                <button class="btn-generate" @onclick='() => GenerateReport("sales")'>
+                <button class="btn-generate" @onclick='() => OpenConfirmModal("sales", "Sales Pipeline Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -432,7 +435,7 @@
                     <h4>Invoice Report</h4>
                     <p>All invoices with payment status, overdue tracking, and aging analysis</p>
                 </div>
-                <button class="btn-generate" @onclick='() => GenerateReport("invoice")'>
+                <button class="btn-generate" @onclick='() => OpenConfirmModal("invoice", "Invoice Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -449,7 +452,7 @@
                     <h4>User Activity Report</h4>
                     <p>System usage, user logins, actions performed, and audit trail</p>
                 </div>
-                <button class="btn-generate" @onclick='() => GenerateReport("activity")'>
+                <button class="btn-generate" @onclick='() => OpenConfirmModal("activity", "User Activity Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -457,7 +460,30 @@
     </div>
 </div>
 
+@if (showConfirmModal)
+{
+    <div class="modal-backdrop"></div>
+    <div class="modal-container">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Generate @pendingReportTitle?</h3>
+            </div>
+            <div class="modal-body">
+                <p>Report period: @startDate.ToString("MMMM dd, yyyy") – @endDate.ToString("MMMM dd, yyyy")</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CancelGenerateReport">Cancel</button>
+                <button class="btn-primary" @onclick="ConfirmGenerateReport">Generate</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
+    private bool showConfirmModal;
+    private string? pendingReportType;
+    private string pendingReportTitle = "";
+
     private string selectedFilter = "thisMonth";
     private DateTime startDate = DateTime.Now.AddDays(-30);
     private DateTime endDate = DateTime.Now;
@@ -489,29 +515,60 @@
         return months[month % 12];
     }
 
+    private void OpenConfirmModal(string reportType, string reportTitle)
+    {
+        pendingReportType = reportType;
+        pendingReportTitle = reportTitle;
+        showConfirmModal = true;
+    }
+
+    private void CancelGenerateReport()
+    {
+        showConfirmModal = false;
+        pendingReportType = null;
+    }
+
+    private async Task ConfirmGenerateReport()
+    {
+        var type = pendingReportType;
+        showConfirmModal = false;
+        pendingReportType = null;
+
+        if (!string.IsNullOrEmpty(type))
+        {
+            await GenerateReport(type);
+        }
+    }
+
     private async Task GenerateReport(string reportType)
     {
         try
         {
-            // Generate HTML report
-            var htmlContent = pdfExportService.GenerateReportHtml(
-                reportType, 
-                startDate, 
+            // Generate PDF bytes using QuestPDF-based ReportPdfService
+            var pdfBytes = ReportPdfService.GenerateReportPdf(
+                reportType,
+                startDate,
                 endDate,
                 campaignPerformance,
                 revenueData,
                 topCustomers,
                 salesOpportunities,
                 customerSegments,
-                revenueSources
+                revenueSources,
+                null
             );
 
-            // Create a data URL for the HTML
-            var base64Html = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(htmlContent));
-            var dataUrl = $"data:text/html;base64,{base64Html}";
+            // Save to a temporary file and open with the system PDF viewer
+            var cacheDir = FileSystem.CacheDirectory;
+            var fileName = $"MarFin_{reportType}_Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            var filePath = Path.Combine(cacheDir, fileName);
 
-            // Open in new window for printing/saving as PDF using JavaScript
-            await JS.InvokeVoidAsync("open", dataUrl, "_blank");
+            File.WriteAllBytes(filePath, pdfBytes);
+
+            await Launcher.OpenAsync(new OpenFileRequest
+            {
+                File = new ReadOnlyFile(filePath)
+            });
         }
         catch (Exception ex)
         {

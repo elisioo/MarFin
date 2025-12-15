@@ -1,0 +1,2015 @@
+USE [master]
+GO
+/****** Object:  Database [DB_CRM_MarFin]    Script Date: 11/27/2025 6:59:21 PM ******/
+CREATE DATABASE [DB_CRM_MarFin]
+ CONTAINMENT = NONE
+ ON  PRIMARY 
+( NAME = N'DB_CRM_MarFin', FILENAME = N'D:\MAUI_BLAZOR_IT13\MarFin_Final\DB_CRM_MarFin.mdf' , SIZE = 8192KB , MAXSIZE = UNLIMITED, FILEGROWTH = 65536KB )
+ LOG ON 
+( NAME = N'DB_CRM_MarFin_log', FILENAME = N'D:\MAUI_BLAZOR_IT13\MarFin_Final\DB_CRM_MarFin_log.ldf' , SIZE = 8192KB , MAXSIZE = 2048GB , FILEGROWTH = 65536KB )
+ WITH CATALOG_COLLATION = DATABASE_DEFAULT, LEDGER = OFF
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET COMPATIBILITY_LEVEL = 150
+GO
+IF (1 = FULLTEXTSERVICEPROPERTY('IsFullTextInstalled'))
+begin
+EXEC [DB_CRM_MarFin].[dbo].[sp_fulltext_database] @action = 'enable'
+end
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET ANSI_NULL_DEFAULT OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET ANSI_NULLS OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET ANSI_PADDING OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET ANSI_WARNINGS OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET ARITHABORT OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET AUTO_CLOSE ON 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET AUTO_SHRINK OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET AUTO_UPDATE_STATISTICS ON 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET CURSOR_CLOSE_ON_COMMIT OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET CURSOR_DEFAULT  GLOBAL 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET CONCAT_NULL_YIELDS_NULL OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET NUMERIC_ROUNDABORT OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET QUOTED_IDENTIFIER OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET RECURSIVE_TRIGGERS OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET  DISABLE_BROKER 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET AUTO_UPDATE_STATISTICS_ASYNC OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET DATE_CORRELATION_OPTIMIZATION OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET TRUSTWORTHY OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET ALLOW_SNAPSHOT_ISOLATION OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET PARAMETERIZATION SIMPLE 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET READ_COMMITTED_SNAPSHOT OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET HONOR_BROKER_PRIORITY OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET RECOVERY SIMPLE 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET  MULTI_USER 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET PAGE_VERIFY CHECKSUM  
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET DB_CHAINING OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET FILESTREAM( NON_TRANSACTED_ACCESS = OFF ) 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET TARGET_RECOVERY_TIME = 60 SECONDS 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET DELAYED_DURABILITY = DISABLED 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET ACCELERATED_DATABASE_RECOVERY = OFF  
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET OPTIMIZED_LOCKING = OFF 
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET QUERY_STORE = OFF
+GO
+USE [DB_CRM_MarFin]
+GO
+/****** Object:  Table [dbo].[tbl_Invoices]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Invoices](
+	[invoice_id] [int] IDENTITY(1,1) NOT NULL,
+	[customer_id] [int] NOT NULL,
+	[created_by] [int] NOT NULL,
+	[invoice_number] [nvarchar](50) NOT NULL,
+	[invoice_date] [date] NOT NULL,
+	[due_date] [date] NOT NULL,
+	[payment_terms] [nvarchar](50) NULL,
+	[subtotal] [decimal](12, 2) NOT NULL,
+	[tax_rate] [decimal](5, 2) NULL,
+	[tax_amount] [decimal](12, 2) NOT NULL,
+	[discount_amount] [decimal](12, 2) NULL,
+	[total_amount] [decimal](12, 2) NOT NULL,
+	[payment_status] [nvarchar](20) NULL,
+	[notes] [nvarchar](max) NULL,
+	[pdf_path] [nvarchar](255) NULL,
+	[is_archived] [bit] NULL,
+	[archived_date] [datetime2](7) NULL,
+	[created_date] [datetime2](7) NULL,
+	[modified_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[invoice_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+UNIQUE NONCLUSTERED 
+(
+	[invoice_number] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Customer_Segments]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Customer_Segments](
+	[segment_id] [int] IDENTITY(1,1) NOT NULL,
+	[segment_name] [nvarchar](50) NOT NULL,
+	[description] [nvarchar](500) NULL,
+	[min_revenue] [decimal](12, 2) NULL,
+	[max_revenue] [decimal](12, 2) NULL,
+	[is_active] [bit] NULL,
+	[created_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[segment_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+UNIQUE NONCLUSTERED 
+(
+	[segment_name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Users]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Users](
+	[user_id] [int] IDENTITY(1,1) NOT NULL,
+	[role_id] [int] NOT NULL,
+	[email] [nvarchar](100) NOT NULL,
+	[password_hash] [nvarchar](255) NOT NULL,
+	[salt] [nvarchar](255) NOT NULL,
+	[first_name] [nvarchar](50) NOT NULL,
+	[last_name] [nvarchar](50) NOT NULL,
+	[phone] [nvarchar](20) NULL,
+	[department] [nvarchar](50) NULL,
+	[profile_image_path] [nvarchar](255) NULL,
+	[is_active] [bit] NULL,
+	[last_login] [datetime2](7) NULL,
+	[failed_login_attempts] [int] NULL,
+	[locked_until] [datetime2](7) NULL,
+	[created_date] [datetime2](7) NULL,
+	[modified_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[user_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+UNIQUE NONCLUSTERED 
+(
+	[email] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Customers]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Customers](
+	[customer_id] [int] IDENTITY(1,1) NOT NULL,
+	[segment_id] [int] NOT NULL,
+	[created_by] [int] NOT NULL,
+	[modified_by] [int] NULL,
+	[first_name] [nvarchar](50) NOT NULL,
+	[last_name] [nvarchar](50) NOT NULL,
+	[email] [nvarchar](100) NOT NULL,
+	[phone] [nvarchar](20) NULL,
+	[company_name] [nvarchar](100) NULL,
+	[address] [nvarchar](500) NULL,
+	[city] [nvarchar](50) NULL,
+	[state_province] [nvarchar](50) NULL,
+	[postal_code] [nvarchar](10) NULL,
+	[country] [nvarchar](50) NULL,
+	[customer_status] [nvarchar](20) NULL,
+	[total_revenue] [decimal](12, 2) NULL,
+	[source] [nvarchar](100) NULL,
+	[notes] [nvarchar](max) NULL,
+	[is_active] [bit] NULL,
+	[is_archived] [bit] NULL,
+	[archived_date] [datetime2](7) NULL,
+	[archived_by] [int] NULL,
+	[created_date] [datetime2](7) NULL,
+	[modified_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[customer_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+UNIQUE NONCLUSTERED 
+(
+	[email] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Interactions]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Interactions](
+	[interaction_id] [int] IDENTITY(1,1) NOT NULL,
+	[customer_id] [int] NOT NULL,
+	[user_id] [int] NOT NULL,
+	[interaction_type] [nvarchar](20) NOT NULL,
+	[interaction_date] [datetime2](7) NOT NULL,
+	[duration_minutes] [int] NULL,
+	[subject] [nvarchar](200) NULL,
+	[notes] [nvarchar](max) NULL,
+	[follow_up_date] [date] NULL,
+	[follow_up_completed] [bit] NULL,
+	[is_archived] [bit] NULL,
+	[archived_date] [datetime2](7) NULL,
+	[created_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[interaction_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Sales_Pipeline]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Sales_Pipeline](
+	[opportunity_id] [int] IDENTITY(1,1) NOT NULL,
+	[customer_id] [int] NOT NULL,
+	[assigned_to] [int] NOT NULL,
+	[stage_id] [int] NOT NULL,
+	[opportunity_name] [nvarchar](100) NOT NULL,
+	[deal_value] [decimal](12, 2) NOT NULL,
+	[probability] [int] NULL,
+	[expected_close_date] [date] NULL,
+	[actual_close_date] [date] NULL,
+	[close_reason] [nvarchar](500) NULL,
+	[notes] [nvarchar](max) NULL,
+	[is_archived] [bit] NULL,
+	[archived_date] [datetime2](7) NULL,
+	[created_date] [datetime2](7) NULL,
+	[modified_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[opportunity_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  View [dbo].[vw_Customer_Summary]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- View: vw_Customer_Summary
+-- Purpose: Summary information for all customers
+
+CREATE   VIEW [dbo].[vw_Customer_Summary]
+AS
+SELECT
+c.customer_id,
+c.first_name,
+c.last_name,
+c.first_name + ' ' + c.last_name AS full_name,
+c.email,
+c.phone,
+c.company_name,
+cs.segment_name,
+c.customer_status,
+c.total_revenue,
+c.source,
+c.created_date,
+COUNT(DISTINCT i.invoice_id) AS total_invoices,
+COUNT(DISTINCT sp.opportunity_id) AS total_opportunities,
+COUNT(DISTINCT int.interaction_id) AS total_interactions,
+MAX(int.interaction_date) AS last_contact_date,
+ISNULL(SUM(CASE WHEN inv.payment_status = 'Overdue' THEN inv.total_amount ELSE 0 END), 0) AS overdue_amount,
+u.first_name + ' ' + u.last_name AS created_by_name
+FROM tbl_Customers c
+LEFT JOIN tbl_Customer_Segments cs ON c.segment_id = cs.segment_id
+LEFT JOIN tbl_Invoices i ON c.customer_id = i.customer_id
+LEFT JOIN tbl_Sales_Pipeline sp ON c.customer_id = sp.customer_id
+LEFT JOIN tbl_Interactions int ON c.customer_id = int.customer_id
+LEFT JOIN tbl_Invoices inv ON c.customer_id = inv.customer_id AND inv.payment_status = 'Overdue'
+LEFT JOIN tbl_Users u ON c.created_by = u.user_id
+WHERE c.is_archived = 0
+GROUP BY
+c.customer_id, c.first_name, c.last_name, c.email, c.phone,
+c.company_name, cs.segment_name, c.customer_status, c.total_revenue,
+c.source, c.created_date, u.first_name, u.last_name;
+
+GO
+/****** Object:  Table [dbo].[tbl_Pipeline_Stages]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Pipeline_Stages](
+	[stage_id] [int] IDENTITY(1,1) NOT NULL,
+	[stage_name] [nvarchar](50) NOT NULL,
+	[stage_order] [int] NOT NULL,
+	[default_probability] [int] NULL,
+	[description] [nvarchar](500) NULL,
+	[is_closed] [bit] NULL,
+	[stage_color] [nvarchar](7) NULL,
+	[is_active] [bit] NULL,
+	[created_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[stage_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+UNIQUE NONCLUSTERED 
+(
+	[stage_name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+UNIQUE NONCLUSTERED 
+(
+	[stage_order] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  View [dbo].[vw_Sales_Pipeline_Summary]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE   VIEW [dbo].[vw_Sales_Pipeline_Summary]
+AS
+SELECT
+sp.opportunity_id,
+sp.opportunity_name,
+c.first_name + ' ' + c.last_name AS customer_name,
+c.company_name,
+ps.stage_name,
+ps.stage_order,
+ps.stage_color,
+sp.deal_value,
+sp.probability,
+(sp.deal_value * sp.probability / 100) AS weighted_value,
+u.first_name + ' ' + u.last_name AS assigned_to_name,
+sp.expected_close_date,
+DATEDIFF(DAY, GETDATE(), sp.expected_close_date) AS days_until_close,
+sp.created_date
+FROM tbl_Sales_Pipeline sp
+INNER JOIN tbl_Customers c ON sp.customer_id = c.customer_id
+INNER JOIN tbl_Pipeline_Stages ps ON sp.stage_id = ps.stage_id
+INNER JOIN tbl_Users u ON sp.assigned_to = u.user_id
+WHERE sp.is_archived = 0 AND ps.is_closed = 0;
+
+GO
+/****** Object:  Table [dbo].[tbl_Campaigns]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Campaigns](
+	[campaign_id] [int] IDENTITY(1,1) NOT NULL,
+	[created_by] [int] NOT NULL,
+	[campaign_name] [nvarchar](100) NOT NULL,
+	[campaign_type] [nvarchar](20) NULL,
+	[start_date] [date] NOT NULL,
+	[end_date] [date] NOT NULL,
+	[budget] [decimal](10, 2) NOT NULL,
+	[actual_spend] [decimal](10, 2) NULL,
+	[subject_line] [nvarchar](200) NULL,
+	[email_content] [nvarchar](max) NULL,
+	[campaign_status] [nvarchar](20) NULL,
+	[total_sent] [int] NULL,
+	[total_opened] [int] NULL,
+	[total_clicked] [int] NULL,
+	[total_converted] [int] NULL,
+	[revenue_generated] [decimal](12, 2) NULL,
+	[is_archived] [bit] NULL,
+	[archived_date] [datetime2](7) NULL,
+	[created_date] [datetime2](7) NULL,
+	[modified_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[campaign_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  View [dbo].[vw_Campaign_Performance]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE   VIEW [dbo].[vw_Campaign_Performance]
+AS
+SELECT
+c.campaign_id,
+c.campaign_name,
+c.campaign_type,
+c.campaign_status,
+c.start_date,
+c.end_date,
+c.budget,
+c.actual_spend,
+c.total_sent,
+c.total_opened,
+c.total_clicked,
+c.total_converted,
+CASE WHEN c.total_sent > 0
+THEN CAST(ROUND((c.total_opened * 100.0 / c.total_sent), 2) AS DECIMAL(5,2))
+ELSE 0 END AS open_rate,
+CASE WHEN c.total_sent > 0
+THEN CAST(ROUND((c.total_clicked * 100.0 / c.total_sent), 2) AS DECIMAL(5,2))
+ELSE 0 END AS click_rate,
+CASE WHEN c.total_sent > 0
+THEN CAST(ROUND((c.total_converted * 100.0 / c.total_sent), 2) AS DECIMAL(5,2))
+ELSE 0 END AS conversion_rate,
+c.revenue_generated,
+CASE WHEN c.actual_spend > 0
+THEN CAST(ROUND(((c.revenue_generated - c.actual_spend) / c.actual_spend) * 100, 2) AS DECIMAL(10,2))
+ELSE
+0 END AS roi_percentage,
+u.first_name + ' ' + u.last_name AS created_by_name,
+c.created_date
+FROM tbl_Campaigns c
+INNER JOIN tbl_Users u ON c.created_by = u.user_id
+WHERE c.is_archived = 0;
+
+GO
+/****** Object:  View [dbo].[vw_Financial_Summary]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE   VIEW [dbo].[vw_Financial_Summary]
+AS
+SELECT
+FORMAT(i.invoice_date, 'yyyy-MM') AS month_year,
+YEAR(i.invoice_date) AS year,
+MONTH(i.invoice_date) AS month,
+COUNT(i.invoice_id) AS total_invoices,
+SUM(i.total_amount) AS total_billed,
+SUM(CASE WHEN i.payment_status = 'Paid' THEN i.total_amount ELSE 0 END) AS total_collected,
+SUM(CASE WHEN i.payment_status = 'Pending' THEN i.total_amount ELSE 0 END) AS total_pending,
+SUM(CASE WHEN i.payment_status = 'Overdue' THEN i.total_amount ELSE 0 END) AS total_overdue,
+CASE WHEN SUM(i.total_amount) > 0
+THEN CAST(ROUND(SUM(CASE WHEN i.payment_status = 'Paid' THEN i.total_amount ELSE 0 END) * 100.0 / SUM(i.total_amount), 2) AS DECIMAL(5,2))
+ELSE 0 END AS collection_rate
+FROM tbl_Invoices i
+WHERE i.is_archived = 0 AND i.payment_status != 'Void'
+GROUP BY FORMAT(i.invoice_date, 'yyyy-MM'), YEAR(i.invoice_date), MONTH(i.invoice_date);
+
+GO
+/****** Object:  View [dbo].[vw_Upcoming_Follow_Ups]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE   VIEW [dbo].[vw_Upcoming_Follow_Ups]
+AS
+SELECT
+i.interaction_id,
+i.follow_up_date,
+DATEDIFF(DAY, GETDATE(), i.follow_up_date) AS days_until_followup,
+c.customer_id,
+c.first_name + ' ' + c.last_name AS customer_name,
+c.company_name,
+c.email,
+c.phone,
+i.subject,
+i.notes,
+u.user_id,
+u.first_name + ' ' + u.last_name AS assigned_to,
+i.interaction_date AS last_interaction_date,
+i.interaction_type AS last_interaction_type
+FROM tbl_Interactions i
+INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
+INNER JOIN tbl_Users u ON i.user_id = u.user_id
+WHERE i.follow_up_date IS NOT NULL
+AND i.follow_up_completed = 0
+AND i.is_archived = 0
+AND c.is_archived = 0;
+
+GO
+/****** Object:  Table [dbo].[tbl_Activity_Log]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Activity_Log](
+	[log_id] [bigint] IDENTITY(1,1) NOT NULL,
+	[user_id] [int] NOT NULL,
+	[activity_type] [nvarchar](50) NOT NULL,
+	[table_name] [nvarchar](50) NULL,
+	[record_id] [int] NULL,
+	[action] [nvarchar](50) NOT NULL,
+	[old_values] [nvarchar](max) NULL,
+	[new_values] [nvarchar](max) NULL,
+	[ip_address] [nvarchar](45) NULL,
+	[user_agent] [nvarchar](500) NULL,
+	[created_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[log_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Campaign_Customers]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Campaign_Customers](
+	[campaign_customer_id] [int] IDENTITY(1,1) NOT NULL,
+	[campaign_id] [int] NOT NULL,
+	[customer_id] [int] NOT NULL,
+	[email_sent_date] [datetime2](7) NULL,
+	[email_opened] [bit] NULL,
+	[email_open_date] [datetime2](7) NULL,
+	[clicked_link] [bit] NULL,
+	[click_date] [datetime2](7) NULL,
+	[converted] [bit] NULL,
+	[conversion_date] [datetime2](7) NULL,
+	[conversion_value] [decimal](12, 2) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[campaign_customer_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_tbl_Campaign_Customer] UNIQUE NONCLUSTERED 
+(
+	[campaign_id] ASC,
+	[customer_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Campaigns_Archive]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Campaigns_Archive](
+	[archive_id] [bigint] IDENTITY(1,1) NOT NULL,
+	[campaign_id] [int] NOT NULL,
+	[campaign_name] [nvarchar](100) NULL,
+	[campaign_type] [nvarchar](20) NULL,
+	[start_date] [date] NULL,
+	[end_date] [date] NULL,
+	[budget] [decimal](10, 2) NULL,
+	[actual_spend] [decimal](10, 2) NULL,
+	[total_sent] [int] NULL,
+	[total_opened] [int] NULL,
+	[total_clicked] [int] NULL,
+	[total_converted] [int] NULL,
+	[revenue_generated] [decimal](12, 2) NULL,
+	[archived_date] [datetime2](7) NULL,
+	[archived_by] [int] NULL,
+	[original_created_date] [datetime2](7) NULL,
+	[archive_reason] [nvarchar](500) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[archive_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Customers_Archive]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Customers_Archive](
+	[archive_id] [bigint] IDENTITY(1,1) NOT NULL,
+	[customer_id] [int] NOT NULL,
+	[segment_id] [int] NULL,
+	[created_by] [int] NULL,
+	[first_name] [nvarchar](50) NULL,
+	[last_name] [nvarchar](50) NULL,
+	[email] [nvarchar](100) NULL,
+	[phone] [nvarchar](20) NULL,
+	[company_name] [nvarchar](100) NULL,
+	[address] [nvarchar](500) NULL,
+	[city] [nvarchar](50) NULL,
+	[state_province] [nvarchar](50) NULL,
+	[postal_code] [nvarchar](10) NULL,
+	[country] [nvarchar](50) NULL,
+	[customer_status] [nvarchar](20) NULL,
+	[total_revenue] [decimal](12, 2) NULL,
+	[source] [nvarchar](100) NULL,
+	[notes] [nvarchar](max) NULL,
+	[archived_date] [datetime2](7) NULL,
+	[archived_by] [int] NULL,
+	[original_created_date] [datetime2](7) NULL,
+	[archive_reason] [nvarchar](500) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[archive_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Documents]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Documents](
+	[document_id] [int] IDENTITY(1,1) NOT NULL,
+	[customer_id] [int] NULL,
+	[uploaded_by] [int] NOT NULL,
+	[document_name] [nvarchar](200) NOT NULL,
+	[document_type] [nvarchar](50) NOT NULL,
+	[file_path] [nvarchar](255) NOT NULL,
+	[file_size] [int] NULL,
+	[mime_type] [nvarchar](100) NULL,
+	[is_archived] [bit] NULL,
+	[archived_date] [datetime2](7) NULL,
+	[upload_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[document_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Invoice_Items]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Invoice_Items](
+	[item_id] [int] IDENTITY(1,1) NOT NULL,
+	[invoice_id] [int] NOT NULL,
+	[item_order] [int] NOT NULL,
+	[description] [nvarchar](200) NOT NULL,
+	[quantity] [decimal](10, 2) NOT NULL,
+	[unit_price] [decimal](12, 2) NOT NULL,
+	[amount] [decimal](12, 2) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[item_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Invoices_Archive]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Invoices_Archive](
+	[archive_id] [bigint] IDENTITY(1,1) NOT NULL,
+	[invoice_id] [int] NOT NULL,
+	[customer_id] [int] NULL,
+	[invoice_number] [nvarchar](50) NULL,
+	[invoice_date] [date] NULL,
+	[due_date] [date] NULL,
+	[total_amount] [decimal](12, 2) NULL,
+	[payment_status] [nvarchar](20) NULL,
+	[archived_date] [datetime2](7) NULL,
+	[archived_by] [int] NULL,
+	[original_created_date] [datetime2](7) NULL,
+	[archive_reason] [nvarchar](500) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[archive_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Roles]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Roles](
+	[role_id] [int] IDENTITY(1,1) NOT NULL,
+	[role_name] [nvarchar](50) NOT NULL,
+	[description] [nvarchar](500) NULL,
+	[permissions] [nvarchar](max) NULL,
+	[is_active] [bit] NULL,
+	[created_date] [datetime2](7) NULL,
+	[modified_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[role_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+UNIQUE NONCLUSTERED 
+(
+	[role_name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Sales_Pipeline_Archive]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Sales_Pipeline_Archive](
+	[archive_id] [bigint] IDENTITY(1,1) NOT NULL,
+	[opportunity_id] [int] NOT NULL,
+	[customer_id] [int] NULL,
+	[assigned_to] [int] NULL,
+	[stage_id] [int] NULL,
+	[opportunity_name] [nvarchar](100) NULL,
+	[deal_value] [decimal](12, 2) NULL,
+	[probability] [int] NULL,
+	[expected_close_date] [date] NULL,
+	[actual_close_date] [date] NULL,
+	[close_reason] [nvarchar](500) NULL,
+	[archived_date] [datetime2](7) NULL,
+	[archived_by] [int] NULL,
+	[original_created_date] [datetime2](7) NULL,
+	[archive_reason] [nvarchar](500) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[archive_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_System_Settings]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_System_Settings](
+	[setting_id] [int] IDENTITY(1,1) NOT NULL,
+	[setting_key] [nvarchar](100) NOT NULL,
+	[setting_value] [nvarchar](max) NULL,
+	[setting_type] [nvarchar](20) NULL,
+	[description] [nvarchar](500) NULL,
+	[is_encrypted] [bit] NULL,
+	[modified_by] [int] NULL,
+	[modified_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[setting_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+UNIQUE NONCLUSTERED 
+(
+	[setting_key] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Transactions]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Transactions](
+	[transaction_id] [int] IDENTITY(1,1) NOT NULL,
+	[customer_id] [int] NOT NULL,
+	[invoice_id] [int] NULL,
+	[recorded_by] [int] NOT NULL,
+	[transaction_date] [date] NOT NULL,
+	[amount] [decimal](12, 2) NOT NULL,
+	[payment_method] [nvarchar](50) NOT NULL,
+	[reference_number] [nvarchar](100) NULL,
+	[transaction_type] [nvarchar](20) NULL,
+	[transaction_status] [nvarchar](20) NULL,
+	[notes] [nvarchar](max) NULL,
+	[is_archived] [bit] NULL,
+	[archived_date] [datetime2](7) NULL,
+	[created_date] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[transaction_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[tbl_Transactions_Archive]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tbl_Transactions_Archive](
+	[archive_id] [bigint] IDENTITY(1,1) NOT NULL,
+	[transaction_id] [int] NOT NULL,
+	[customer_id] [int] NULL,
+	[invoice_id] [int] NULL,
+	[transaction_date] [date] NULL,
+	[amount] [decimal](12, 2) NULL,
+	[payment_method] [nvarchar](50) NULL,
+	[reference_number] [nvarchar](100) NULL,
+	[archived_date] [datetime2](7) NULL,
+	[archived_by] [int] NULL,
+	[original_created_date] [datetime2](7) NULL,
+	[archive_reason] [nvarchar](500) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[archive_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_ActivityLog_Action]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_ActivityLog_Action] ON [dbo].[tbl_Activity_Log]
+(
+	[action] ASC,
+	[created_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_ActivityLog_Date]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_ActivityLog_Date] ON [dbo].[tbl_Activity_Log]
+(
+	[created_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_ActivityLog_Table]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_ActivityLog_Table] ON [dbo].[tbl_Activity_Log]
+(
+	[table_name] ASC,
+	[record_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_ActivityLog_User]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_ActivityLog_User] ON [dbo].[tbl_Activity_Log]
+(
+	[user_id] ASC,
+	[created_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_CampaignCustomers_Campaign]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_CampaignCustomers_Campaign] ON [dbo].[tbl_Campaign_Customers]
+(
+	[campaign_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_CampaignCustomers_Clicked]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_CampaignCustomers_Clicked] ON [dbo].[tbl_Campaign_Customers]
+(
+	[clicked_link] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_CampaignCustomers_Customer]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_CampaignCustomers_Customer] ON [dbo].[tbl_Campaign_Customers]
+(
+	[customer_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_CampaignCustomers_Opened]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_CampaignCustomers_Opened] ON [dbo].[tbl_Campaign_Customers]
+(
+	[email_opened] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Campaigns_Archived]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Campaigns_Archived] ON [dbo].[tbl_Campaigns]
+(
+	[is_archived] ASC,
+	[archived_date] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Campaigns_CreatedBy]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Campaigns_CreatedBy] ON [dbo].[tbl_Campaigns]
+(
+	[created_by] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Campaigns_Dates]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Campaigns_Dates] ON [dbo].[tbl_Campaigns]
+(
+	[start_date] ASC,
+	[end_date] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Campaigns_Status]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Campaigns_Status] ON [dbo].[tbl_Campaigns]
+(
+	[campaign_status] ASC
+)
+WHERE ([is_archived]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_CampaignsArchive_CampaignId]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_CampaignsArchive_CampaignId] ON [dbo].[tbl_Campaigns_Archive]
+(
+	[campaign_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_CampaignsArchive_Date]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_CampaignsArchive_Date] ON [dbo].[tbl_Campaigns_Archive]
+(
+	[archived_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_CampaignsArchive_Name]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_CampaignsArchive_Name] ON [dbo].[tbl_Campaigns_Archive]
+(
+	[campaign_name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Customer_Segments_Name]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Customer_Segments_Name] ON [dbo].[tbl_Customer_Segments]
+(
+	[segment_name] ASC
+)
+WHERE ([is_active]=(1))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Customers_Archived]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Customers_Archived] ON [dbo].[tbl_Customers]
+(
+	[is_archived] ASC,
+	[archived_date] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Customers_Company]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Customers_Company] ON [dbo].[tbl_Customers]
+(
+	[company_name] ASC
+)
+WHERE ([is_active]=(1))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Customers_CreatedDate]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Customers_CreatedDate] ON [dbo].[tbl_Customers]
+(
+	[created_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Customers_Email]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Customers_Email] ON [dbo].[tbl_Customers]
+(
+	[email] ASC
+)
+WHERE ([is_active]=(1))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Customers_Segment]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Customers_Segment] ON [dbo].[tbl_Customers]
+(
+	[segment_id] ASC
+)
+WHERE ([is_active]=(1))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Customers_Status]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Customers_Status] ON [dbo].[tbl_Customers]
+(
+	[customer_status] ASC
+)
+WHERE ([is_active]=(1))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_CustomersArchive_Company]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_CustomersArchive_Company] ON [dbo].[tbl_Customers_Archive]
+(
+	[company_name] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_CustomersArchive_CustomerId]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_CustomersArchive_CustomerId] ON [dbo].[tbl_Customers_Archive]
+(
+	[customer_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_CustomersArchive_Date]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_CustomersArchive_Date] ON [dbo].[tbl_Customers_Archive]
+(
+	[archived_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Documents_Archived]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Documents_Archived] ON [dbo].[tbl_Documents]
+(
+	[is_archived] ASC,
+	[archived_date] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Documents_Customer]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Documents_Customer] ON [dbo].[tbl_Documents]
+(
+	[customer_id] ASC
+)
+WHERE ([is_archived]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Documents_Date]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Documents_Date] ON [dbo].[tbl_Documents]
+(
+	[upload_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Documents_Type]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Documents_Type] ON [dbo].[tbl_Documents]
+(
+	[document_type] ASC
+)
+WHERE ([is_archived]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Interactions_Customer]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Interactions_Customer] ON [dbo].[tbl_Interactions]
+(
+	[customer_id] ASC,
+	[interaction_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Interactions_Date]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Interactions_Date] ON [dbo].[tbl_Interactions]
+(
+	[interaction_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Interactions_FollowUp]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Interactions_FollowUp] ON [dbo].[tbl_Interactions]
+(
+	[follow_up_date] ASC
+)
+WHERE ([follow_up_completed]=(0) AND [is_archived]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Interactions_User]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Interactions_User] ON [dbo].[tbl_Interactions]
+(
+	[user_id] ASC,
+	[interaction_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_InvoiceItems_Invoice]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_InvoiceItems_Invoice] ON [dbo].[tbl_Invoice_Items]
+(
+	[invoice_id] ASC,
+	[item_order] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Invoices_Archived]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Invoices_Archived] ON [dbo].[tbl_Invoices]
+(
+	[is_archived] ASC,
+	[archived_date] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Invoices_CreatedDate]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Invoices_CreatedDate] ON [dbo].[tbl_Invoices]
+(
+	[created_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Invoices_Customer]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Invoices_Customer] ON [dbo].[tbl_Invoices]
+(
+	[customer_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Invoices_DueDate]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Invoices_DueDate] ON [dbo].[tbl_Invoices]
+(
+	[due_date] ASC
+)
+WHERE ([payment_status] IN ('Issued', 'Partial', 'Overdue'))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Invoices_Number]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Invoices_Number] ON [dbo].[tbl_Invoices]
+(
+	[invoice_number] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Invoices_Status]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Invoices_Status] ON [dbo].[tbl_Invoices]
+(
+	[payment_status] ASC
+)
+WHERE ([is_archived]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_InvoicesArchive_Date]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_InvoicesArchive_Date] ON [dbo].[tbl_Invoices_Archive]
+(
+	[archived_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_InvoicesArchive_InvoiceId]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_InvoicesArchive_InvoiceId] ON [dbo].[tbl_Invoices_Archive]
+(
+	[invoice_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_InvoicesArchive_Number]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_InvoicesArchive_Number] ON [dbo].[tbl_Invoices_Archive]
+(
+	[invoice_number] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Pipeline_Stages_Order]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Pipeline_Stages_Order] ON [dbo].[tbl_Pipeline_Stages]
+(
+	[stage_order] ASC
+)
+WHERE ([is_active]=(1))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Roles_RoleName]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Roles_RoleName] ON [dbo].[tbl_Roles]
+(
+	[role_name] ASC
+)
+WHERE ([is_active]=(1))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Pipeline_Archived]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Pipeline_Archived] ON [dbo].[tbl_Sales_Pipeline]
+(
+	[is_archived] ASC,
+	[archived_date] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Pipeline_Assigned]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Pipeline_Assigned] ON [dbo].[tbl_Sales_Pipeline]
+(
+	[assigned_to] ASC
+)
+WHERE ([is_archived]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Pipeline_CloseDate]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Pipeline_CloseDate] ON [dbo].[tbl_Sales_Pipeline]
+(
+	[expected_close_date] ASC
+)
+WHERE ([is_archived]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Pipeline_Customer]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Pipeline_Customer] ON [dbo].[tbl_Sales_Pipeline]
+(
+	[customer_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Pipeline_Stage]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Pipeline_Stage] ON [dbo].[tbl_Sales_Pipeline]
+(
+	[stage_id] ASC
+)
+WHERE ([is_archived]=(0))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_PipelineArchive_Customer]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_PipelineArchive_Customer] ON [dbo].[tbl_Sales_Pipeline_Archive]
+(
+	[customer_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_PipelineArchive_Date]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_PipelineArchive_Date] ON [dbo].[tbl_Sales_Pipeline_Archive]
+(
+	[archived_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_PipelineArchive_OpportunityId]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_PipelineArchive_OpportunityId] ON [dbo].[tbl_Sales_Pipeline_Archive]
+(
+	[opportunity_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_System_Settings_Key]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_System_Settings_Key] ON [dbo].[tbl_System_Settings]
+(
+	[setting_key] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Transactions_Archived]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Transactions_Archived] ON [dbo].[tbl_Transactions]
+(
+	[is_archived] ASC,
+	[archived_date] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Transactions_Customer]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Transactions_Customer] ON [dbo].[tbl_Transactions]
+(
+	[customer_id] ASC,
+	[transaction_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Transactions_Date]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Transactions_Date] ON [dbo].[tbl_Transactions]
+(
+	[transaction_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Transactions_Invoice]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Transactions_Invoice] ON [dbo].[tbl_Transactions]
+(
+	[invoice_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Transactions_Status]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Transactions_Status] ON [dbo].[tbl_Transactions]
+(
+	[transaction_status] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_TransactionsArchive_Customer]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_TransactionsArchive_Customer] ON [dbo].[tbl_Transactions_Archive]
+(
+	[customer_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_TransactionsArchive_Date]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_TransactionsArchive_Date] ON [dbo].[tbl_Transactions_Archive]
+(
+	[archived_date] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_TransactionsArchive_TransactionId]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_TransactionsArchive_TransactionId] ON [dbo].[tbl_Transactions_Archive]
+(
+	[transaction_id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+SET ANSI_PADDING ON
+GO
+/****** Object:  Index [IX_tbl_Users_Email]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Users_Email] ON [dbo].[tbl_Users]
+(
+	[email] ASC
+)
+WHERE ([is_active]=(1))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Users_LastLogin]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Users_LastLogin] ON [dbo].[tbl_Users]
+(
+	[last_login] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [IX_tbl_Users_Role]    Script Date: 11/27/2025 6:59:22 PM ******/
+CREATE NONCLUSTERED INDEX [IX_tbl_Users_Role] ON [dbo].[tbl_Users]
+(
+	[role_id] ASC
+)
+WHERE ([is_active]=(1))
+WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+ALTER TABLE [dbo].[tbl_Activity_Log] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Campaign_Customers] ADD  DEFAULT ((0)) FOR [email_opened]
+GO
+ALTER TABLE [dbo].[tbl_Campaign_Customers] ADD  DEFAULT ((0)) FOR [clicked_link]
+GO
+ALTER TABLE [dbo].[tbl_Campaign_Customers] ADD  DEFAULT ((0)) FOR [converted]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT ('Email') FOR [campaign_type]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT ((0.00)) FOR [actual_spend]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT ('Draft') FOR [campaign_status]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT ((0)) FOR [total_sent]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT ((0)) FOR [total_opened]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT ((0)) FOR [total_clicked]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT ((0)) FOR [total_converted]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT ((0.00)) FOR [revenue_generated]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT ((0)) FOR [is_archived]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] ADD  DEFAULT (getdate()) FOR [modified_date]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns_Archive] ADD  DEFAULT (getdate()) FOR [archived_date]
+GO
+ALTER TABLE [dbo].[tbl_Customer_Segments] ADD  DEFAULT ((0)) FOR [min_revenue]
+GO
+ALTER TABLE [dbo].[tbl_Customer_Segments] ADD  DEFAULT ((1)) FOR [is_active]
+GO
+ALTER TABLE [dbo].[tbl_Customer_Segments] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Customers] ADD  DEFAULT ('Philippines') FOR [country]
+GO
+ALTER TABLE [dbo].[tbl_Customers] ADD  DEFAULT ('Lead') FOR [customer_status]
+GO
+ALTER TABLE [dbo].[tbl_Customers] ADD  DEFAULT ((0.00)) FOR [total_revenue]
+GO
+ALTER TABLE [dbo].[tbl_Customers] ADD  DEFAULT ((1)) FOR [is_active]
+GO
+ALTER TABLE [dbo].[tbl_Customers] ADD  DEFAULT ((0)) FOR [is_archived]
+GO
+ALTER TABLE [dbo].[tbl_Customers] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Customers] ADD  DEFAULT (getdate()) FOR [modified_date]
+GO
+ALTER TABLE [dbo].[tbl_Customers_Archive] ADD  DEFAULT (getdate()) FOR [archived_date]
+GO
+ALTER TABLE [dbo].[tbl_Documents] ADD  DEFAULT ((0)) FOR [is_archived]
+GO
+ALTER TABLE [dbo].[tbl_Documents] ADD  DEFAULT (getdate()) FOR [upload_date]
+GO
+ALTER TABLE [dbo].[tbl_Interactions] ADD  DEFAULT ((0)) FOR [follow_up_completed]
+GO
+ALTER TABLE [dbo].[tbl_Interactions] ADD  DEFAULT ((0)) FOR [is_archived]
+GO
+ALTER TABLE [dbo].[tbl_Interactions] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Invoice_Items] ADD  DEFAULT ((1)) FOR [quantity]
+GO
+ALTER TABLE [dbo].[tbl_Invoices] ADD  DEFAULT ('Net 30') FOR [payment_terms]
+GO
+ALTER TABLE [dbo].[tbl_Invoices] ADD  DEFAULT ((12.00)) FOR [tax_rate]
+GO
+ALTER TABLE [dbo].[tbl_Invoices] ADD  DEFAULT ((0.00)) FOR [discount_amount]
+GO
+ALTER TABLE [dbo].[tbl_Invoices] ADD  DEFAULT ('Draft') FOR [payment_status]
+GO
+ALTER TABLE [dbo].[tbl_Invoices] ADD  DEFAULT ((0)) FOR [is_archived]
+GO
+ALTER TABLE [dbo].[tbl_Invoices] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Invoices] ADD  DEFAULT (getdate()) FOR [modified_date]
+GO
+ALTER TABLE [dbo].[tbl_Invoices_Archive] ADD  DEFAULT (getdate()) FOR [archived_date]
+GO
+ALTER TABLE [dbo].[tbl_Pipeline_Stages] ADD  DEFAULT ((50)) FOR [default_probability]
+GO
+ALTER TABLE [dbo].[tbl_Pipeline_Stages] ADD  DEFAULT ((0)) FOR [is_closed]
+GO
+ALTER TABLE [dbo].[tbl_Pipeline_Stages] ADD  DEFAULT ((1)) FOR [is_active]
+GO
+ALTER TABLE [dbo].[tbl_Pipeline_Stages] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Roles] ADD  DEFAULT ((1)) FOR [is_active]
+GO
+ALTER TABLE [dbo].[tbl_Roles] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Roles] ADD  DEFAULT (getdate()) FOR [modified_date]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline] ADD  DEFAULT ((50)) FOR [probability]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline] ADD  DEFAULT ((0)) FOR [is_archived]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline] ADD  DEFAULT (getdate()) FOR [modified_date]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline_Archive] ADD  DEFAULT (getdate()) FOR [archived_date]
+GO
+ALTER TABLE [dbo].[tbl_System_Settings] ADD  DEFAULT ('String') FOR [setting_type]
+GO
+ALTER TABLE [dbo].[tbl_System_Settings] ADD  DEFAULT ((0)) FOR [is_encrypted]
+GO
+ALTER TABLE [dbo].[tbl_System_Settings] ADD  DEFAULT (getdate()) FOR [modified_date]
+GO
+ALTER TABLE [dbo].[tbl_Transactions] ADD  DEFAULT ('Payment') FOR [transaction_type]
+GO
+ALTER TABLE [dbo].[tbl_Transactions] ADD  DEFAULT ('Completed') FOR [transaction_status]
+GO
+ALTER TABLE [dbo].[tbl_Transactions] ADD  DEFAULT ((0)) FOR [is_archived]
+GO
+ALTER TABLE [dbo].[tbl_Transactions] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Transactions_Archive] ADD  DEFAULT (getdate()) FOR [archived_date]
+GO
+ALTER TABLE [dbo].[tbl_Users] ADD  DEFAULT ((1)) FOR [is_active]
+GO
+ALTER TABLE [dbo].[tbl_Users] ADD  DEFAULT ((0)) FOR [failed_login_attempts]
+GO
+ALTER TABLE [dbo].[tbl_Users] ADD  DEFAULT (getdate()) FOR [created_date]
+GO
+ALTER TABLE [dbo].[tbl_Users] ADD  DEFAULT (getdate()) FOR [modified_date]
+GO
+ALTER TABLE [dbo].[tbl_Activity_Log]  WITH CHECK ADD  CONSTRAINT [FK_tbl_ActivityLog_Users] FOREIGN KEY([user_id])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Activity_Log] CHECK CONSTRAINT [FK_tbl_ActivityLog_Users]
+GO
+ALTER TABLE [dbo].[tbl_Campaign_Customers]  WITH CHECK ADD  CONSTRAINT [FK_tbl_CampaignCustomers_Campaigns] FOREIGN KEY([campaign_id])
+REFERENCES [dbo].[tbl_Campaigns] ([campaign_id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[tbl_Campaign_Customers] CHECK CONSTRAINT [FK_tbl_CampaignCustomers_Campaigns]
+GO
+ALTER TABLE [dbo].[tbl_Campaign_Customers]  WITH CHECK ADD  CONSTRAINT [FK_tbl_CampaignCustomers_Customers] FOREIGN KEY([customer_id])
+REFERENCES [dbo].[tbl_Customers] ([customer_id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[tbl_Campaign_Customers] CHECK CONSTRAINT [FK_tbl_CampaignCustomers_Customers]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Campaigns_CreatedBy] FOREIGN KEY([created_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] CHECK CONSTRAINT [FK_tbl_Campaigns_CreatedBy]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns_Archive]  WITH CHECK ADD  CONSTRAINT [FK_tbl_CampaignsArchive_ArchivedBy] FOREIGN KEY([archived_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Campaigns_Archive] CHECK CONSTRAINT [FK_tbl_CampaignsArchive_ArchivedBy]
+GO
+ALTER TABLE [dbo].[tbl_Customers]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Customers_ArchivedBy] FOREIGN KEY([archived_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Customers] CHECK CONSTRAINT [FK_tbl_Customers_ArchivedBy]
+GO
+ALTER TABLE [dbo].[tbl_Customers]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Customers_CreatedBy] FOREIGN KEY([created_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Customers] CHECK CONSTRAINT [FK_tbl_Customers_CreatedBy]
+GO
+ALTER TABLE [dbo].[tbl_Customers]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Customers_ModifiedBy] FOREIGN KEY([modified_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Customers] CHECK CONSTRAINT [FK_tbl_Customers_ModifiedBy]
+GO
+ALTER TABLE [dbo].[tbl_Customers]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Customers_Segments] FOREIGN KEY([segment_id])
+REFERENCES [dbo].[tbl_Customer_Segments] ([segment_id])
+GO
+ALTER TABLE [dbo].[tbl_Customers] CHECK CONSTRAINT [FK_tbl_Customers_Segments]
+GO
+ALTER TABLE [dbo].[tbl_Customers_Archive]  WITH CHECK ADD  CONSTRAINT [FK_tbl_CustomersArchive_ArchivedBy] FOREIGN KEY([archived_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Customers_Archive] CHECK CONSTRAINT [FK_tbl_CustomersArchive_ArchivedBy]
+GO
+ALTER TABLE [dbo].[tbl_Documents]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Documents_Customers] FOREIGN KEY([customer_id])
+REFERENCES [dbo].[tbl_Customers] ([customer_id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[tbl_Documents] CHECK CONSTRAINT [FK_tbl_Documents_Customers]
+GO
+ALTER TABLE [dbo].[tbl_Documents]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Documents_UploadedBy] FOREIGN KEY([uploaded_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Documents] CHECK CONSTRAINT [FK_tbl_Documents_UploadedBy]
+GO
+ALTER TABLE [dbo].[tbl_Interactions]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Interactions_Customers] FOREIGN KEY([customer_id])
+REFERENCES [dbo].[tbl_Customers] ([customer_id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[tbl_Interactions] CHECK CONSTRAINT [FK_tbl_Interactions_Customers]
+GO
+ALTER TABLE [dbo].[tbl_Interactions]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Interactions_Users] FOREIGN KEY([user_id])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Interactions] CHECK CONSTRAINT [FK_tbl_Interactions_Users]
+GO
+ALTER TABLE [dbo].[tbl_Invoice_Items]  WITH CHECK ADD  CONSTRAINT [FK_tbl_InvoiceItems_Invoices] FOREIGN KEY([invoice_id])
+REFERENCES [dbo].[tbl_Invoices] ([invoice_id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[tbl_Invoice_Items] CHECK CONSTRAINT [FK_tbl_InvoiceItems_Invoices]
+GO
+ALTER TABLE [dbo].[tbl_Invoices]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Invoices_CreatedBy] FOREIGN KEY([created_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Invoices] CHECK CONSTRAINT [FK_tbl_Invoices_CreatedBy]
+GO
+ALTER TABLE [dbo].[tbl_Invoices]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Invoices_Customers] FOREIGN KEY([customer_id])
+REFERENCES [dbo].[tbl_Customers] ([customer_id])
+GO
+ALTER TABLE [dbo].[tbl_Invoices] CHECK CONSTRAINT [FK_tbl_Invoices_Customers]
+GO
+ALTER TABLE [dbo].[tbl_Invoices_Archive]  WITH CHECK ADD  CONSTRAINT [FK_tbl_InvoicesArchive_ArchivedBy] FOREIGN KEY([archived_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Invoices_Archive] CHECK CONSTRAINT [FK_tbl_InvoicesArchive_ArchivedBy]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Pipeline_AssignedTo] FOREIGN KEY([assigned_to])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline] CHECK CONSTRAINT [FK_tbl_Pipeline_AssignedTo]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Pipeline_Customers] FOREIGN KEY([customer_id])
+REFERENCES [dbo].[tbl_Customers] ([customer_id])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline] CHECK CONSTRAINT [FK_tbl_Pipeline_Customers]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Pipeline_Stages] FOREIGN KEY([stage_id])
+REFERENCES [dbo].[tbl_Pipeline_Stages] ([stage_id])
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline] CHECK CONSTRAINT [FK_tbl_Pipeline_Stages]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline_Archive]  WITH CHECK ADD  CONSTRAINT [FK_tbl_PipelineArchive_ArchivedBy] FOREIGN KEY([archived_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline_Archive] CHECK CONSTRAINT [FK_tbl_PipelineArchive_ArchivedBy]
+GO
+ALTER TABLE [dbo].[tbl_System_Settings]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Settings_ModifiedBy] FOREIGN KEY([modified_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_System_Settings] CHECK CONSTRAINT [FK_tbl_Settings_ModifiedBy]
+GO
+ALTER TABLE [dbo].[tbl_Transactions]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Transactions_Customers] FOREIGN KEY([customer_id])
+REFERENCES [dbo].[tbl_Customers] ([customer_id])
+GO
+ALTER TABLE [dbo].[tbl_Transactions] CHECK CONSTRAINT [FK_tbl_Transactions_Customers]
+GO
+ALTER TABLE [dbo].[tbl_Transactions]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Transactions_Invoices] FOREIGN KEY([invoice_id])
+REFERENCES [dbo].[tbl_Invoices] ([invoice_id])
+ON DELETE SET NULL
+GO
+ALTER TABLE [dbo].[tbl_Transactions] CHECK CONSTRAINT [FK_tbl_Transactions_Invoices]
+GO
+ALTER TABLE [dbo].[tbl_Transactions]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Transactions_RecordedBy] FOREIGN KEY([recorded_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Transactions] CHECK CONSTRAINT [FK_tbl_Transactions_RecordedBy]
+GO
+ALTER TABLE [dbo].[tbl_Transactions_Archive]  WITH CHECK ADD  CONSTRAINT [FK_tbl_TransactionsArchive_ArchivedBy] FOREIGN KEY([archived_by])
+REFERENCES [dbo].[tbl_Users] ([user_id])
+GO
+ALTER TABLE [dbo].[tbl_Transactions_Archive] CHECK CONSTRAINT [FK_tbl_TransactionsArchive_ArchivedBy]
+GO
+ALTER TABLE [dbo].[tbl_Users]  WITH CHECK ADD  CONSTRAINT [FK_tbl_Users_Roles] FOREIGN KEY([role_id])
+REFERENCES [dbo].[tbl_Roles] ([role_id])
+GO
+ALTER TABLE [dbo].[tbl_Users] CHECK CONSTRAINT [FK_tbl_Users_Roles]
+GO
+ALTER TABLE [dbo].[tbl_Activity_Log]  WITH CHECK ADD  CONSTRAINT [CK_tbl_ActivityLog_Action] CHECK  (([action]='RESTORE' OR [action]='ARCHIVE' OR [action]='LOGOUT' OR [action]='LOGIN' OR [action]='SELECT' OR [action]='DELETE' OR [action]='UPDATE' OR [action]='INSERT'))
+GO
+ALTER TABLE [dbo].[tbl_Activity_Log] CHECK CONSTRAINT [CK_tbl_ActivityLog_Action]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Campaigns_Budget] CHECK  (([budget]>=(0)))
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] CHECK CONSTRAINT [CK_tbl_Campaigns_Budget]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Campaigns_Dates] CHECK  (([end_date]>=[start_date]))
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] CHECK CONSTRAINT [CK_tbl_Campaigns_Dates]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Campaigns_Metrics] CHECK  (([total_sent]>=(0) AND [total_opened]>=(0) AND [total_clicked]>=(0) AND [total_converted]>=(0) AND [total_opened]<=[total_sent] AND [total_clicked]<=[total_opened]))
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] CHECK CONSTRAINT [CK_tbl_Campaigns_Metrics]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Campaigns_Spend] CHECK  (([actual_spend]>=(0)))
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] CHECK CONSTRAINT [CK_tbl_Campaigns_Spend]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Campaigns_Status] CHECK  (([campaign_status]='Cancelled' OR [campaign_status]='Paused' OR [campaign_status]='Completed' OR [campaign_status]='Active' OR [campaign_status]='Scheduled' OR [campaign_status]='Draft'))
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] CHECK CONSTRAINT [CK_tbl_Campaigns_Status]
+GO
+ALTER TABLE [dbo].[tbl_Campaigns]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Campaigns_Type] CHECK  (([campaign_type]='Other' OR [campaign_type]='Social' OR [campaign_type]='SMS' OR [campaign_type]='Email'))
+GO
+ALTER TABLE [dbo].[tbl_Campaigns] CHECK CONSTRAINT [CK_tbl_Campaigns_Type]
+GO
+ALTER TABLE [dbo].[tbl_Customer_Segments]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Segments_Revenue] CHECK  (([min_revenue]>=(0) AND ([max_revenue] IS NULL OR [max_revenue]>[min_revenue])))
+GO
+ALTER TABLE [dbo].[tbl_Customer_Segments] CHECK CONSTRAINT [CK_tbl_Segments_Revenue]
+GO
+ALTER TABLE [dbo].[tbl_Customers]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Customers_Email] CHECK  (([email] like '%_@_%.__%'))
+GO
+ALTER TABLE [dbo].[tbl_Customers] CHECK CONSTRAINT [CK_tbl_Customers_Email]
+GO
+ALTER TABLE [dbo].[tbl_Customers]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Customers_Revenue] CHECK  (([total_revenue]>=(0)))
+GO
+ALTER TABLE [dbo].[tbl_Customers] CHECK CONSTRAINT [CK_tbl_Customers_Revenue]
+GO
+ALTER TABLE [dbo].[tbl_Customers]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Customers_Status] CHECK  (([customer_status]='Dormant' OR [customer_status]='Inactive' OR [customer_status]='Active' OR [customer_status]='Lead'))
+GO
+ALTER TABLE [dbo].[tbl_Customers] CHECK CONSTRAINT [CK_tbl_Customers_Status]
+GO
+ALTER TABLE [dbo].[tbl_Documents]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Documents_FileSize] CHECK  (([file_size] IS NULL OR [file_size]>(0)))
+GO
+ALTER TABLE [dbo].[tbl_Documents] CHECK CONSTRAINT [CK_tbl_Documents_FileSize]
+GO
+ALTER TABLE [dbo].[tbl_Documents]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Documents_Type] CHECK  (([document_type]='Other' OR [document_type]='Report' OR [document_type]='Agreement' OR [document_type]='Proposal' OR [document_type]='Invoice' OR [document_type]='Contract'))
+GO
+ALTER TABLE [dbo].[tbl_Documents] CHECK CONSTRAINT [CK_tbl_Documents_Type]
+GO
+ALTER TABLE [dbo].[tbl_Interactions]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Interactions_Duration] CHECK  (([duration_minutes] IS NULL OR [duration_minutes]>=(0)))
+GO
+ALTER TABLE [dbo].[tbl_Interactions] CHECK CONSTRAINT [CK_tbl_Interactions_Duration]
+GO
+ALTER TABLE [dbo].[tbl_Interactions]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Interactions_Type] CHECK  (([interaction_type]='Other' OR [interaction_type]='SMS' OR [interaction_type]='Note' OR [interaction_type]='Meeting' OR [interaction_type]='Email' OR [interaction_type]='Call'))
+GO
+ALTER TABLE [dbo].[tbl_Interactions] CHECK CONSTRAINT [CK_tbl_Interactions_Type]
+GO
+ALTER TABLE [dbo].[tbl_Invoice_Items]  WITH CHECK ADD  CONSTRAINT [CK_tbl_InvoiceItems_Amount] CHECK  (([amount]>=(0)))
+GO
+ALTER TABLE [dbo].[tbl_Invoice_Items] CHECK CONSTRAINT [CK_tbl_InvoiceItems_Amount]
+GO
+ALTER TABLE [dbo].[tbl_Invoice_Items]  WITH CHECK ADD  CONSTRAINT [CK_tbl_InvoiceItems_Price] CHECK  (([unit_price]>=(0)))
+GO
+ALTER TABLE [dbo].[tbl_Invoice_Items] CHECK CONSTRAINT [CK_tbl_InvoiceItems_Price]
+GO
+ALTER TABLE [dbo].[tbl_Invoice_Items]  WITH CHECK ADD  CONSTRAINT [CK_tbl_InvoiceItems_Quantity] CHECK  (([quantity]>(0)))
+GO
+ALTER TABLE [dbo].[tbl_Invoice_Items] CHECK CONSTRAINT [CK_tbl_InvoiceItems_Quantity]
+GO
+ALTER TABLE [dbo].[tbl_Invoices]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Invoices_Amounts] CHECK  (([subtotal]>=(0) AND [tax_amount]>=(0) AND [discount_amount]>=(0) AND [total_amount]>=(0)))
+GO
+ALTER TABLE [dbo].[tbl_Invoices] CHECK CONSTRAINT [CK_tbl_Invoices_Amounts]
+GO
+ALTER TABLE [dbo].[tbl_Invoices]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Invoices_Dates] CHECK  (([due_date]>=[invoice_date]))
+GO
+ALTER TABLE [dbo].[tbl_Invoices] CHECK CONSTRAINT [CK_tbl_Invoices_Dates]
+GO
+ALTER TABLE [dbo].[tbl_Invoices]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Invoices_Status] CHECK  (([payment_status]='Void' OR [payment_status]='Overdue' OR [payment_status]='Partial' OR [payment_status]='Paid' OR [payment_status]='Issued' OR [payment_status]='Draft'))
+GO
+ALTER TABLE [dbo].[tbl_Invoices] CHECK CONSTRAINT [CK_tbl_Invoices_Status]
+GO
+ALTER TABLE [dbo].[tbl_Pipeline_Stages]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Stages_Order] CHECK  (([stage_order]>(0)))
+GO
+ALTER TABLE [dbo].[tbl_Pipeline_Stages] CHECK CONSTRAINT [CK_tbl_Stages_Order]
+GO
+ALTER TABLE [dbo].[tbl_Pipeline_Stages]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Stages_Probability] CHECK  (([default_probability]>=(0) AND [default_probability]<=(100)))
+GO
+ALTER TABLE [dbo].[tbl_Pipeline_Stages] CHECK CONSTRAINT [CK_tbl_Stages_Probability]
+GO
+ALTER TABLE [dbo].[tbl_Roles]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Roles_RoleName] CHECK  ((len([role_name])>(0)))
+GO
+ALTER TABLE [dbo].[tbl_Roles] CHECK CONSTRAINT [CK_tbl_Roles_RoleName]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Pipeline_Probability] CHECK  (([probability]>=(0) AND [probability]<=(100)))
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline] CHECK CONSTRAINT [CK_tbl_Pipeline_Probability]
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Pipeline_Value] CHECK  (([deal_value]>=(0)))
+GO
+ALTER TABLE [dbo].[tbl_Sales_Pipeline] CHECK CONSTRAINT [CK_tbl_Pipeline_Value]
+GO
+ALTER TABLE [dbo].[tbl_System_Settings]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Settings_Type] CHECK  (([setting_type]='Encrypted' OR [setting_type]='JSON' OR [setting_type]='Boolean' OR [setting_type]='Integer' OR [setting_type]='String'))
+GO
+ALTER TABLE [dbo].[tbl_System_Settings] CHECK CONSTRAINT [CK_tbl_Settings_Type]
+GO
+ALTER TABLE [dbo].[tbl_Transactions]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Transactions_Amount] CHECK  (([amount]>(0)))
+GO
+ALTER TABLE [dbo].[tbl_Transactions] CHECK CONSTRAINT [CK_tbl_Transactions_Amount]
+GO
+ALTER TABLE [dbo].[tbl_Transactions]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Transactions_Method] CHECK  (([payment_method]='Other' OR [payment_method]='Online Payment' OR [payment_method]='Debit Card' OR [payment_method]='Credit Card' OR [payment_method]='Check' OR [payment_method]='Bank Transfer' OR [payment_method]='Cash'))
+GO
+ALTER TABLE [dbo].[tbl_Transactions] CHECK CONSTRAINT [CK_tbl_Transactions_Method]
+GO
+ALTER TABLE [dbo].[tbl_Transactions]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Transactions_Status] CHECK  (([transaction_status]='Cancelled' OR [transaction_status]='Failed' OR [transaction_status]='Completed' OR [transaction_status]='Pending'))
+GO
+ALTER TABLE [dbo].[tbl_Transactions] CHECK CONSTRAINT [CK_tbl_Transactions_Status]
+GO
+ALTER TABLE [dbo].[tbl_Transactions]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Transactions_Type] CHECK  (([transaction_type]='Adjustment' OR [transaction_type]='Refund' OR [transaction_type]='Payment'))
+GO
+ALTER TABLE [dbo].[tbl_Transactions] CHECK CONSTRAINT [CK_tbl_Transactions_Type]
+GO
+ALTER TABLE [dbo].[tbl_Users]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Users_Email] CHECK  (([email] like '%_@_%.__%'))
+GO
+ALTER TABLE [dbo].[tbl_Users] CHECK CONSTRAINT [CK_tbl_Users_Email]
+GO
+ALTER TABLE [dbo].[tbl_Users]  WITH CHECK ADD  CONSTRAINT [CK_tbl_Users_FailedAttempts] CHECK  (([failed_login_attempts]>=(0)))
+GO
+ALTER TABLE [dbo].[tbl_Users] CHECK CONSTRAINT [CK_tbl_Users_FailedAttempts]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_ArchiveCustomer]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE   PROCEDURE [dbo].[sp_ArchiveCustomer]
+@customer_id INT,
+@archived_by INT,
+@archive_reason NVARCHAR(500) = NULL
+AS
+BEGIN
+SET NOCOUNT ON;
+BEGIN TRY
+BEGIN TRANSACTION;
+    -- Check if customer exists and is not already archived
+    IF NOT EXISTS (SELECT 1 FROM tbl_Customers WHERE customer_id = @customer_id AND is_archived = 0)
+    BEGIN
+        RAISERROR('Customer not found or already archived', 16, 1);
+        RETURN;
+    END
+    
+    -- Insert into archive table
+    INSERT INTO tbl_Customers_Archive (
+        customer_id, segment_id, created_by, first_name, last_name,
+        email, phone, company_name, address, city, state_province,
+        postal_code, country, customer_status, total_revenue, source,
+        notes, archived_by, original_created_date, archive_reason
+    )
+    SELECT 
+        customer_id, segment_id, created_by, first_name, last_name,
+        email, phone, company_name, address, city, state_province,
+        postal_code, country, customer_status, total_revenue, source,
+        notes, @archived_by, created_date, @archive_reason
+    FROM tbl_Customers
+    WHERE customer_id = @customer_id;
+    
+    -- Update customer record
+    UPDATE tbl_Customers
+    SET 
+        is_archived = 1,
+        archived_date = GETDATE(),
+        archived_by = @archived_by,
+        modified_date = GETDATE()
+    WHERE customer_id = @customer_id;
+    
+    -- Archive related interactions
+    UPDATE tbl_Interactions
+    SET is_archived = 1, archived_date = GETDATE()
+    WHERE customer_id = @customer_id AND is_archived = 0;
+    
+    -- Archive related pipeline opportunities
+    UPDATE tbl_Sales_Pipeline
+    SET is_archived = 1, archived_date = GETDATE()
+    WHERE customer_id = @customer_id AND is_archived = 0;
+    
+    -- Log the activity
+    INSERT INTO tbl_Activity_Log (user_id, activity_type, table_name, record_id, action)
+    VALUES (@archived_by, 'CUSTOMER_ARCHIVE', 'tbl_Customers', @customer_id, 'ARCHIVE');
+    
+    COMMIT TRANSACTION;
+    
+    PRINT 'Customer archived successfully: ' + CAST(@customer_id AS NVARCHAR(10));
+    SELECT 'Customer archived successfully' AS Result, @customer_id AS CustomerID;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+    
+    DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+    DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+    DECLARE @ErrorState INT = ERROR_STATE();
+    
+    RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+END CATCH
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[sp_ArchiveInvoice]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE   PROCEDURE [dbo].[sp_ArchiveInvoice]
+@invoice_id INT,
+@archived_by INT,
+@archive_reason NVARCHAR(500) = NULL
+AS
+BEGIN
+SET NOCOUNT ON;
+BEGIN TRY
+BEGIN TRANSACTION;
+    -- Check if invoice exists and is not already archived
+    IF NOT EXISTS (SELECT 1 FROM tbl_Invoices WHERE invoice_id = @invoice_id AND is_archived = 0)
+    BEGIN
+        RAISERROR('Invoice not found or already archived', 16, 1);
+        RETURN;
+    END
+    
+    -- Insert into archive table
+    INSERT INTO tbl_Invoices_Archive (
+        invoice_id, customer_id, invoice_number, invoice_date, due_date,
+        total_amount, payment_status, archived_by, original_created_date, archive_reason
+    )
+    SELECT 
+        invoice_id, customer_id, invoice_number, invoice_date, due_date,
+        total_amount, payment_status, @archived_by, created_date, @archive_reason
+    FROM tbl_Invoices
+    WHERE invoice_id = @invoice_id;
+    
+    -- Update invoice record
+    UPDATE tbl_Invoices
+    SET 
+        is_archived = 1,
+        archived_date = GETDATE(),
+        modified_date = GETDATE()
+    WHERE invoice_id = @invoice_id;
+    
+    -- Archive related transactions
+    UPDATE tbl_Transactions
+    SET is_archived = 1, archived_date = GETDATE()
+    WHERE invoice_id = @invoice_id AND is_archived = 0;
+    
+    -- Log the activity
+    INSERT INTO tbl_Activity_Log (user_id, activity_type, table_name, record_id, action)
+    VALUES (@archived_by, 'INVOICE_ARCHIVE', 'tbl_Invoices', @invoice_id, 'ARCHIVE');
+    
+    COMMIT TRANSACTION;
+    
+    PRINT 'Invoice archived successfully: ' + CAST(@invoice_id AS NVARCHAR(10));
+    SELECT 'Invoice archived successfully' AS Result, @invoice_id AS InvoiceID;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+    
+    DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+    DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+    DECLARE @ErrorState INT = ERROR_STATE();
+    
+    RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+END CATCH
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[sp_ArchiveOldRecords]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE   PROCEDURE [dbo].[sp_ArchiveOldRecords]
+@record_type NVARCHAR(50), -- 'Customer', 'Invoice', 'Transaction', 'Campaign'
+@days_old INT = 365,
+@archived_by INT
+AS
+BEGIN
+SET NOCOUNT ON;
+DECLARE @archived_count INT = 0;
+BEGIN TRY
+    BEGIN TRANSACTION;
+    
+    IF @record_type = 'Customer'
+    BEGIN
+        -- Archive inactive customers older than specified days
+        INSERT INTO tbl_Customers_Archive (
+            customer_id, segment_id, created_by, first_name, last_name,
+            email, phone, company_name, address, city, state_province,
+            postal_code, country, customer_status, total_revenue, source,
+            notes, archived_by, original_created_date, archive_reason
+        )
+        SELECT 
+            customer_id, segment_id, created_by, first_name, last_name,
+            email, phone, company_name, address, city, state_province,
+            postal_code, country, customer_status, total_revenue, source,
+            notes, @archived_by, created_date, 
+            'Auto-archived: Inactive for ' + CAST(@days_old AS NVARCHAR(10)) + ' days'
+        FROM tbl_Customers
+        WHERE customer_status = 'Inactive' 
+          AND is_archived = 0
+          AND DATEDIFF(DAY, modified_date, GETDATE()) > @days_old;
+        
+        SET @archived_count = @@ROWCOUNT;
+        
+        UPDATE tbl_Customers
+        SET is_archived = 1, archived_date = GETDATE(), archived_by = @archived_by
+        WHERE customer_status = 'Inactive' 
+          AND is_archived = 0
+          AND DATEDIFF(DAY, modified_date, GETDATE()) > @days_old;
+    END
+    
+    ELSE IF @record_type = 'Invoice'
+    BEGIN
+        -- Archive old paid invoices
+        INSERT INTO tbl_Invoices_Archive (
+            invoice_id, customer_id, invoice_number, invoice_date, due_date,
+            total_amount, payment_status, archived_by, original_created_date, archive_reason
+        )
+        SELECT 
+            invoice_id, customer_id, invoice_number, invoice_date, due_date,
+            total_amount, payment_status, @archived_by, created_date,
+            'Auto-archived: Paid invoice older than ' + CAST(@days_old AS NVARCHAR(10)) + ' days'
+        FROM tbl_Invoices
+        WHERE payment_status = 'Paid'
+          AND is_archived = 0
+          AND DATEDIFF(DAY, invoice_date, GETDATE()) > @days_old;
+        
+        SET @archived_count = @@ROWCOUNT;
+        
+        UPDATE tbl_Invoices
+        SET is_archived = 1, archived_date = GETDATE()
+        WHERE payment_status = 'Paid'
+          AND is_archived = 0
+          AND DATEDIFF(DAY, invoice_date, GETDATE()) > @days_old;
+    END
+    
+    ELSE IF @record_type = 'Campaign'
+    BEGIN
+        -- Archive old completed campaigns
+        INSERT INTO tbl_Campaigns_Archive (
+            campaign_id, campaign_name, campaign_type, start_date, end_date,
+            budget, actual_spend, total_sent, total_opened, total_clicked,
+            total_converted, revenue_generated, archived_by, original_created_date, archive_reason
+        )
+        SELECT 
+            campaign_id, campaign_name, campaign_type, start_date, end_date,
+            budget, actual_spend, total_sent, total_opened, total_clicked,
+            total_converted, revenue_generated, @archived_by, created_date,
+            'Auto-archived: Completed campaign older than ' + CAST(@days_old AS NVARCHAR(10)) + ' days'
+        FROM tbl_Campaigns
+        WHERE campaign_status = 'Completed'
+          AND is_archived = 0
+          AND DATEDIFF(DAY, end_date, GETDATE()) > @days_old;
+        
+        SET @archived_count = @@ROWCOUNT;
+        
+        UPDATE tbl_Campaigns
+        SET is_archived = 1, archived_date = GETDATE()
+        WHERE campaign_status = 'Completed'
+          AND is_archived = 0
+          AND DATEDIFF(DAY, end_date, GETDATE()) > @days_old;
+    END
+    
+    -- Log the activity
+    INSERT INTO tbl_Activity_Log (user_id, activity_type, table_name, record_id, action, new_values)
+    VALUES (@archived_by, 'BULK_ARCHIVE', @record_type, NULL, 'ARCHIVE', 
+            JSON_QUERY('{"archived_count": ' + CAST(@archived_count AS NVARCHAR(10)) + '}'));
+    
+    COMMIT TRANSACTION;
+    
+    PRINT 'Records archived successfully: ' + CAST(@archived_count AS NVARCHAR(10));
+    SELECT 'Records archived successfully' AS Result, 
+           @archived_count AS ArchivedCount,
+           @record_type AS RecordType;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+    
+    DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+    DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+    DECLARE @ErrorState INT = ERROR_STATE();
+    
+    RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+END CATCH
+END
+
+GO
+/****** Object:  StoredProcedure [dbo].[sp_RestoreCustomer]    Script Date: 11/27/2025 6:59:22 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE   PROCEDURE [dbo].[sp_RestoreCustomer]
+@customer_id INT,
+@restored_by INT
+AS
+BEGIN
+SET NOCOUNT ON;
+BEGIN TRY
+BEGIN TRANSACTION;
+    -- Check if customer exists and is archived
+    IF NOT EXISTS (SELECT 1 FROM tbl_Customers WHERE customer_id = @customer_id AND is_archived = 1)
+    BEGIN
+        RAISERROR('Customer not found or not archived', 16, 1);
+        RETURN;
+    END
+    
+    -- Restore customer record
+    UPDATE tbl_Customers
+    SET 
+        is_archived = 0,
+        archived_date = NULL,
+        archived_by = NULL,
+        modified_date = GETDATE(),
+        modified_by = @restored_by
+    WHERE customer_id = @customer_id;
+    
+    -- Restore related interactions
+    UPDATE tbl_Interactions
+    SET is_archived = 0, archived_date = NULL
+    WHERE customer_id = @customer_id AND is_archived = 1;
+    
+    -- Restore related pipeline opportunities
+    UPDATE tbl_Sales_Pipeline
+    SET is_archived = 0, archived_date = NULL
+    WHERE customer_id = @customer_id AND is_archived = 1;
+    
+    -- Log the activity
+    INSERT INTO tbl_Activity_Log (user_id, activity_type, table_name, record_id, action)
+    VALUES (@restored_by, 'CUSTOMER_RESTORE', 'tbl_Customers', @customer_id, 'RESTORE');
+    
+    COMMIT TRANSACTION;
+    
+    PRINT 'Customer restored successfully: ' + CAST(@customer_id AS NVARCHAR(10));
+    SELECT 'Customer restored successfully' AS Result, @customer_id AS CustomerID;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+    
+    DECLARE @ErrorMessage NVARCHAR(4000) = ERROR_MESSAGE();
+    DECLARE @ErrorSeverity INT = ERROR_SEVERITY();
+    DECLARE @ErrorState INT = ERROR_STATE();
+    
+    RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+END CATCH
+END
+
+GO
+USE [master]
+GO
+ALTER DATABASE [DB_CRM_MarFin] SET  READ_WRITE 
+GO
