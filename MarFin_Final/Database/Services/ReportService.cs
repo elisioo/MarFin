@@ -21,7 +21,7 @@ public class ReportService
                 var query = @"
                     SELECT 
                         MONTH(created_date) as Month,
-                        YEAR(created_date) as Year,
+                        YEAR(created_date) as Year,gi
                         ISNULL(SUM(total_amount), 0) as Income,
                         CAST(0 AS decimal(18,2)) as Expense
                     FROM tbl_Invoices

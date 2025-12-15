@@ -48,6 +48,13 @@ wwwroot/**/*.map
 wwwroot/**/*.lock.json
 node_modules/
 
+
+Database/DBConnection.cs
+Database/Services/RemoteDatabaseService.cs
+Database/Services/LocalDatabaseService.cs
+Database/Services/ReportService.cs
+appsettings.json
+
 # =============================
 # OS generated files
 # =============================
