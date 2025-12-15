@@ -56,6 +56,7 @@
             // Load revenue sources
             revenueSources = await reportService.GetRevenueBySourceAsync(startDate, endDate);
 
+            _revenueChartRendered = false;
             isLoading = false;
         }
         catch (Exception ex)
@@ -63,6 +64,45 @@
             errorMessage = $"Error loading report data: {ex.Message}";
             isLoading = false;
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!isLoading && revenueData.Any() && !_revenueChartRendered)
+        {
+            await RenderRevenueChartAsync();
+            _revenueChartRendered = true;
+        }
+    }
+
+    private async Task RenderRevenueChartAsync()
+    {
+        var labels = revenueData
+            .Select(r => new DateTime(r.Year, r.Month, 1).ToString("MMM"))
+            .ToArray();
+
+        var incomeData = revenueData.Select(r => (double)r.Income).ToArray();
+        var expenseData = revenueData.Select(r => (double)r.Expense).ToArray();
+
+        await JS.InvokeVoidAsync(
+            "chartJsInterop.createBarChart",
+            "revenueByMonthChart",
+            labels,
+            new object[]
+            {
+                new
+                {
+                    label = "Income",
+                    data = incomeData,
+                    backgroundColor = "#10b981"
+                },
+                new
+                {
+                    label = "Expenses",
+                    data = expenseData,
+                    backgroundColor = "#ef4444"
+                }
+            });
     }
 }
 
@@ -145,24 +185,8 @@
                     }
                     else if (revenueData.Any())
                     {
-                        <div class="bar-chart">
-                            @foreach (var data in revenueData)
-                            {
-                                var maxValue = revenueData.Max(r => Math.Max(r.Income, r.Expense));
-                                var incomeHeight = maxValue > 0 ? (data.Income / maxValue * 200) : 0;
-                                var expenseHeight = maxValue > 0 ? (data.Expense / maxValue * 200) : 0;
-                                var monthDate = new DateTime(data.Year, data.Month, 1);
-                                
-                                <div class="bar-group">
-                                    <div class="bar green" style="height: @((int)incomeHeight)px" title="Income: ₱@data.Income.ToString("N2")"></div>
-                                    <div class="bar dark" style="height: @((int)expenseHeight)px" title="Expenses: ₱@data.Expense.ToString("N2")"></div>
-                                    <span class="bar-label">@monthDate.ToString("MMM")</span>
-                                </div>
-                            }
-                        </div>
-                        <div class="chart-legend">
-                            <span><span class="legend-color green"></span> Income</span>
-                            <span><span class="legend-color dark"></span> Expenses</span>
+                        <div style="height: 260px;">
+                            <canvas id="revenueByMonthChart"></canvas>
                         </div>
                     }
                     else
@@ -583,6 +607,7 @@
     }
 
     // Data properties
+    private bool _revenueChartRendered;
     private List<ReportService.RevenueData> revenueData = new List<ReportService.RevenueData>();
     private ReportService.CampaignPerformanceData? campaignPerformance;
     private List<ReportService.TopCustomerData> topCustomers = new List<ReportService.TopCustomerData>();

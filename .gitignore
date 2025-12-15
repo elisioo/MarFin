@@ -52,7 +52,6 @@ node_modules/
 MarFin_Final/Database/DBConnection.cs
 MarFin_Final/Database/Services/RemoteDatabaseService.cs
 MarFin_Final/Database/Services/LocalDatabaseService.cs
-MarFin_Final/Database/Services/ReportService.cs
 MarFin_Final/appsettings.json
 
 # =============================
