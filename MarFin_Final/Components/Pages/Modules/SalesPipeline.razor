@@ -20,6 +20,21 @@
         </div>
     </div>
 
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success">
+            @successMessage
+            <button class="alert-close" @onclick="() => successMessage = string.Empty">×</button>
+        </div>
+    }
+
     @if (!showArchived)
     {
         <!-- Sales Pipeline Summary -->
@@ -347,17 +362,38 @@
                 <button class="btn-cancel" @onclick="ToggleModal">×</button>
             </div>
             <div class="modal-body">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">
+                        @errorMessage
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        @successMessage
+                    </div>
+                }
+
                 <div class="form-row">
                     <div class="form-group full-width">
                         <label>Deal Name <span class="required">*</span></label>
-                        <input type="text" class="form-control" placeholder="Enter deal name" @bind="newOpportunity.OpportunityName" />
+                        <input type="text"
+                               class="form-control @(validationErrors.ContainsKey("OpportunityName") ? "is-invalid" : string.Empty)"
+                               placeholder="Enter deal name"
+                               @bind="newOpportunity.OpportunityName" />
+                        @if (validationErrors.ContainsKey("OpportunityName"))
+                        {
+                            <span class="validation-error">@validationErrors["OpportunityName"]</span>
+                        }
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Customer <span class="required">*</span></label>
-                        <select class="form-control" @bind="newOpportunity.CustomerId">
+                        <select class="form-control @(validationErrors.ContainsKey("CustomerId") ? "is-invalid" : string.Empty)" @bind="newOpportunity.CustomerId">
                             <option value="0">Select customer</option>
 
                             @foreach (var customer in customers)
@@ -365,16 +401,24 @@
                                 <option value="@customer.CustomerId">@customer.FullName - @customer.CompanyName</option>
                             }
                         </select>
+                        @if (validationErrors.ContainsKey("CustomerId"))
+                        {
+                            <span class="validation-error">@validationErrors["CustomerId"]</span>
+                        }
                     </div>
                     <div class="form-group">
                         <label>Pipeline Stage <span class="required">*</span></label>
-                        <select class="form-control" @bind="newOpportunity.StageId">
+                        <select class="form-control @(validationErrors.ContainsKey("StageId") ? "is-invalid" : string.Empty)" @bind="newOpportunity.StageId">
                             <option value="0">Select stage</option>
                             @foreach (var stage in allStages)
                             {
                                 <option value="@stage.StageId">@stage.StageName</option>
                             }
                         </select>
+                        @if (validationErrors.ContainsKey("StageId"))
+                        {
+                            <span class="validation-error">@validationErrors["StageId"]</span>
+                        }
                     </div>
                 </div>
 
@@ -383,12 +427,26 @@
                         <label>Deal Value <span class="required">*</span></label>
                         <div class="input-with-prefix">
                             <span class="input-prefix">₱</span>
-                            <input type="number" step="0.01" class="form-control with-prefix" placeholder="0.00" @bind="newOpportunity.DealValue" />
+                            <input type="number"
+                                   step="0.01"
+                                   class="form-control with-prefix @(validationErrors.ContainsKey("DealValue") ? "is-invalid" : string.Empty)"
+                                   placeholder="0.00"
+                                   @bind="newOpportunity.DealValue" />
                         </div>
+                        @if (validationErrors.ContainsKey("DealValue"))
+                        {
+                            <span class="validation-error">@validationErrors["DealValue"]</span>
+                        }
                     </div>
                     <div class="form-group">
                         <label>Probability (%)</label>
-                        <input type="number" class="form-control" placeholder="0-100" min="0" max="100" @bind="newOpportunity.Probability" />
+                        <input type="number"
+                               class="form-control @(validationErrors.ContainsKey("Probability") ? "is-invalid" : string.Empty)"
+                               placeholder="0-100" min="0" max="100" @bind="newOpportunity.Probability" />
+                        @if (validationErrors.ContainsKey("Probability"))
+                        {
+                            <span class="validation-error">@validationErrors["Probability"]</span>
+                        }
                     </div>
                 </div>
 
@@ -399,10 +457,14 @@
                     </div>
                     <div class="form-group">
                         <label>Assigned To <span class="required">*</span></label>
-                        <select class="form-control" @bind="newOpportunity.AssignedTo">
+                        <select class="form-control @(validationErrors.ContainsKey("AssignedTo") ? "is-invalid" : string.Empty)" @bind="newOpportunity.AssignedTo">
                             <option value="0">Select user</option>
                             <option value="1">Current User</option>
                         </select>
+                        @if (validationErrors.ContainsKey("AssignedTo"))
+                        {
+                            <span class="validation-error">@validationErrors["AssignedTo"]</span>
+                        }
                     </div>
                 </div>
 
@@ -492,6 +554,10 @@
     private string confirmMessage = "";
     private string confirmButtonText = "";
     private Action? confirmCallback;
+
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private Dictionary<string, string> validationErrors = new();
 
     private class PipelineColumn
     {
@@ -584,10 +650,14 @@
         {
             newOpportunity = new SalesPipelineModel { AssignedTo = 1 };
             closeDate = null;
+            validationErrors.Clear();
+            errorMessage = string.Empty;
         }
         else if (!showModal)
         {
             isEditMode = false;
+            validationErrors.Clear();
+            errorMessage = string.Empty;
         }
     }
 
@@ -595,6 +665,8 @@
     {
         showModal = false;
         isEditMode = false;
+        validationErrors.Clear();
+        errorMessage = string.Empty;
     }
 
     private void EditOpportunity(int opportunityId)
@@ -616,21 +688,77 @@
             };
             closeDate = opp.ExpectedCloseDate;
             isEditMode = true;
+            validationErrors.Clear();
+            errorMessage = string.Empty;
             showModal = true;
         }
     }
 
+    private bool ValidateOpportunity()
+    {
+        validationErrors.Clear();
+
+        // Deal name
+        if (string.IsNullOrWhiteSpace(newOpportunity.OpportunityName))
+        {
+            validationErrors["OpportunityName"] = "Deal name is required";
+        }
+
+        // Customer required
+        if (newOpportunity.CustomerId <= 0)
+        {
+            validationErrors["CustomerId"] = "Please select a customer";
+        }
+
+        // Stage required
+        if (newOpportunity.StageId <= 0)
+        {
+            validationErrors["StageId"] = "Please select a pipeline stage";
+        }
+
+        // Assigned user required
+        if (newOpportunity.AssignedTo <= 0)
+        {
+            validationErrors["AssignedTo"] = "Please assign an owner";
+        }
+
+        // Deal value must be positive
+        if (newOpportunity.DealValue <= 0)
+        {
+            validationErrors["DealValue"] = "Deal value must be greater than zero";
+        }
+
+        // Probability between 0 and 100
+        if (newOpportunity.Probability < 0 || newOpportunity.Probability > 100)
+        {
+            validationErrors["Probability"] = "Probability must be between 0 and 100";
+        }
+
+        if (validationErrors.Any())
+        {
+            errorMessage = "Please fill the required fields before saving.";
+            return false;
+        }
+
+        errorMessage = string.Empty;
+        return true;
+    }
+
     private async Task SaveOpportunity()
     {
-        if (string.IsNullOrWhiteSpace(newOpportunity.OpportunityName) ||
-            newOpportunity.CustomerId == 0 ||
-            newOpportunity.StageId == 0 ||
-            newOpportunity.AssignedTo == 0)
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        if (!ValidateOpportunity())
+        {
             return;
+        }
 
         newOpportunity.ExpectedCloseDate = closeDate;
 
-        bool success = isEditMode
+        bool isUpdate = isEditMode && newOpportunity.OpportunityId > 0;
+
+        bool success = isUpdate
             ? await Task.Run(() => pipelineService.UpdateOpportunity(newOpportunity))
             : await Task.Run(() => pipelineService.AddOpportunity(newOpportunity));
 
@@ -638,6 +766,13 @@
         {
             await LoadData();
             ToggleModal();
+            successMessage = isUpdate
+                ? "Opportunity updated successfully!"
+                : "New opportunity created successfully!";
+        }
+        else
+        {
+            errorMessage = "Failed to save opportunity. Please try again.";
         }
     }
 

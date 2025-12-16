@@ -1064,14 +1064,15 @@
                 int.TryParse(customerIdValue, out var customerId) &&
                 customerId > 0)
             {
-                selectedCustomer = await CustomerService.GetCustomerByIdAsync(customerId);
-                if (selectedCustomer != null)
+                var customer = await CustomerService.GetCustomerByIdAsync(customerId);
+                if (customer != null)
                 {
-                    ToggleInvoiceModal();
-                    newInvoice.CustomerId = selectedCustomer.CustomerId;
-                    customerSearchTerm = string.IsNullOrEmpty(selectedCustomer.CompanyName)
-                        ? selectedCustomer.FullName
-                        : selectedCustomer.CompanyName;
+                    await ToggleInvoiceModal();
+                    selectedCustomer = customer;
+                    newInvoice.CustomerId = customer.CustomerId;
+                    customerSearchTerm = string.IsNullOrEmpty(customer.CompanyName)
+                        ? customer.FullName
+                        : customer.CompanyName;
                 }
             }
         }

@@ -2,6 +2,7 @@
 @inject NavigationManager Navigation
 @inject AuthService AuthService
 @inject IJSRuntime JS
+@implements IDisposable
 @using MarFin_Final.Database.Services
 @using System.Globalization
 @using MarFin_Final.Services
@@ -129,7 +130,7 @@
                 }
             </span>
         </div>
-        <button class="btn-export">
+        <button class="btn-export" @onclick='() => OpenConfirmModal("all", "All Reports")'>
             <i class="bi bi-download"></i> Export All Reports
         </button>
     </div>
@@ -176,7 +177,18 @@
             <div class="chart-card">
                 <div class="chart-header">
                     <h3>Revenue by Month</h3>
-                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                    <div class="chart-header-actions">
+                        <button class="btn-chart-action" @onclick='() => ToggleCardMenu("revenue")'>
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        @if (activeCardMenu == "revenue")
+                        {
+                            <div class="chart-action-menu">
+                                <button type="button" @onclick='() => OpenViewModal("revenue", "Revenue by Month")'>View</button>
+                                <button type="button" @onclick='() => OpenConfirmModal("financial", "Financial Report")'>Export as PDF</button>
+                            </div>
+                        }
+                    </div>
                 </div>
                 <div class="chart-content">
                     @if (isLoading)
@@ -203,7 +215,18 @@
             <div class="chart-card">
                 <div class="chart-header">
                     <h3>Campaign Performance</h3>
-                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                    <div class="chart-header-actions">
+                        <button class="btn-chart-action" @onclick='() => ToggleCardMenu("campaign")'>
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        @if (activeCardMenu == "campaign")
+                        {
+                            <div class="chart-action-menu">
+                                <button type="button" @onclick='() => OpenViewModal("campaign", "Campaign Performance")'>View</button>
+                                <button type="button" @onclick='() => OpenConfirmModal("campaign", "Campaign Report")'>Export as PDF</button>
+                            </div>
+                        }
+                    </div>
                 </div>
                 <div class="chart-content">
                     @if (isLoading)
@@ -257,7 +280,18 @@
             <div class="chart-card">
                 <div class="chart-header">
                     <h3>Top Customers</h3>
-                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                    <div class="chart-header-actions">
+                        <button class="btn-chart-action" @onclick='() => ToggleCardMenu("topCustomers")'>
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        @if (activeCardMenu == "topCustomers")
+                        {
+                            <div class="chart-action-menu">
+                                <button type="button" @onclick='() => OpenViewModal("topCustomers", "Top Customers")'>View</button>
+                                <button type="button" @onclick='() => OpenConfirmModal("customer", "Customer Report")'>Export as PDF</button>
+                            </div>
+                        }
+                    </div>
                 </div>
                 <div class="chart-content">
                     <div class="customer-list">
@@ -282,7 +316,18 @@
             <div class="chart-card">
                 <div class="chart-header">
                     <h3>Sales Opportunities</h3>
-                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                    <div class="chart-header-actions">
+                        <button class="btn-chart-action" @onclick='() => ToggleCardMenu("sales")'>
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        @if (activeCardMenu == "sales")
+                        {
+                            <div class="chart-action-menu">
+                                <button type="button" @onclick='() => OpenViewModal("sales", "Sales Opportunities")'>View</button>
+                                <button type="button" @onclick='() => OpenConfirmModal("sales", "Sales Pipeline Report")'>Export as PDF</button>
+                            </div>
+                        }
+                    </div>
                 </div>
                 <div class="chart-content">
                     @if (isLoading)
@@ -328,7 +373,18 @@
             <div class="chart-card">
                 <div class="chart-header">
                     <h3>Customer Segments</h3>
-                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                    <div class="chart-header-actions">
+                        <button class="btn-chart-action" @onclick='() => ToggleCardMenu("segments")'>
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        @if (activeCardMenu == "segments")
+                        {
+                            <div class="chart-action-menu">
+                                <button type="button" @onclick='() => OpenViewModal("segments", "Customer Segments")'>View</button>
+                                <button type="button" @onclick='() => OpenConfirmModal("customer", "Customer Report")'>Export as PDF</button>
+                            </div>
+                        }
+                    </div>
                 </div>
                 <div class="chart-content">
                     <div class="segment-list">
@@ -356,7 +412,18 @@
             <div class="chart-card">
                 <div class="chart-header">
                     <h3>Revenue by Source</h3>
-                    <button class="btn-chart-action"><i class="bi bi-three-dots-vertical"></i></button>
+                    <div class="chart-header-actions">
+                        <button class="btn-chart-action" @onclick='() => ToggleCardMenu("sources")'>
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        @if (activeCardMenu == "sources")
+                        {
+                            <div class="chart-action-menu">
+                                <button type="button" @onclick='() => OpenViewModal("sources", "Revenue by Source")'>View</button>
+                                <button type="button" @onclick='() => OpenConfirmModal("financial", "Financial Report")'>Export as PDF</button>
+                            </div>
+                        }
+                    </div>
                 </div>
                 <div class="chart-content">
                     <div class="source-list">
@@ -503,14 +570,256 @@
     </div>
 }
 
+@if (showViewModal)
+{
+    <div class="modal-overlay p-3" @onclick="CloseViewModal">
+        <div class="modal-content view-report-modal p-3" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h3>@viewModalTitle</h3>
+            </div>
+            <div class="modal-body">
+                @if (viewModalType == "revenue")
+                {
+                    @if (revenueData.Any())
+                    {
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Income</th>
+                                    <th>Expenses</th>
+                                    <th>Net Profit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in revenueData.OrderBy(x => x.Year).ThenBy(x => x.Month))
+                                {
+                                    var monthName = new DateTime(r.Year, r.Month, 1).ToString("MMMM yyyy");
+                                    var profit = r.Income - r.Expense;
+                                    <tr>
+                                        <td>@monthName</td>
+                                        <td>₱@r.Income.ToString("N2")</td>
+                                        <td>₱@r.Expense.ToString("N2")</td>
+                                        <td>₱@profit.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No revenue data available for the selected period.</p>
+                    }
+                }
+                else if (viewModalType == "campaign")
+                {
+                    @if (campaignPerformance != null)
+                    {
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Email Open Rate</td>
+                                    <td>@campaignPerformance.OpenRate.ToString("F2")%</td>
+                                </tr>
+                                <tr>
+                                    <td>Click-Through Rate</td>
+                                    <td>@campaignPerformance.ClickRate.ToString("F2")%</td>
+                                </tr>
+                                <tr>
+                                    <td>Conversion Rate</td>
+                                    <td>@campaignPerformance.ConversionRate.ToString("F2")%</td>
+                                </tr>
+                                <tr>
+                                    <td>ROI</td>
+                                    <td>@campaignPerformance.ROI.ToString("F2")%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No campaign data available for the selected period.</p>
+                    }
+                }
+                else if (viewModalType == "topCustomers")
+                {
+                    @if (topCustomers.Any())
+                    {
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Customer</th>
+                                    <th>Total Amount</th>
+                                    <th>Transactions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in topCustomers)
+                                {
+                                    <tr>
+                                        <td>@c.Rank</td>
+                                        <td>@c.Name</td>
+                                        <td>₱@c.Amount.ToString("N2")</td>
+                                        <td>@c.Transactions</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No customer data available for the selected period.</p>
+                    }
+                }
+                else if (viewModalType == "sales")
+                {
+                    @if (salesOpportunities != null)
+                    {
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Active</th>
+                                    <th>Won</th>
+                                    <th>Lost</th>
+                                    <th>Total Pipeline Value</th>
+                                    <th>Win Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>@salesOpportunities.Active</td>
+                                    <td>@salesOpportunities.Won</td>
+                                    <td>@salesOpportunities.Lost</td>
+                                    <td>₱@salesOpportunities.TotalPipelineValue.ToString("N2")</td>
+                                    <td>@salesOpportunities.WinRate.ToString("F2")%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No sales data available for the selected period.</p>
+                    }
+                }
+                else if (viewModalType == "segments")
+                {
+                    @if (customerSegments.Any())
+                    {
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Segment</th>
+                                    <th>Customer Count</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in customerSegments)
+                                {
+                                    <tr>
+                                        <td>@s.Name</td>
+                                        <td>@s.Count</td>
+                                        <td>@s.Percentage.ToString("F2")%</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No customer segment data available for the selected period.</p>
+                    }
+                }
+                else if (viewModalType == "sources")
+                {
+                    @if (revenueSources.Any())
+                    {
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Source</th>
+                                    <th>Amount</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in revenueSources)
+                                {
+                                    <tr>
+                                        <td>@s.Name</td>
+                                        <td>₱@s.Amount.ToString("N2")</td>
+                                        <td>@s.Percentage.ToString("F2")%</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No revenue source data available for the selected period.</p>
+                    }
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseViewModal">Close</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(pdfDownloadStatus))
+{
+    <div class="pdf-status-overlay" @onclick="ClosePdfStatus">
+        <div class="pdf-status-card" @onclick:stopPropagation>
+            @if (pdfDownloadStatus.Contains("Downloaded"))
+            {
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 48px;"></i>
+                <h4 class="mt-3">@pdfDownloadStatus</h4>
+                <p class="text-muted mt-2">Your report has been downloaded successfully.</p>
+                <button class="btn btn-primary mt-3" @onclick="ClosePdfStatus">Close</button>
+            }
+            else if (pdfDownloadStatus.StartsWith("Error") || pdfDownloadStatus.Contains("failed"))
+            {
+                <i class="bi bi-x-circle-fill text-danger" style="font-size: 48px;"></i>
+                <h4 class="mt-3">@pdfDownloadStatus</h4>
+                <button class="btn btn-primary mt-3" @onclick="ClosePdfStatus">Close</button>
+            }
+            else
+            {
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h4 class="mt-3">@pdfDownloadStatus</h4>
+            }
+        </div>
+    </div>
+}
+
 @code {
     private bool showConfirmModal;
     private string? pendingReportType;
     private string pendingReportTitle = "";
 
+    private PdfExportService pdfExportService = new PdfExportService();
+
     private string selectedFilter = "thisMonth";
     private DateTime startDate = DateTime.Now.AddDays(-30);
     private DateTime endDate = DateTime.Now;
+
+    private string? activeCardMenu;
+    private bool showViewModal;
+    private string viewModalType = "";
+    private string viewModalTitle = "";
+
+    private string pdfDownloadStatus = "";
+    private System.Threading.Timer? pdfStatusTimer;
 
     private void SetFilter(string filter)
     {
@@ -532,11 +841,44 @@
             endDate = DateTime.Now;
         }
     }
-
+    private void ClosePdfStatus()
+    {
+        pdfDownloadStatus = string.Empty;
+        pdfStatusTimer?.Dispose();
+        pdfStatusTimer = null;
+        StateHasChanged();
+    }
     private string GetMonthName(int month)
     {
         var months = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
         return months[month % 12];
+    }
+
+    private void ToggleCardMenu(string cardKey)
+    {
+        if (activeCardMenu == cardKey)
+        {
+            activeCardMenu = null;
+        }
+        else
+        {
+            activeCardMenu = cardKey;
+        }
+    }
+
+    private void OpenViewModal(string type, string title)
+    {
+        viewModalType = type;
+        viewModalTitle = title;
+        showViewModal = true;
+        activeCardMenu = null;
+    }
+
+    private void CloseViewModal()
+    {
+        showViewModal = false;
+        viewModalType = string.Empty;
+        viewModalTitle = string.Empty;
     }
 
     private void OpenConfirmModal(string reportType, string reportTitle)
@@ -544,6 +886,7 @@
         pendingReportType = reportType;
         pendingReportTitle = reportTitle;
         showConfirmModal = true;
+        activeCardMenu = null;
     }
 
     private void CancelGenerateReport()
@@ -568,35 +911,143 @@
     {
         try
         {
-            // Generate PDF bytes using QuestPDF-based ReportPdfService
-            var pdfBytes = ReportPdfService.GenerateReportPdf(
-                reportType,
-                startDate,
-                endDate,
-                campaignPerformance,
-                revenueData,
-                topCustomers,
-                salesOpportunities,
-                customerSegments,
-                revenueSources,
-                null
-            );
+            pdfDownloadStatus = "Preparing PDF...";
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(100); // Give UI time to update
 
-            // Save to a temporary file and open with the system PDF viewer
-            var cacheDir = FileSystem.CacheDirectory;
-            var fileName = $"MarFin_{reportType}_Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-            var filePath = Path.Combine(cacheDir, fileName);
+            byte[] pdfBytes = Array.Empty<byte>();
 
-            File.WriteAllBytes(filePath, pdfBytes);
-
-            await Launcher.OpenAsync(new OpenFileRequest
+            try
             {
-                File = new ReadOnlyFile(filePath)
-            });
+                pdfBytes = ReportPdfService.GenerateReportPdf(
+                    reportType,
+                    startDate,
+                    endDate,
+                    campaignPerformance,
+                    revenueData,
+                    topCustomers,
+                    salesOpportunities,
+                    customerSegments,
+                    revenueSources,
+                    null
+                );
+            }
+            catch (Exception genEx)
+            {
+                Console.WriteLine($"[Reports] QuestPDF report generation failed: {genEx}");
+
+                try
+                {
+                    var html = pdfExportService.GenerateReportHtml(
+                        reportType,
+                        startDate,
+                        endDate,
+                        campaignPerformance,
+                        revenueData,
+                        topCustomers,
+                        salesOpportunities,
+                        customerSegments,
+                        revenueSources,
+                        null
+                    );
+
+                    var htmlFileName = $"MarFin_{reportType}_Report_{DateTime.Now:yyyyMMdd_HHmmss}.html";
+
+                    pdfDownloadStatus = "Opening HTML report...";
+                    await InvokeAsync(StateHasChanged);
+
+                    var htmlBytes = System.Text.Encoding.UTF8.GetBytes(html);
+                    await SaveAndOpenPdfAsync(htmlFileName, htmlBytes);
+
+                    pdfDownloadStatus = "Report opened in browser. Use Print > Save as PDF.";
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch (Exception htmlEx)
+                {
+                    errorMessage = $"Report generation failed: {htmlEx.Message}";
+                    pdfDownloadStatus = $"Error: {htmlEx.Message}";
+                    Console.WriteLine($"[Reports] HTML report generation failed: {htmlEx}");
+                }
+
+                return;
+            }
+
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                errorMessage = "Report generation returned no data.";
+                pdfDownloadStatus = "Error: No data generated";
+                return;
+            }
+
+            var fileName = $"MarFin_{reportType}_Report_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+
+            pdfDownloadStatus = "Saving PDF...";
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(100);
+
+            try
+            {
+                await SaveAndOpenPdfAsync(fileName, pdfBytes);
+
+                pdfDownloadStatus = "PDF Downloaded!";
+                await InvokeAsync(StateHasChanged);
+
+                // Auto-close after 3 seconds
+                pdfStatusTimer?.Dispose();
+                pdfStatusTimer = new System.Threading.Timer(_ =>
+                {
+                    InvokeAsync(() =>
+                    {
+                        ClosePdfStatus();
+                    });
+                }, null, TimeSpan.FromSeconds(3), Timeout.InfiniteTimeSpan);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Failed to save or open PDF: {ex.Message}";
+                pdfDownloadStatus = $"Error: Failed to open PDF - {ex.Message}";
+                Console.WriteLine($"[Reports] Error saving/opening PDF: {ex}");
+            }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error generating report: {ex.Message}";
+            errorMessage = $"Unexpected error: {ex.Message}";
+            pdfDownloadStatus = $"Error: {ex.Message}";
+            Console.WriteLine(ex);
+        }
+    }
+
+    private async Task SaveAndOpenPdfAsync(string fileName, byte[] pdfBytes)
+    {
+        try
+        {
+            Console.WriteLine($"[Reports] Starting PDF save: {fileName}, {pdfBytes.Length} bytes");
+
+            var directory = FileSystem.AppDataDirectory;
+            var fullPath = Path.Combine(directory, fileName);
+
+            var folder = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+
+            await File.WriteAllBytesAsync(fullPath, pdfBytes);
+            Console.WriteLine($"[Reports] PDF saved to: {fullPath}");
+
+            await Launcher.OpenAsync(new OpenFileRequest
+            {
+                File = new ReadOnlyFile(fullPath)
+            });
+
+            Console.WriteLine("[Reports] OpenFileRequest sent to OS.");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to save or open PDF: {ex.Message}";
+            pdfDownloadStatus = $"Error: Failed to open PDF - {ex.Message}";
+            Console.WriteLine($"[Reports] Error saving/opening PDF: {ex}");
+            throw;
         }
     }
 
@@ -606,12 +1057,17 @@
         await LoadReportData();
     }
 
+    public void Dispose()
+    {
+        pdfStatusTimer?.Dispose();
+    }
+
     // Data properties
     private bool _revenueChartRendered;
-    private List<ReportService.RevenueData> revenueData = new List<ReportService.RevenueData>();
+    private List<ReportService.RevenueData> revenueData = new();
     private ReportService.CampaignPerformanceData? campaignPerformance;
-    private List<ReportService.TopCustomerData> topCustomers = new List<ReportService.TopCustomerData>();
+    private List<ReportService.TopCustomerData> topCustomers = new();
     private ReportService.SalesOpportunitiesData? salesOpportunities;
-    private List<ReportService.CustomerSegmentData> customerSegments = new List<ReportService.CustomerSegmentData>();
-    private List<ReportService.RevenueSourceData> revenueSources = new List<ReportService.RevenueSourceData>();
+    private List<ReportService.CustomerSegmentData> customerSegments = new();
+    private List<ReportService.RevenueSourceData> revenueSources = new();
 }

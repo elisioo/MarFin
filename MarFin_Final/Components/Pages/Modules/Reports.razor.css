@@ -142,6 +142,12 @@
         color: #1a1a1a;
     }
 
+.chart-header-actions {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
 .btn-chart-action {
     background: none;
     border: none;
@@ -156,6 +162,35 @@
     .btn-chart-action:hover {
         background-color: #f0f0f0;
     }
+
+.chart-action-menu {
+    position: absolute;
+    right: 0;
+    top: 110%;
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    min-width: 160px;
+    z-index: 20;
+    padding: 4px 0;
+}
+
+    .chart-action-menu button {
+        width: 100%;
+        padding: 8px 16px;
+        border: none;
+        background: none;
+        text-align: left;
+        font-size: 14px;
+        color: #1a1a1a;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+
+        .chart-action-menu button:hover {
+            background-color: #f3f4f6;
+        }
 
 /* Bar Chart */
 .chart-content {
@@ -476,6 +511,79 @@
     text-align: right;
 }
 
+/* View / PDF Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content.view-report-modal,
+.modal-content.confirm-modal {
+    background: white;
+    border-radius: 16px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-content.view-report-modal .modal-body {
+    padding: 1.5rem 2rem;
+    overflow-y: auto;
+}
+
+.modal-content.view-report-modal .modal-header,
+.modal-content.view-report-modal .modal-footer {
+    padding: 1rem 2rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-content.view-report-modal .modal-footer {
+    border-bottom: none;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 14px;
+}
+
+    .report-table thead {
+        background-color: #f9fafb;
+    }
+
+    .report-table th,
+    .report-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+    }
+
+    .report-table th {
+        font-weight: 600;
+        color: #4b5563;
+    }
+
+    .report-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
 /* Custom Reports Grid */
 .custom-reports-grid {
     display: grid;
@@ -644,5 +752,65 @@
     .customer-transactions,
     .btn-arrow {
         display: none;
+    }
+}
+
+/* PDF Status Overlay - separate from modal-overlay */
+.pdf-status-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000; /* Higher than other modals */
+    animation: fadeIn 0.2s ease;
+}
+
+.pdf-status-card {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 16px;
+    text-align: center;
+    min-width: 350px;
+    max-width: 500px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: slideUp 0.3s ease;
+}
+
+    .pdf-status-card h4 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    .pdf-status-card .text-muted {
+        font-size: 14px;
+        color: #666;
+    }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
     }
 }

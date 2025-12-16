@@ -71,6 +71,9 @@ public static class ReportPdfService
                         case "invoice":
                             GenerateInvoiceReport(column, invoices);
                             break;
+                        case "all":
+                            GenerateCombinedReport(column, revenueData, revenueSources, campaignData, salesData, topCustomers, segments);
+                            break;
                         default:
                             column.Item().Text("Unknown report type selected.")
                                 .FontColor(Colors.Red.Medium).Italic();
@@ -91,6 +94,31 @@ public static class ReportPdfService
         }).GeneratePdf();
     }
 
+
+    private static void GenerateCombinedReport(
+    ColumnDescriptor column,
+    List<ReportService.RevenueData>? revenueData,
+    List<ReportService.RevenueSourceData>? revenueSources,
+    ReportService.CampaignPerformanceData? campaignData,
+    ReportService.SalesOpportunitiesData? salesData,
+    List<ReportService.TopCustomerData>? topCustomers,
+    List<ReportService.CustomerSegmentData>? segments)
+    {
+        column.Item().Text("Comprehensive Analytics Report").FontSize(18).Bold().LetterSpacing(20);
+
+        // Call each individual section in sequence
+        GenerateFinancialReport(column, revenueData, revenueSources);
+        column.Item().PageBreak(); // Optional: force new page between sections
+
+        GenerateCampaignReport(column, campaignData);
+        column.Item().PageBreak();
+
+        GenerateSalesReport(column, salesData, topCustomers);
+        column.Item().PageBreak();
+
+        GenerateCustomerReport(column, topCustomers, segments);
+    }
+
     private static string GetReportTitle(string type) => type.ToLower() switch
     {
         "financial" => "Financial Performance Report",
@@ -98,6 +126,7 @@ public static class ReportPdfService
         "sales" => "Sales Pipeline Report",
         "customer" => "Customer Analysis Report",
         "invoice" => "Invoice Summary Report",
+        "all" => "Comprehensive Analytics Report",
         _ => "Custom Report"
     };
 

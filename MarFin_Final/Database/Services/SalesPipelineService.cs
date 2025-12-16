@@ -357,38 +357,43 @@ namespace MarFin_Final.Data
                 {
                     conn.Open();
 
-                    // Total pipeline value
-                    string valueQuery = @"SELECT ISNULL(SUM(deal_value), 0) FROM tbl_Sales_Pipeline 
-                                        WHERE is_archived = 0";
+                    // Total pipeline value (all non-archived opportunities)
+                    string valueQuery = @"SELECT ISNULL(SUM(deal_value), 0)
+                                          FROM tbl_Sales_Pipeline
+                                          WHERE is_archived = 0";
                     using (SqlCommand cmd = new SqlCommand(valueQuery, conn))
                     {
                         metrics["TotalValue"] = cmd.ExecuteScalar() ?? 0;
                     }
 
-                    // Active deals count
-                    string countQuery = @"SELECT COUNT(*) FROM tbl_Sales_Pipeline 
-                                        WHERE is_archived = 0";
+                    // Active deals count (non-archived opportunities in non-closed stages)
+                    string countQuery = @"SELECT COUNT(*)
+                                          FROM tbl_Sales_Pipeline sp
+                                          INNER JOIN tbl_Pipeline_Stages ps ON sp.stage_id = ps.stage_id
+                                          WHERE sp.is_archived = 0 AND ps.is_closed = 0";
                     using (SqlCommand cmd = new SqlCommand(countQuery, conn))
                     {
                         metrics["ActiveDeals"] = cmd.ExecuteScalar() ?? 0;
                     }
 
-                    // Average deal size
-                    string avgQuery = @"SELECT ISNULL(AVG(deal_value), 0) FROM tbl_Sales_Pipeline 
-                                      WHERE is_archived = 0";
+                    // Average deal size (all non-archived opportunities)
+                    string avgQuery = @"SELECT ISNULL(AVG(deal_value), 0)
+                                        FROM tbl_Sales_Pipeline
+                                        WHERE is_archived = 0";
                     using (SqlCommand cmd = new SqlCommand(avgQuery, conn))
                     {
                         metrics["AvgDealSize"] = cmd.ExecuteScalar() ?? 0;
                     }
 
-                    // Win rate
+                    // Win rate (percentage of opportunities in closed stages)
                     string winRateQuery = @"SELECT 
-                                          CASE WHEN COUNT(*) > 0 
-                                          THEN CAST(SUM(CASE WHEN ps.is_closed = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS DECIMAL(5,2))
-                                          ELSE 0 END
-                                          FROM tbl_Sales_Pipeline sp
-                                          INNER JOIN tbl_Pipeline_Stages ps ON sp.stage_id = ps.stage_id
-                                          WHERE sp.is_archived = 0";
+                                              CASE WHEN COUNT(*) > 0 
+                                                   THEN CAST(SUM(CASE WHEN ps.is_closed = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS DECIMAL(5,2))
+                                                   ELSE 0 
+                                              END
+                                            FROM tbl_Sales_Pipeline sp
+                                            INNER JOIN tbl_Pipeline_Stages ps ON sp.stage_id = ps.stage_id
+                                            WHERE sp.is_archived = 0";
                     using (SqlCommand cmd = new SqlCommand(winRateQuery, conn))
                     {
                         metrics["WinRate"] = cmd.ExecuteScalar() ?? 0;
