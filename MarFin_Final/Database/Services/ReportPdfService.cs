@@ -74,6 +74,9 @@ public static class ReportPdfService
                         case "all":
                             GenerateCombinedReport(column, revenueData, revenueSources, campaignData, salesData, topCustomers, segments);
                             break;
+                        case "activity":
+                            GenerateActivityReport(column);
+                            break;
                         default:
                             column.Item().Text("Unknown report type selected.")
                                 .FontColor(Colors.Red.Medium).Italic();
@@ -127,6 +130,7 @@ public static class ReportPdfService
         "customer" => "Customer Analysis Report",
         "invoice" => "Invoice Summary Report",
         "all" => "Comprehensive Analytics Report",
+        "activity" => "User Activity Report",
         _ => "Custom Report"
     };
 
@@ -260,6 +264,60 @@ public static class ReportPdfService
             table.Cell().AlignRight().Text($"{data.ROI:F2}%")
                 .Bold().FontSize(14)
                 .FontColor(data.ROI >= 100 ? Colors.Green.Darken3 : Colors.Orange.Darken3);
+        });
+
+        // Insight-style commentary based on performance
+        column.Item().PaddingTop(20).Text("Insights & Recommendations").FontSize(14).Bold();
+
+        column.Item().PaddingTop(5).Text(text =>
+        {
+            if (data.ClickRate < 0.5)
+            {
+                text.Span("• Click-through rate is extremely low. ");
+                text.Span("Consider testing new creatives, clearer calls to action, and different placement (e.g., retargeting or search ads) to drive initial engagement.");
+            }
+            else if (data.ClickRate < 2)
+            {
+                text.Span("• Click-through rate is below typical benchmarks. ");
+                text.Span("Refine audience targeting and subject lines, and experiment with shorter, benefit-focused copy.");
+            }
+        });
+
+        column.Item().PaddingTop(2).Text(text =>
+        {
+            if (data.OpenRate < 15)
+            {
+                text.Span("• Open rate is weak. ");
+                text.Span("Review send time, sender name, and subject line testing. Think about segmenting by lifecycle stage so only high-intent contacts receive campaigns.");
+            }
+        });
+
+        column.Item().PaddingTop(2).Text(text =>
+        {
+            if (data.ConversionRate < 1)
+            {
+                text.Span("• Conversions are low relative to engagement. ");
+                text.Span("Audit the landing page experience, simplify forms, and align your offer more closely with the campaign message.");
+            }
+        });
+
+        column.Item().PaddingTop(2).Text(text =>
+        {
+            if (data.ROI <= 0)
+            {
+                text.Span("• Current campaigns are destroying value (negative ROI). ");
+                text.Span("Reallocate budget temporarily toward proven channels (e.g., high-intent search, existing customer upsell) while you redesign the campaign funnel.");
+            }
+            else if (data.ROI < 100)
+            {
+                text.Span("• ROI is positive but below a 1:1 payback. ");
+                text.Span("Prioritize optimization of underperforming segments and pause creatives with the weakest engagement before scaling spend.");
+            }
+            else
+            {
+                text.Span("• ROI is healthy. ");
+                text.Span("Consider increasing spend on the best-performing segments while continuing small-scale tests on new audiences.");
+            }
         });
     }
 
@@ -462,6 +520,53 @@ public static class ReportPdfService
                 table.Cell().Text(inv.DueDate.ToString("MMM dd, yyyy"));
                 table.Cell().AlignRight().Text($"₱{inv.TotalAmount:N2}");
             }
+        });
+    }
+
+    // ==================== USER ACTIVITY REPORT ====================
+    private static void GenerateActivityReport(ColumnDescriptor column)
+    {
+        column.Item().Text("User Activity Overview").FontSize(16).Bold();
+
+        column.Item().PaddingTop(10).Text(text =>
+        {
+            text.Span("This report summarizes how users interact with the MarFin system. ");
+            text.Span("Detailed activity tracking (logins, page views, record changes) can be added here once auditing is enabled in the application.");
+        });
+
+        column.Item().PaddingTop(20).Text("Suggested Activity Metrics to Track").FontSize(14).Bold();
+        column.Item().Table(table =>
+        {
+            table.ColumnsDefinition(cols =>
+            {
+                cols.RelativeColumn(2);
+                cols.RelativeColumn(3);
+            });
+
+            table.Header(header =>
+            {
+                header.Cell().Text("Metric").Bold();
+                header.Cell().Text("Description").Bold();
+            });
+
+            table.Cell().Text("Logins per User");
+            table.Cell().Text("How frequently each user signs in over a given period.");
+
+            table.Cell().Text("Key Actions Performed");
+            table.Cell().Text("Volume of high-value actions, such as creating invoices, updating opportunities, or launching campaigns.");
+
+            table.Cell().Text("Data Changes");
+            table.Cell().Text("Records created, updated, or deleted, useful for audit and compliance.");
+
+            table.Cell().Text("Inactive Users");
+            table.Cell().Text("Users who have not logged in during the selected period and may require re-engagement.");
+        });
+
+        column.Item().PaddingTop(20).Text("Next Steps").FontSize(14).Bold();
+        column.Item().Text(text =>
+        {
+            text.Span("To fully enable this report, configure an audit trail in the database (e.g., a tbl_User_Activity table) and wire it into the reporting service. ");
+            text.Span("This will allow you to quantify system adoption, identify training needs, and monitor sensitive changes.");
         });
     }
 }

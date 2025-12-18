@@ -1,0 +1,9 @@
+﻿SET IDENTITY_INSERT [dbo].[tbl_Pipeline_Stages] ON
+INSERT INTO [dbo].[tbl_Pipeline_Stages] ([stage_id], [stage_name], [stage_order], [default_probability], [description], [is_closed], [stage_color], [is_active], [created_date]) VALUES (1, N'Prospecting', 1, 10, N'Initial contact and qualification', 0, N'#6B7280', 1, N'2025-11-17 10:19:18')
+INSERT INTO [dbo].[tbl_Pipeline_Stages] ([stage_id], [stage_name], [stage_order], [default_probability], [description], [is_closed], [stage_color], [is_active], [created_date]) VALUES (2, N'Qualified', 2, 40, N'Lead qualified with confirmed budget and timeline', 0, N'#3B82F6', 1, N'2025-11-17 10:19:18')
+INSERT INTO [dbo].[tbl_Pipeline_Stages] ([stage_id], [stage_name], [stage_order], [default_probability], [description], [is_closed], [stage_color], [is_active], [created_date]) VALUES (3, N'Proposal', 3, 60, N'Proposal submitted to customer', 0, N'#8B5CF6', 1, N'2025-11-17 10:19:18')
+INSERT INTO [dbo].[tbl_Pipeline_Stages] ([stage_id], [stage_name], [stage_order], [default_probability], [description], [is_closed], [stage_color], [is_active], [created_date]) VALUES (4, N'Negotiation', 4, 80, N'Negotiating terms and pricing', 0, N'#F59E0B', 1, N'2025-11-17 10:19:18')
+INSERT INTO [dbo].[tbl_Pipeline_Stages] ([stage_id], [stage_name], [stage_order], [default_probability], [description], [is_closed], [stage_color], [is_active], [created_date]) VALUES (5, N'Closed Won', 5, 100, N'Deal successfully closed', 1, N'#10B981', 1, N'2025-11-17 10:19:18')
+INSERT INTO [dbo].[tbl_Pipeline_Stages] ([stage_id], [stage_name], [stage_order], [default_probability], [description], [is_closed], [stage_color], [is_active], [created_date]) VALUES (6, N'Closed Lost', 6, 0, N'Deal lost to competitor or cancelled', 1, N'#EF4444', 1, N'2025-11-17 10:19:18')
+SET IDENTITY_INSERT [dbo].[tbl_Pipeline_Stages] OFF
+	

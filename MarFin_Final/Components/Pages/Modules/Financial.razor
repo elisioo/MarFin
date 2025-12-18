@@ -161,7 +161,7 @@
                     <span class="clickable text-primary"
                           @onclick="() => NavigateToCustomer(invoice.CustomerId)"
                           @onclick:stopPropagation>
-                        @(string.IsNullOrEmpty(invoice.CustomerCompany) ? invoice.CustomerName : invoice.CustomerCompany)
+                        @(string.IsNullOrEmpty(invoice.CustomerName) ? invoice.CustomerName : invoice.CustomerName)
                     </span>
                     <span>Php @((invoice.TotalAmount ?? 0m).ToString("N2"))</span>
                     <span>@invoice.InvoiceDate.ToString("MM/dd/yyyy")</span>

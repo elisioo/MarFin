@@ -4,11 +4,15 @@
 @inject IJSRuntime JS
 @implements IDisposable
 @using MarFin_Final.Database.Services
+@using MarFin_Final.Data
+@using MarFin_Final.Models
 @using System.Globalization
 @using MarFin_Final.Services
 @using Microsoft.Maui.Storage
 @using Microsoft.Maui.ApplicationModel
 @using System.IO
+
+@inject InvoiceService InvoiceService
 
 @code {
     private ReportService reportService = new ReportService();
@@ -48,14 +52,18 @@
             // Load top customers
             topCustomers = await reportService.GetTopCustomersAsync(startDate, endDate);
 
-            // Load sales opportunities
+            // Load sales opportunities (summary + detailed rows)
             salesOpportunities = await reportService.GetSalesOpportunitiesAsync(startDate, endDate);
+            salesOpportunityDetails = await reportService.GetSalesOpportunityDetailsAsync(startDate, endDate);
 
             // Load customer segments
             customerSegments = await reportService.GetCustomerSegmentsAsync(startDate, endDate);
 
             // Load revenue sources
             revenueSources = await reportService.GetRevenueBySourceAsync(startDate, endDate);
+
+            // Load invoices for invoice reports
+            invoices = await InvoiceService.GetInvoicesByDateRangeAsync(startDate, endDate);
 
             _revenueChartRendered = false;
             isLoading = false;
@@ -130,7 +138,7 @@
                 }
             </span>
         </div>
-        <button class="btn-export" @onclick='() => OpenConfirmModal("all", "All Reports")'>
+        <button class="btn-export" @onclick='() => OpenReportModal("all", "All Reports")'>
             <i class="bi bi-download"></i> Export All Reports
         </button>
     </div>
@@ -185,7 +193,7 @@
                         {
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("revenue", "Revenue by Month")'>View</button>
-                                <button type="button" @onclick='() => OpenConfirmModal("financial", "Financial Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => OpenReportModal("financial", "Financial Report")'>Export as PDF</button>
                             </div>
                         }
                     </div>
@@ -223,7 +231,7 @@
                         {
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("campaign", "Campaign Performance")'>View</button>
-                                <button type="button" @onclick='() => OpenConfirmModal("campaign", "Campaign Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => OpenReportModal("campaign", "Campaign Report")'>Export as PDF</button>
                             </div>
                         }
                     </div>
@@ -288,7 +296,7 @@
                         {
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("topCustomers", "Top Customers")'>View</button>
-                                <button type="button" @onclick='() => OpenConfirmModal("customer", "Customer Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => OpenReportModal("customer", "Customer Report")'>Export as PDF</button>
                             </div>
                         }
                     </div>
@@ -324,7 +332,7 @@
                         {
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("sales", "Sales Opportunities")'>View</button>
-                                <button type="button" @onclick='() => OpenConfirmModal("sales", "Sales Pipeline Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => OpenReportModal("sales", "Sales Pipeline Report")'>Export as PDF</button>
                             </div>
                         }
                     </div>
@@ -381,7 +389,7 @@
                         {
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("segments", "Customer Segments")'>View</button>
-                                <button type="button" @onclick='() => OpenConfirmModal("customer", "Customer Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => OpenReportModal("customer", "Customer Report")'>Export as PDF</button>
                             </div>
                         }
                     </div>
@@ -420,7 +428,7 @@
                         {
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("sources", "Revenue by Source")'>View</button>
-                                <button type="button" @onclick='() => OpenConfirmModal("financial", "Financial Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => OpenReportModal("financial", "Financial Report")'>Export as PDF</button>
                             </div>
                         }
                     </div>
@@ -458,7 +466,7 @@
                     <h4>Customer Report</h4>
                     <p>Complete customer data with interactions, segments, and revenue breakdown</p>
                 </div>
-                <button class="btn-generate" @onclick='() => OpenConfirmModal("customer", "Customer Report")'>
+                <button class="btn-generate" @onclick='() => OpenReportModal("customer", "Customer Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -475,7 +483,7 @@
                     <h4>Financial Report</h4>
                     <p>Revenue, expenses, invoices, and transaction details with P&L statement</p>
                 </div>
-                <button class="btn-generate" @onclick='() => OpenConfirmModal("financial", "Financial Report")'>
+                <button class="btn-generate" @onclick='() => OpenReportModal("financial", "Financial Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -492,7 +500,7 @@
                     <h4>Campaign Report</h4>
                     <p>Marketing campaign performance, ROI, engagement metrics, and conversions</p>
                 </div>
-                <button class="btn-generate" @onclick='() => OpenConfirmModal("campaign", "Campaign Report")'>
+                <button class="btn-generate" @onclick='() => OpenReportModal("campaign", "Campaign Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -509,7 +517,7 @@
                     <h4>Sales Pipeline Report</h4>
                     <p>Opportunity tracking, win rates, pipeline health, and forecast analysis</p>
                 </div>
-                <button class="btn-generate" @onclick='() => OpenConfirmModal("sales", "Sales Pipeline Report")'>
+                <button class="btn-generate" @onclick='() => OpenReportModal("sales", "Sales Pipeline Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -526,7 +534,7 @@
                     <h4>Invoice Report</h4>
                     <p>All invoices with payment status, overdue tracking, and aging analysis</p>
                 </div>
-                <button class="btn-generate" @onclick='() => OpenConfirmModal("invoice", "Invoice Report")'>
+                <button class="btn-generate" @onclick='() => OpenReportModal("invoice", "Invoice Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
@@ -543,32 +551,13 @@
                     <h4>User Activity Report</h4>
                     <p>System usage, user logins, actions performed, and audit trail</p>
                 </div>
-                <button class="btn-generate" @onclick='() => OpenConfirmModal("activity", "User Activity Report")'>
+                <button class="btn-generate" @onclick='() => OpenReportModal("activity", "User Activity Report")'>
                     <i class="bi bi-file-earmark-arrow-down"></i> Generate
                 </button>
             </div>
         }
     </div>
 </div>
-
-@if (showConfirmModal)
-{
-    <div class="modal-backdrop"></div>
-    <div class="modal-container">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h3>Generate @pendingReportTitle?</h3>
-            </div>
-            <div class="modal-body">
-                <p>Report period: @startDate.ToString("MMMM dd, yyyy") – @endDate.ToString("MMMM dd, yyyy")</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" @onclick="CancelGenerateReport">Cancel</button>
-                <button class="btn-primary" @onclick="ConfirmGenerateReport">Generate</button>
-            </div>
-        </div>
-    </div>
-}
 
 @if (showViewModal)
 {
@@ -774,39 +763,350 @@
     </div>
 }
 
-@if (!string.IsNullOrEmpty(pdfDownloadStatus))
+@if (showReportModal)
 {
-    <div class="pdf-status-overlay" @onclick="ClosePdfStatus">
-        <div class="pdf-status-card" @onclick:stopPropagation>
-            @if (pdfDownloadStatus.Contains("Downloaded"))
-            {
-                <i class="bi bi-check-circle-fill text-success" style="font-size: 48px;"></i>
-                <h4 class="mt-3">@pdfDownloadStatus</h4>
-                <p class="text-muted mt-2">Your report has been downloaded successfully.</p>
-                <button class="btn btn-primary mt-3" @onclick="ClosePdfStatus">Close</button>
-            }
-            else if (pdfDownloadStatus.StartsWith("Error") || pdfDownloadStatus.Contains("failed"))
-            {
-                <i class="bi bi-x-circle-fill text-danger" style="font-size: 48px;"></i>
-                <h4 class="mt-3">@pdfDownloadStatus</h4>
-                <button class="btn btn-primary mt-3" @onclick="ClosePdfStatus">Close</button>
-            }
-            else
-            {
-                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                    <span class="visually-hidden">Loading...</span>
+    <div class="modal-overlay p-3" @onclick="CloseReportModal">
+        <div class="modal-content view-report-modal p-3" @onclick:stopPropagation>
+            <div class="modal-header">
+                <div>
+                    <h3>@reportModalTitle</h3>
+                    <p class="text-muted mb-0">Report period: @startDate.ToString("MMMM dd, yyyy") – @endDate.ToString("MMMM dd, yyyy")</p>
                 </div>
-                <h4 class="mt-3">@pdfDownloadStatus</h4>
-            }
+            </div>
+            <div class="modal-body">
+                @if (reportModalType == "financial")
+                {
+                    if (revenueData.Any() || revenueSources.Any())
+                    {
+                        if (revenueData.Any())
+                        {
+                            var totalIncome = revenueData.Sum(r => r.Income);
+                            var totalExpense = revenueData.Sum(r => r.Expense);
+                            var netProfit = totalIncome - totalExpense;
+                            var margin = totalIncome > 0 ? (netProfit / totalIncome * 100) : 0;
+
+                            <h5>Revenue Overview</h5>
+                            <div class="mb-3">
+                                <p><strong>Total Income:</strong> ₱@totalIncome.ToString("N2")</p>
+                                <p><strong>Total Expenses:</strong> ₱@totalExpense.ToString("N2")</p>
+                                <p><strong>Net Profit:</strong> ₱@netProfit.ToString("N2")</p>
+                                <p><strong>Profit Margin:</strong> @margin.ToString("F2")%</p>
+                            </div>
+
+                            <h5>Monthly Breakdown</h5>
+                            <table class="report-table">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>Income</th>
+                                        <th>Expenses</th>
+                                        <th>Net Profit</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var r in revenueData.OrderBy(x => x.Year).ThenBy(x => x.Month))
+                                    {
+                                        var monthName = new DateTime(r.Year, r.Month, 1).ToString("MMMM yyyy");
+                                        var profit = r.Income - r.Expense;
+                                        <tr>
+                                            <td>@monthName</td>
+                                            <td>₱@r.Income.ToString("N2")</td>
+                                            <td>₱@r.Expense.ToString("N2")</td>
+                                            <td>₱@profit.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+
+                        if (revenueSources.Any())
+                        {
+                            <h5 class="mt-4">Revenue by Source</h5>
+                            <table class="report-table">
+                                <thead>
+                                    <tr>
+                                        <th>Source</th>
+                                        <th>Amount</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var s in revenueSources)
+                                    {
+                                        <tr>
+                                            <td>@s.Name</td>
+                                            <td>₱@s.Amount.ToString("N2")</td>
+                                            <td>@s.Percentage.ToString("F2")%</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    }
+                    else
+                    {
+                        <p>No financial data available for the selected period.</p>
+                    }
+                }
+                else if (reportModalType == "campaign")
+                {
+                    if (campaignPerformance != null)
+                    {
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Email Open Rate</td>
+                                    <td>@campaignPerformance.OpenRate.ToString("F2")%</td>
+                                </tr>
+                                <tr>
+                                    <td>Click-Through Rate</td>
+                                    <td>@campaignPerformance.ClickRate.ToString("F2")%</td>
+                                </tr>
+                                <tr>
+                                    <td>Conversion Rate</td>
+                                    <td>@campaignPerformance.ConversionRate.ToString("F2")%</td>
+                                </tr>
+                                <tr>
+                                    <td>ROI</td>
+                                    <td>@campaignPerformance.ROI.ToString("F2")%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No campaign data available for the selected period.</p>
+                    }
+                }
+                else if (reportModalType == "customer")
+                {
+                    if (topCustomers.Any())
+                    {
+                        <h5>Top Customers</h5>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Customer</th>
+                                    <th>Total Amount</th>
+                                    <th>Transactions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in topCustomers)
+                                {
+                                    <tr>
+                                        <td>@c.Rank</td>
+                                        <td>@c.Name</td>
+                                        <td>₱@c.Amount.ToString("N2")</td>
+                                        <td>@c.Transactions</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+
+                    if (customerSegments.Any())
+                    {
+                        <h5 class="mt-4">Customer Segments</h5>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Segment</th>
+                                    <th>Customer Count</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in customerSegments)
+                                {
+                                    <tr>
+                                        <td>@s.Name</td>
+                                        <td>@s.Count</td>
+                                        <td>@s.Percentage.ToString("F2")%</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+
+                    if (!topCustomers.Any() && !customerSegments.Any())
+                    {
+                        <p>No customer data available for the selected period.</p>
+                    }
+                }
+                else if (reportModalType == "sales")
+                {
+                    if (salesOpportunities != null)
+                    {
+                        <h5>Sales Pipeline Summary</h5>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Total Opportunities</th>
+                                    <th>Active</th>
+                                    <th>Won</th>
+                                    <th>Lost</th>
+                                    <th>Total Pipeline Value</th>
+                                    <th>Win Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>@(salesOpportunityDetails?.Count ?? 0)</td>
+                                    <td>@salesOpportunities.Active</td>
+                                    <td>@salesOpportunities.Won</td>
+                                    <td>@salesOpportunities.Lost</td>
+                                    <td>₱@salesOpportunities.TotalPipelineValue.ToString("N2")</td>
+                                    <td>@salesOpportunities.WinRate.ToString("F2")%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    }
+
+                    if (salesOpportunityDetails != null && salesOpportunityDetails.Any())
+                    {
+                        <h5 class="mt-4">Opportunities Detail</h5>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Opportunity</th>
+                                    <th>Company</th>
+                                    <th>Stage</th>
+                                    <th>Est. Revenue</th>
+                                    <th>Probability</th>
+                                    <th>Weighted Revenue</th>
+                                    <th>Owner</th>
+                                    <th>Est. Close Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var opp in salesOpportunityDetails)
+                                {
+                                    <tr>
+                                        <td>@opp.OpportunityName</td>
+                                        <td>@opp.CompanyName</td>
+                                        <td>@opp.StageName</td>
+                                        <td>₱@opp.DealValue.ToString("N2")</td>
+                                        <td>@opp.Probability.ToString("N0")%</td>
+                                        <td>₱@opp.WeightedValue.ToString("N2")</td>
+                                        <td>@opp.OwnerName</td>
+                                        <td>@(opp.ExpectedCloseDate?.ToString("MMM dd, yyyy") ?? "-")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+
+                    if ((salesOpportunities == null || (salesOpportunityDetails == null || !salesOpportunityDetails.Any())) && !topCustomers.Any())
+                    {
+                        <p>No sales data available for the selected period.</p>
+                    }
+                }
+                else if (reportModalType == "invoice")
+                {
+                    if (invoices != null && invoices.Any())
+                    {
+                        var totalAmount = invoices.Sum(i => i.TotalAmount ?? 0m);
+                        var paidAmount = invoices
+                            .Where(i => string.Equals(i.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase))
+                            .Sum(i => i.TotalAmount ?? 0m);
+                        var overdueAmount = invoices.Where(i => i.IsOverdue).Sum(i => i.TotalAmount ?? 0m);
+
+                        <h5>Invoice Summary</h5>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Total Invoices</td>
+                                    <td>@invoices.Count</td>
+                                </tr>
+                                <tr>
+                                    <td>Total Amount</td>
+                                    <td>₱@totalAmount.ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <td>Paid Amount</td>
+                                    <td>₱@paidAmount.ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <td>Overdue Amount</td>
+                                    <td>₱@overdueAmount.ToString("N2")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h5 class="mt-4">Detailed Invoice List</h5>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Invoice #</th>
+                                    <th>Date</th>
+                                    <th>Customer</th>
+                                    <th>Status</th>
+                                    <th>Due Date</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var inv in invoices.OrderByDescending(i => i.InvoiceDate))
+                                {
+                                    var status = inv.IsOverdue && !string.Equals(inv.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase)
+                                        ? "Overdue"
+                                        : (inv.PaymentStatus ?? "Pending");
+
+                                    var customerDisplay = string.IsNullOrEmpty(inv.CustomerCompany)
+                                        ? inv.CustomerName
+                                        : inv.CustomerCompany;
+
+                                    <tr>
+                                        <td>@(inv.InvoiceNumber ?? "N/A")</td>
+                                        <td>@inv.InvoiceDate.ToString("MMM dd, yyyy")</td>
+                                        <td>@(customerDisplay ?? "Unknown")</td>
+                                        <td>@status</td>
+                                        <td>@inv.DueDate.ToString("MMM dd, yyyy")</td>
+                                        <td>₱@(inv.TotalAmount ?? 0m)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No invoices found for the selected period.</p>
+                    }
+                }
+                else if (reportModalType == "all")
+                {
+                    <p>This combined report will include financial, campaign, sales, and customer analytics. Use "Download as PDF" to view the full comprehensive report.</p>
+                }
+                else
+                {
+                    <p>Unknown report type selected.</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CloseReportModal">Close</button>
+                <button class="btn-primary" @onclick="DownloadReportPdfFromModal">
+                    <i class="bi bi-download"></i> Download as PDF
+                </button>
+            </div>
         </div>
     </div>
 }
 
 @code {
-    private bool showConfirmModal;
-    private string? pendingReportType;
-    private string pendingReportTitle = "";
-
     private PdfExportService pdfExportService = new PdfExportService();
 
     private string selectedFilter = "thisMonth";
@@ -818,8 +1118,14 @@
     private string viewModalType = "";
     private string viewModalTitle = "";
 
+    private bool showReportModal;
+    private string reportModalType = "";
+    private string reportModalTitle = "";
+
     private string pdfDownloadStatus = "";
     private System.Threading.Timer? pdfStatusTimer;
+
+    private List<Invoice> invoices = new();
 
     private void SetFilter(string filter)
     {
@@ -841,6 +1147,7 @@
             endDate = DateTime.Now;
         }
     }
+
     private void ClosePdfStatus()
     {
         pdfDownloadStatus = string.Empty;
@@ -848,6 +1155,7 @@
         pdfStatusTimer = null;
         StateHasChanged();
     }
+
     private string GetMonthName(int month)
     {
         var months = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
@@ -881,30 +1189,29 @@
         viewModalTitle = string.Empty;
     }
 
-    private void OpenConfirmModal(string reportType, string reportTitle)
+    private void OpenReportModal(string reportType, string reportTitle)
     {
-        pendingReportType = reportType;
-        pendingReportTitle = reportTitle;
-        showConfirmModal = true;
+        reportModalType = reportType;
+        reportModalTitle = reportTitle;
+        showReportModal = true;
         activeCardMenu = null;
     }
 
-    private void CancelGenerateReport()
+    private void CloseReportModal()
     {
-        showConfirmModal = false;
-        pendingReportType = null;
+        showReportModal = false;
+        reportModalType = string.Empty;
+        reportModalTitle = string.Empty;
     }
 
-    private async Task ConfirmGenerateReport()
+    private async Task DownloadReportPdfFromModal()
     {
-        var type = pendingReportType;
-        showConfirmModal = false;
-        pendingReportType = null;
-
-        if (!string.IsNullOrEmpty(type))
+        if (string.IsNullOrEmpty(reportModalType))
         {
-            await GenerateReport(type);
+            return;
         }
+
+        await GenerateReport(reportModalType);
     }
 
     private async Task GenerateReport(string reportType)
@@ -929,7 +1236,7 @@
                     salesOpportunities,
                     customerSegments,
                     revenueSources,
-                    null
+                    invoices
                 );
             }
             catch (Exception genEx)
@@ -948,7 +1255,7 @@
                         salesOpportunities,
                         customerSegments,
                         revenueSources,
-                        null
+                        invoices
                     );
 
                     var htmlFileName = $"MarFin_{reportType}_Report_{DateTime.Now:yyyyMMdd_HHmmss}.html";
@@ -1068,6 +1375,7 @@
     private ReportService.CampaignPerformanceData? campaignPerformance;
     private List<ReportService.TopCustomerData> topCustomers = new();
     private ReportService.SalesOpportunitiesData? salesOpportunities;
+    private List<ReportService.SalesOpportunityDetailData> salesOpportunityDetails = new();
     private List<ReportService.CustomerSegmentData> customerSegments = new();
     private List<ReportService.RevenueSourceData> revenueSources = new();
 }
