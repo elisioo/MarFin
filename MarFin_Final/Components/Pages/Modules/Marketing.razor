@@ -1,6 +1,9 @@
 ﻿@page "/marketing"
 @inject NavigationManager Navigation
 @inject AuthService AuthService
+@inject CustomerService CustomerService
+@inject CustomerSegmentService SegmentService
+@inject EmailService EmailService
 @using MarFin_Final.Database.Services
 @using MarFin_Final.Models
 @using MarFin_Final.Services
@@ -413,7 +416,7 @@
     }
 </div>
 
-@* Add/Edit Modal *@
+@* Multi-step Campaign Wizard Modal *@
 @if (showModal)
 {
     <div class="modal-overlay" @onclick="CloseModal">
@@ -421,7 +424,10 @@
             <div class="modal-header">
                 <div class="modal-title">
                     <span class="user-icon"><i class="bi bi-megaphone"></i></span>
-                    <h2>@(isEditMode ? "Edit Campaign" : "New Campaign")</h2>
+                    <div>
+                        <h2>@(isEditMode ? "Edit Campaign" : "New Campaign")</h2>
+                        <small>Step @wizardStep of 4</small>
+                    </div>
                 </div>
                 <div class="modal-actions">
                     <button class="btn-cancel" @onclick="CloseModal">Cancel</button>
@@ -430,10 +436,68 @@
                         {
                             <span class="spinner-small"></span>
                         }
-                        Save Campaign
+                        Save Draft
                     </button>
                 </div>
             </div>
+
+            <div class="wizard-progress-container">
+                <div class="wizard-steps-new">
+                    <div class="wizard-step-new @(wizardStep >= 1 ? "active" : "") @(wizardStep > 1 ? "completed" : "")">
+                        <div class="step-circle">
+                            @if (wizardStep > 1)
+                            {
+                                <i class="bi bi-check-lg"></i>
+                            }
+                            else
+                            {
+                                <span>1</span>
+                            }
+                        </div>
+                        <div class="step-connector @(wizardStep > 1 ? "completed" : "")"></div>
+                        <span class="step-label">Details</span>
+                    </div>
+
+                    <div class="wizard-step-new @(wizardStep >= 2 ? "active" : "") @(wizardStep > 2 ? "completed" : "")">
+                        <div class="step-circle">
+                            @if (wizardStep > 2)
+                            {
+                                <i class="bi bi-check-lg"></i>
+                            }
+                            else
+                            {
+                                <span>2</span>
+                            }
+                        </div>
+                        <div class="step-connector @(wizardStep > 2 ? "completed" : "")"></div>
+                        <span class="step-label">Content</span>
+                    </div>
+
+                    <div class="wizard-step-new @(wizardStep >= 3 ? "active" : "") @(wizardStep > 3 ? "completed" : "")">
+                        <div class="step-circle">
+                            @if (wizardStep > 3)
+                            {
+                                <i class="bi bi-check-lg"></i>
+                            }
+                            else
+                            {
+                                <span>3</span>
+                            }
+                        </div>
+                        <div class="step-connector @(wizardStep > 3 ? "completed" : "")"></div>
+                        <span class="step-label">Audience</span>
+                    </div>
+
+                    <div class="wizard-step-new @(wizardStep >= 4 ? "active" : "")">
+                        <div class="step-circle">
+                            <span>4</span>
+                        </div>
+                        <span class="step-label">Review</span>
+                    </div>
+                </div>
+            </div>
+
+
 
             <div class="modal-body">
                 @if (!string.IsNullOrEmpty(errorMessage))
@@ -441,93 +505,243 @@
                     <div class="alert alert-danger">@errorMessage</div>
                 }
 
-                <div class="form-group">
-                    <label>Campaign Name <span class="required">*</span></label>
-                    <input type="text" class="form-control" @bind="editingCampaign.CampaignName" placeholder="Enter campaign name" />
+                @if (wizardStep == 1)
+                {
+                    <div class="wizard-step-content">
+                        <h4 class="section-title">Campaign Details</h4>
+
+                        <div class="form-group">
+                            <label>Campaign Name <span class="required">*</span></label>
+                            <input type="text" class="form-control" @bind="editingCampaign.CampaignName" placeholder="Enter campaign name" />
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Campaign Type</label>
+                                <select class="form-control" @bind="editingCampaign.CampaignType">
+                                    <option value="Email">Email</option>
+                                    <option value="SMS">SMS</option>
+                                    <option value="Social">Social</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select class="form-control" @bind="editingCampaign.CampaignStatus">
+                                    <option value="Draft">Draft</option>
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Paused">Paused</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Start Date</label>
+                                <input type="date" class="form-control" @bind="editingCampaign.StartDate" />
+                            </div>
+                            <div class="form-group">
+                                <label>End Date</label>
+                                <input type="date" class="form-control" @bind="editingCampaign.EndDate" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Budget (₱)</label>
+                                <input type="number" step="0.01" class="form-control" @bind="editingCampaign.Budget" placeholder="0.00" />
+                            </div>
+                            <div class="form-group">
+                                <label>Actual Spend (₱)</label>
+                                <input type="number" step="0.01" class="form-control" @bind="editingCampaign.ActualSpend" placeholder="0.00" />
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (wizardStep == 2)
+                {
+                    <div class="wizard-step-content">
+                        <h4 class="section-title">Email Content</h4>
+
+                        <div class="form-group">
+                            <label>Subject Line <span class="required">*</span></label>
+                            <input type="text" class="form-control" @bind="editingCampaign.SubjectLine" placeholder="Email subject line" />
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 1;">
+                                <label>Email Content <span class="required">*</span></label>
+                                <textarea class="form-control" rows="8" @bind="editingCampaign.EmailContent" placeholder="Write your email content here..."></textarea>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>Live Preview</label>
+                                <div class="email-preview">
+                                    <strong>@(editingCampaign.SubjectLine ?? "(No subject)")</strong>
+                                    <div class="email-preview-body">
+                                        @((MarkupString)(editingCampaign.EmailContent ?? string.Empty))
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (wizardStep == 3)
+                {
+                    <div class="wizard-step-content">
+                        <h4 class="section-title">Audience</h4>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Customer Status</label>
+                                <select class="form-control" @bind="audienceStatusFilter" @bind:after="ApplyAudienceFilters">
+                                    <option value="">All statuses</option>
+                                    @foreach (var status in audienceStatuses)
+                                    {
+                                        <option value="@status">@status</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Segment</label>
+                                <select class="form-control" @bind="audienceSegmentId" @bind:after="ApplyAudienceFilters">
+                                    <option value="">All segments</option>
+                                    @foreach (var segment in audienceSegments)
+                                    {
+                                        <option value="@segment.SegmentId">@segment.SegmentName</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <p class="text-muted">Recipients with valid email: <strong>@RecipientCount</strong></p>
+
+                        @if (isAudienceLoading)
+                        {
+                            <div class="loading-state">
+                                <div class="spinner"></div>
+                                <p>Loading audience...</p>
+                            </div>
+                        }
+                        else if (!audienceCustomers.Any())
+                        {
+                            <div class="empty-state">
+                                <i class="bi bi-people"></i>
+                                <p>No customers match the selected filters.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="campaigns-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Email</th>
+                                            <th>Segment</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var customer in audienceCustomers.Take(50))
+                                        {
+                                            <tr>
+                                                <td>@customer.FullName</td>
+                                                <td>@customer.Email</td>
+                                                <td>@customer.CustomerSegment</td>
+                                                <td>@customer.CustomerStatus</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                                @if (audienceCustomers.Count > 50)
+                                {
+                                    <p class="text-muted">Showing first 50 of @audienceCustomers.Count customers.</p>
+                                }
+                            </div>
+                        }
+
+                        <div class="form-row" style="margin-top: 1rem;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>Send test email</label>
+                                <div class="form-row">
+                                    <input type="email" class="form-control" style="flex: 1;" @bind="testEmailAddress" placeholder="your-email@example.com" />
+                                    <button class="btn-secondary" style="margin-left: 0.5rem;" @onclick="SendTestEmail" disabled="@isSaving">Send Test</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (wizardStep == 4)
+                {
+                    <div class="wizard-step-content">
+                        <h4 class="section-title">Review &amp; Send</h4>
+
+                        <div class="review-grid">
+                            <div class="review-section">
+                                <h5>Details</h5>
+                                <p><strong>Name:</strong> @editingCampaign.CampaignName</p>
+                                <p><strong>Type:</strong> @editingCampaign.CampaignType</p>
+                                <p><strong>Status:</strong> @editingCampaign.CampaignStatus</p>
+                                <p><strong>Date Range:</strong> @editingCampaign.StartDate.ToShortDateString() - @editingCampaign.EndDate.ToShortDateString()</p>
+                                <p><strong>Budget:</strong> ₱@editingCampaign.Budget.ToString("N0")</p>
+                            </div>
+                            <div class="review-section">
+                                <h5>Email Preview</h5>
+                                <p><strong>Subject:</strong> @editingCampaign.SubjectLine</p>
+                                <div class="email-preview">
+                                    <div class="email-preview-body">
+                                        @((MarkupString)(editingCampaign.EmailContent ?? string.Empty))
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="review-section">
+                                <h5>Audience</h5>
+                                <p><strong>Total recipients:</strong> @RecipientCount</p>
+                                @if (!string.IsNullOrWhiteSpace(audienceStatusFilter))
+                                {
+                                    <p><strong>Status filter:</strong> @audienceStatusFilter</p>
+                                }
+                                @if (audienceSegmentId.HasValue)
+                                {
+                                    var seg = audienceSegments.FirstOrDefault(s => s.SegmentId == audienceSegmentId.Value);
+                                    if (seg != null)
+                                    {
+                                        <p><strong>Segment filter:</strong> @seg.SegmentName</p>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer wizard-footer">
+                <div class="wizard-footer-left">
+                    <button class="btn-cancel" disabled="@(wizardStep == 1)" @onclick="PreviousStep">Back</button>
                 </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Campaign Type</label>
-                        <select class="form-control" @bind="editingCampaign.CampaignType">
-                            <option value="Email">Email</option>
-                            <option value="SMS">SMS</option>
-                            <option value="Social">Social</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Status</label>
-                        <select class="form-control" @bind="editingCampaign.CampaignStatus">
-                            <option value="Draft">Draft</option>
-                            <option value="Scheduled">Scheduled</option>
-                            <option value="Active">Active</option>
-                            <option value="Paused">Paused</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Cancelled">Cancelled</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Start Date</label>
-                        <input type="date" class="form-control" @bind="editingCampaign.StartDate" />
-                    </div>
-                    <div class="form-group">
-                        <label>End Date</label>
-                        <input type="date" class="form-control" @bind="editingCampaign.EndDate" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Budget (₱)</label>
-                        <input type="number" step="0.01" class="form-control" @bind="editingCampaign.Budget" placeholder="0.00" />
-                    </div>
-                    <div class="form-group">
-                        <label>Actual Spend (₱)</label>
-                        <input type="number" step="0.01" class="form-control" @bind="editingCampaign.ActualSpend" placeholder="0.00" />
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Subject Line</label>
-                    <input type="text" class="form-control" @bind="editingCampaign.SubjectLine" placeholder="Email subject line" />
-                </div>
-
-                <div class="form-group">
-                    <label>Email Content</label>
-                    <textarea class="form-control" rows="4" @bind="editingCampaign.EmailContent" placeholder="Campaign message..."></textarea>
-                </div>
-
-                <h4 class="section-title">Campaign Metrics</h4>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Total Sent</label>
-                        <input type="number" class="form-control" @bind="editingCampaign.TotalSent" placeholder="0" />
-                    </div>
-                    <div class="form-group">
-                        <label>Total Opened</label>
-                        <input type="number" class="form-control" @bind="editingCampaign.TotalOpened" placeholder="0" />
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Total Clicked</label>
-                        <input type="number" class="form-control" @bind="editingCampaign.TotalClicked" placeholder="0" />
-                    </div>
-                    <div class="form-group">
-                        <label>Total Converted</label>
-                        <input type="number" class="form-control" @bind="editingCampaign.TotalConverted" placeholder="0" />
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Revenue Generated (₱)</label>
-                    <input type="number" step="0.01" class="form-control" @bind="editingCampaign.RevenueGenerated" placeholder="0.00" />
+                <div class="wizard-footer-right">
+                    @if (wizardStep < 4)
+                    {
+                        <button class="btn-save" @onclick="NextStep" disabled="@isSaving">
+                            Next
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-cancel" @onclick="SaveCampaign" disabled="@isSaving">
+                            Save as Draft
+                        </button>
+                        <button class="btn-save" @onclick="SendCampaignNow" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-small"></span>
+                            }
+                            Send Campaign
+                        </button>
+                    }
                 </div>
             </div>
         </div>
@@ -593,8 +807,22 @@
     private string successMessage = "";
     private int currentUserId = 1;
 
+    private int wizardStep = 1;
+    private const int MaxWizardStep = 4;
+
+    private List<Customer> allAudienceCustomers = new();
+    private List<Customer> audienceCustomers = new();
+    private List<CustomerSegment> audienceSegments = new();
+    private List<string> audienceStatuses = new();
+    private string audienceStatusFilter = "";
+    private int? audienceSegmentId = null;
+    private bool isAudienceLoading = false;
+    private string testEmailAddress = "";
+
+    private int RecipientCount => audienceCustomers.Count(c => !string.IsNullOrWhiteSpace(c.Email));
 
     private bool isCardView = true; // default view
+
     private int currentPage = 1;
     private int pageSize = 10;
     private int totalRecords = 0;
@@ -603,7 +831,8 @@
 
     private Timer? searchTimer;
 
-      protected override async Task OnInitializedAsync()
+
+    protected override async Task OnInitializedAsync()
     {
         if (!AuthService.IsAuthenticated)
         {
@@ -614,10 +843,9 @@
         currentUserId = AuthService.CurrentUser?.UserId ?? 1;
         await LoadCampaigns();
         await LoadMetrics();
+        await LoadAudienceData();
         await LoadData();
     }
-
-
 
     private async Task LoadData()
     {
@@ -644,6 +872,334 @@
 
         isLoading = false;
         StateHasChanged();
+    }
+
+    private bool ValidateCurrentStep()
+    {
+        errorMessage = "";
+
+        if (wizardStep == 1)
+        {
+            if (string.IsNullOrWhiteSpace(editingCampaign.CampaignName))
+            {
+                errorMessage = "Campaign name is required.";
+                return false;
+            }
+
+            if (editingCampaign.EndDate < editingCampaign.StartDate)
+            {
+                errorMessage = "End date cannot be earlier than start date.";
+                return false;
+            }
+        }
+        else if (wizardStep == 2)
+        {
+            if (string.IsNullOrWhiteSpace(editingCampaign.SubjectLine))
+            {
+                errorMessage = "Subject line is required.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(editingCampaign.EmailContent))
+            {
+                errorMessage = "Email content is required.";
+                return false;
+            }
+        }
+        else if (wizardStep == 3)
+        {
+            if (RecipientCount == 0)
+            {
+                errorMessage = "No recipients match the selected audience filters.";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private async Task NextStep()
+    {
+        if (!ValidateCurrentStep())
+        {
+            return;
+        }
+
+        if (wizardStep < MaxWizardStep)
+        {
+            wizardStep++;
+        }
+
+        if (wizardStep == 3 && allAudienceCustomers.Count == 0)
+        {
+            await LoadAudienceData();
+        }
+    }
+
+    private void PreviousStep()
+    {
+        if (wizardStep > 1)
+        {
+            wizardStep--;
+        }
+    }
+
+    private async Task SendTestEmail()
+    {
+        if (string.IsNullOrWhiteSpace(testEmailAddress))
+        {
+            errorMessage = "Please enter a test email address.";
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+            errorMessage = "";
+            successMessage = "";
+
+            var htmlBody = BuildCampaignEmailHtml();
+
+            await EmailService.SendEmailAsync(
+                testEmailAddress.Trim(),
+                editingCampaign.SubjectLine ?? string.Empty,
+                htmlBody);
+
+            successMessage = "Test email sent successfully.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to send test email: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private string BuildCampaignEmailHtml()
+    {
+        var subject = (editingCampaign.SubjectLine ?? string.Empty).Trim();
+        var preheader = subject;
+        if (preheader.Length > 90)
+        {
+            preheader = preheader.Substring(0, 90) + "...";
+        }
+
+        var bodyContent = editingCampaign.EmailContent ?? string.Empty;
+
+        var baseUri = Navigation.BaseUri?.TrimEnd('/') ?? string.Empty;
+        const string logoPath = "wwwroot/img/logo_blacktxt.png";
+        var logoUrl = string.IsNullOrWhiteSpace(baseUri)
+            ? logoPath
+            : $"{baseUri}{logoPath}";
+
+        var companyName = "MarFin CRM";
+        var companyEmail = AuthService.CurrentUser?.Email ?? string.Empty;
+
+        var html = $@"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+  <meta charset=""UTF-8"" />
+  <title>{subject}</title>
+  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+</head>
+<body style=""margin:0; padding:0; background-color:#f4f4f4;"">
+  <table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0"" border=""0"">
+    <tr>
+      <td align=""center"" style=""padding:12px 10px; font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#555555;"">
+        <table role=""presentation"" width=""600"" cellspacing=""0"" cellpadding=""0"" border=""0"" style=""max-width:600px; width:100%;"">
+          <tr>
+            <td align=""left"" style=""color:#555555;"">
+              {preheader}
+            </td>
+            <td align=""right"">
+              <a href=""#"" style=""color:#555555; text-decoration:underline;"">View this email in your browser</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td align=""center"" style=""padding:0 10px 30px 10px;"">
+        <table role=""presentation"" width=""600"" cellspacing=""0"" cellpadding=""0"" border=""0"" style=""max-width:600px; width:100%;"">
+
+          <tr>
+            <td align=""center"" style=""background-color:#00bfa5; padding:40px 30px 35px 30px;"">
+
+              <img src=""{logoUrl}""
+                   alt=""MarFin CRM""
+                   style=""display:block; max-width:140px; width:100%; margin:0 auto 30px auto; border:0;"" />
+
+              <h1 style=""margin:0 0 10px 0; font-family:Arial,Helvetica,sans-serif;
+                         font-size:28px; letter-spacing:2px; color:#ffffff; text-transform:uppercase;"">
+                {subject}
+              </h1>
+
+              <p style=""margin:0 0 24px 0; font-family:Arial,Helvetica,sans-serif;
+                        font-size:16px; color:#ffffff; letter-spacing:1px;"">
+                We value your feedback and would love to hear from you.
+              </p>
+
+              <div style=""margin:0 0 28px 0; font-family:Arial,Helvetica,sans-serif;
+                        font-size:14px; line-height:1.6; color:#ffffff;"">
+                {bodyContent}
+              </div>
+
+              <table role=""presentation"" cellspacing=""0"" cellpadding=""0"" border=""0"" style=""margin:0 auto 30px auto;"">
+                <tr>
+                  <td align=""center"" bgcolor=""#ff4b5c"" style=""border-radius:4px;"">
+                    <a href=""#""
+                       style=""display:inline-block; padding:14px 32px;
+                              font-family:Arial,Helvetica,sans-serif; font-size:14px;
+                              color:#ffffff; text-decoration:none; font-weight:bold;
+                              text-transform:uppercase;"">
+                      Let's Begin!
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style=""margin:0 0 6px 0; font-family:Arial,Helvetica,sans-serif;
+                        font-size:14px; color:#ffffff;"">
+                We appreciate your time!
+              </p>
+              <p style=""margin:0; font-family:'Brush Script MT','Segoe Script',cursive;
+                        font-size:28px; color:#ffffff;"">
+                Thank you!
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td align=""center""
+                style=""background-color:#ffffff; padding:25px 30px 35px 30px;
+                       font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#777777;"">
+
+              <p style=""margin:0 0 12px 0;"">
+                <a href=""#"" style=""margin:0 8px; color:#777777; text-decoration:none;"">Facebook</a> •
+                <a href=""#"" style=""margin:0 8px; color:#777777; text-decoration:none;"">Instagram</a> •
+                <a href=""#"" style=""margin:0 8px; color:#777777; text-decoration:none;"">Twitter</a>
+              </p>
+
+              <p style=""margin:0 0 4px 0;"">
+                &copy; {DateTime.Now.Year} {companyName}. All rights reserved.
+              </p>
+              <p style=""margin:0 0 10px 0;"">
+                You are receiving this email from {companyName}.<br />
+                If you have any questions, reply to <a href=""mailto:{companyEmail}"" style=""color:#777777; text-decoration:underline;"">{companyEmail}</a>.
+              </p>
+
+              <p style=""margin:0;"">
+                Want to change how you receive these emails?<br />
+                You can <a href=""#"" style=""color:#777777; text-decoration:underline;"">update your preferences</a>
+                or <a href=""#"" style=""color:#777777; text-decoration:underline;"">unsubscribe from this list</a>.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+
+        return html;
+    }
+
+    private async Task SendCampaignNow()
+    {
+        // Ensure all steps are valid before sending
+        var previousStep = wizardStep;
+        wizardStep = 1;
+        if (!ValidateCurrentStep())
+        {
+            return;
+        }
+
+        wizardStep = 2;
+        if (!ValidateCurrentStep())
+        {
+            return;
+        }
+
+        wizardStep = 3;
+        if (!ValidateCurrentStep())
+        {
+            return;
+        }
+
+        wizardStep = previousStep;
+
+        if (RecipientCount == 0)
+        {
+            errorMessage = "There are no recipients to send this campaign to.";
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+            errorMessage = "";
+            successMessage = "";
+
+            var recipientEmails = audienceCustomers
+                .Select(c => c.Email)
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Select(e => e.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            editingCampaign.TotalSent = recipientEmails.Count;
+
+            if (!isEditMode)
+            {
+                editingCampaign.CreatedBy = currentUserId;
+            }
+
+            bool success = false;
+            await Task.Run(() =>
+            {
+                if (isEditMode)
+                {
+                    success = campaignService.UpdateCampaign(editingCampaign);
+                }
+                else
+                {
+                    success = campaignService.AddCampaign(editingCampaign);
+                }
+            });
+
+            if (!success)
+            {
+                errorMessage = "Failed to save campaign before sending emails.";
+                return;
+            }
+
+            var htmlBody = BuildCampaignEmailHtml();
+
+            await EmailService.SendBulkEmailAsync(
+                recipientEmails,
+                editingCampaign.SubjectLine ?? string.Empty,
+                htmlBody);
+
+            successMessage = $"Campaign sent to {recipientEmails.Count} recipients.";
+            showModal = false;
+            await LoadCampaigns();
+            await LoadMetrics();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error sending campaign: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
     }
 
     private void SetView(bool cardView)
@@ -711,7 +1267,6 @@
         await LoadData();
     }
 
-  
     private async Task LoadCampaigns()
     {
         try
@@ -752,6 +1307,56 @@
             metrics = campaignService.GetCampaignMetrics();
         });
         StateHasChanged();
+    }
+
+    private async Task LoadAudienceData()
+    {
+        try
+        {
+            isAudienceLoading = true;
+            StateHasChanged();
+
+            await Task.Run(() =>
+            {
+                allAudienceCustomers = CustomerService.GetAllCustomers() ?? new List<Customer>();
+                audienceSegments = SegmentService.GetAllSegments() ?? new List<CustomerSegment>();
+            });
+
+            audienceStatuses = allAudienceCustomers
+                .Select(c => c.CustomerStatus)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s)
+                .ToList();
+
+            ApplyAudienceFilters();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading audience data: {ex.Message}";
+        }
+        finally
+        {
+            isAudienceLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyAudienceFilters()
+    {
+        IEnumerable<Customer> query = allAudienceCustomers;
+
+        if (!string.IsNullOrWhiteSpace(audienceStatusFilter))
+        {
+            query = query.Where(c => string.Equals(c.CustomerStatus, audienceStatusFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (audienceSegmentId.HasValue && audienceSegmentId.Value > 0)
+        {
+            query = query.Where(c => c.SegmentId == audienceSegmentId.Value);
+        }
+
+        audienceCustomers = query.ToList();
     }
 
     private void ApplyFilters()
@@ -814,8 +1419,6 @@
         StateHasChanged();
     }
 
-
-
     private void OpenAddModal()
     {
         isEditMode = false;
@@ -828,6 +1431,11 @@
             EndDate = DateTime.Today.AddDays(7)
         };
         errorMessage = "";
+        successMessage = "";
+        wizardStep = 1;
+        audienceStatusFilter = "";
+        audienceSegmentId = null;
+        ApplyAudienceFilters();
         showModal = true;
     }
 
@@ -854,13 +1462,17 @@
             RevenueGenerated = campaign.RevenueGenerated
         };
         errorMessage = "";
+        successMessage = "";
+        wizardStep = 1;
+        audienceStatusFilter = "";
+        audienceSegmentId = null;
+        ApplyAudienceFilters();
         showModal = true;
     }
 
     private void CloseModal()
     {
         showModal = false;
-        errorMessage = "";
     }
 
     private async Task SaveCampaign()

@@ -404,7 +404,7 @@
                             @* Sales can log interactions *@
                             @if (AuthService.IsSalesRep() || AuthService.IsAdmin())
                             {
-                                <button class="btn-action">
+                                <button class="btn-action" @onclick="ToggleInteractionForm">
                                     <i class="bi bi-plus-lg"></i> Log Interaction
                                 </button>
                             }
@@ -415,7 +415,7 @@
                             </button>
                             
                             @* Everyone can call *@
-                            <button class="btn-action">
+                            <button class="btn-action" @onclick="CallCustomer" disabled="@(customer == null || string.IsNullOrWhiteSpace(customer.Phone))">
                                 <i class="bi bi-telephone"></i> Call Customer
                             </button>
                             
@@ -435,6 +435,44 @@
                                 </button>
                             }
                         </div>
+
+                        @if (showInteractionForm && customer != null)
+                        {
+                            <div class="interaction-form mt-3">
+                                <div class="card-header">
+                                    <h3>Log Interaction</h3>
+                                </div>
+                                <div class="form-group">
+                                    <label>Type</label>
+                                    <select class="form-control" @bind="interactionType">
+                                        <option value="Call">Call</option>
+                                        <option value="Email">Email</option>
+                                        <option value="Meeting">Meeting</option>
+                                        <option value="SMS">SMS</option>
+                                        <option value="Note">Note</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Subject</label>
+                                    <input class="form-control" @bind="interactionSubject" placeholder="Short description" />
+                                </div>
+                                <div class="form-group">
+                                    <label>Notes</label>
+                                    <textarea class="form-control" rows="3" @bind="interactionNotes" placeholder="Details of the interaction"></textarea>
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn-cancel" @onclick="ToggleInteractionForm">Cancel</button>
+                                    <button class="btn-save" @onclick="SaveInteraction" disabled="@isSavingInteraction">
+                                        @if (isSavingInteraction)
+                                        {
+                                            <span class="spinner-small"></span>
+                                        }
+                                        Save Interaction
+                                    </button>
+                                </div>
+                            </div>
+                        }
 
                         <div class="card-header mt-3">
                             <h3>Invoice History</h3>
@@ -532,7 +570,9 @@
     private bool isInvoicesLoading = true;
 
     private bool isSaving = false;
+    private bool isSavingInteraction = false;
     private bool showArchiveModal = false;
+    private bool showInteractionForm = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
 
@@ -541,6 +581,10 @@
     private int currentUserId => AuthService.CurrentUserId ?? 1;
 
     private List<Invoice> customerInvoices = new();
+
+    private string interactionType = "Note";
+    private string interactionSubject = string.Empty;
+    private string interactionNotes = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -714,11 +758,77 @@
         }
     }
 
+    private async Task SaveInteraction()
+    {
+        if (customer == null)
+        {
+            return;
+        }
+
+        if (!AuthService.IsSalesRep() && !AuthService.IsAdmin())
+        {
+            errorMessage = "You don't have permission to log interactions";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(interactionNotes) && string.IsNullOrWhiteSpace(interactionSubject))
+        {
+            errorMessage = "Please enter a subject or notes for the interaction";
+            return;
+        }
+
+        try
+        {
+            isSavingInteraction = true;
+            StateHasChanged();
+
+            bool success = false;
+            await Task.Run(() =>
+            {
+                success = CustomerService.LogInteraction(
+                    customer.CustomerId,
+                    currentUserId,
+                    interactionType,
+                    interactionSubject,
+                    interactionNotes);
+            });
+
+            if (success)
+            {
+                successMessage = "Interaction logged successfully";
+                errorMessage = string.Empty;
+                ToggleInteractionForm();
+            }
+            else
+            {
+                errorMessage = "Failed to log interaction. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error logging interaction: {ex.Message}";
+            Console.WriteLine($"SaveInteraction Error: {ex.Message}\n{ex.StackTrace}");
+        }
+        finally
+        {
+            isSavingInteraction = false;
+            StateHasChanged();
+        }
+    }
+
     private void SendEmail()
     {
         if (customer != null && !string.IsNullOrEmpty(customer.Email))
         {
             Navigation.NavigateTo($"mailto:{customer.Email}");
+        }
+    }
+
+    private void CallCustomer()
+    {
+        if (customer != null && !string.IsNullOrWhiteSpace(customer.Phone))
+        {
+            Navigation.NavigateTo($"tel:{customer.Phone}");
         }
     }
 
@@ -732,6 +842,17 @@
         }
 
         showArchiveModal = true;
+    }
+
+    private void ToggleInteractionForm()
+    {
+        showInteractionForm = !showInteractionForm;
+        if (!showInteractionForm)
+        {
+            interactionType = "Note";
+            interactionSubject = string.Empty;
+            interactionNotes = string.Empty;
+        }
     }
 
     private void CloseArchiveModal()

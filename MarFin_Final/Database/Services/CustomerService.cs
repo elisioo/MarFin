@@ -560,6 +560,38 @@ namespace MarFin_Final.Data
             }
         }
 
+        public bool LogInteraction(int customerId, int userId, string interactionType, string subject, string notes)
+        {
+            try
+            {
+                using (SqlConnection conn = DBConnection.GetConnection())
+                {
+                    conn.Open();
+                    string query = @"INSERT INTO tbl_Interactions (customer_id, user_id, interaction_type, interaction_date, duration_minutes, subject, notes) ";
+                    query += @"VALUES (@CustomerId, @UserId, @InteractionType, @InteractionDate, @DurationMinutes, @Subject, @Notes)";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@CustomerId", customerId);
+                        cmd.Parameters.AddWithValue("@UserId", userId);
+                        cmd.Parameters.AddWithValue("@InteractionType", interactionType);
+                        cmd.Parameters.AddWithValue("@InteractionDate", DateTime.Now);
+                        cmd.Parameters.AddWithValue("@DurationMinutes", DBNull.Value);
+                        cmd.Parameters.AddWithValue("@Subject", string.IsNullOrWhiteSpace(subject) ? (object)DBNull.Value : subject);
+                        cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(notes) ? (object)DBNull.Value : notes);
+
+                        int result = cmd.ExecuteNonQuery();
+                        return result > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error logging interaction: " + ex.Message);
+                return false;
+            }
+        }
+
         // Get customer count
         public int GetCustomerCount()
         {

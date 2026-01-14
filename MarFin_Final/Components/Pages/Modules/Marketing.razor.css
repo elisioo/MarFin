@@ -489,9 +489,9 @@
         color: #d97706;
     }
 
-    .action-link.danger:hover {
-        color: #b45309;
-    }
+        .action-link.danger:hover {
+            color: #b45309;
+        }
 
     .action-link.restore {
         color: #059669;
@@ -520,7 +520,7 @@
     background: white;
     border-radius: 16px;
     width: 100%;
-    max-width: 700px;
+    max-width: 900px;
     max-height: 90vh;
     overflow: hidden;
     display: flex;
@@ -551,6 +551,14 @@
         font-weight: 600;
         margin: 0;
         color: #1a1a1a;
+    }
+
+    .modal-title small {
+        display: block;
+        font-size: 13px;
+        font-weight: 400;
+        color: #6b7280;
+        margin-top: 4px;
     }
 
 .user-icon {
@@ -589,6 +597,11 @@
 
     .btn-cancel:hover {
         background-color: #f8f9fa;
+    }
+
+    .btn-cancel:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
 
 .btn-save {
@@ -632,6 +645,27 @@
         background-color: #d97706;
     }
 
+.btn-secondary {
+    background-color: #6b7280;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+    .btn-secondary:hover:not(:disabled) {
+        background-color: #4b5563;
+    }
+
+    .btn-secondary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
 .modal-body {
     padding: 2rem;
     overflow-y: auto;
@@ -648,6 +682,129 @@
 .text-muted {
     color: #666;
     font-size: 14px;
+}
+
+/* NEW MODERN WIZARD PROGRESS BAR */
+.wizard-progress-container {
+    padding: 2rem 2rem 1.5rem;
+    background-color: #fafbfc;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.wizard-steps-new {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.wizard-step-new {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    flex: 1;
+}
+
+.step-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #e5e7eb;
+    border: 3px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    color: #9ca3af;
+    z-index: 2;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.wizard-step-new.active .step-circle {
+    background-color: #0A1828;
+    border-color: #0A1828;
+    color: white;
+    box-shadow: 0 0 0 4px rgba(10, 24, 40, 0.1);
+}
+
+.wizard-step-new.completed .step-circle {
+    background-color: #0A1828;
+    border-color: #0A1828;
+    color: white;
+}
+
+.step-connector {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    right: -50%;
+    height: 3px;
+    background-color: #e5e7eb;
+    z-index: 1;
+    transition: background-color 0.3s ease;
+}
+
+.wizard-step-new:last-child .step-connector {
+    display: none;
+}
+
+.step-connector.completed {
+    background-color: #0A1828;
+}
+
+.step-label {
+    margin-top: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    text-align: center;
+    transition: color 0.3s ease;
+}
+
+.wizard-step-new.active .step-label {
+    color: #0A1828;
+    font-weight: 600;
+}
+
+.wizard-step-new.completed .step-label {
+    color: #0A1828;
+}
+
+/* Wizard step content */
+.wizard-step-content {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Wizard footer */
+.wizard-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #e5e7eb;
+    background-color: #fafbfc;
+}
+
+.wizard-footer-left,
+.wizard-footer-right {
+    display: flex;
+    gap: 0.75rem;
 }
 
 /* Form Styles */
@@ -677,9 +834,9 @@
     font-size: 16px;
     font-weight: 600;
     color: #1a1a1a;
-    margin: 1.5rem 0 1rem 0;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e5e7eb;
+    margin: 0 0 1.5rem 0;
+    padding: 0;
+    border: none;
 }
 
 .form-control {
@@ -696,6 +853,7 @@
 
     .form-control:focus {
         border-color: #0A1828;
+        box-shadow: 0 0 0 3px rgba(10, 24, 40, 0.1);
     }
 
     .form-control::placeholder {
@@ -710,6 +868,54 @@ textarea.form-control {
 select.form-control {
     cursor: pointer;
 }
+
+/* Email Preview */
+.email-preview {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    background-color: #fafbfc;
+    min-height: 150px;
+    font-size: 14px;
+}
+
+.email-preview-body {
+    margin-top: 0.75rem;
+    color: #1a1a1a;
+    line-height: 1.6;
+}
+
+/* Review Grid */
+.review-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.review-section {
+    background-color: #fafbfc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+    .review-section h5 {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin: 0 0 1rem 0;
+    }
+
+    .review-section p {
+        font-size: 14px;
+        color: #374151;
+        margin: 0.5rem 0;
+    }
+
+        .review-section p strong {
+            color: #1a1a1a;
+            font-weight: 600;
+        }
 
 /* View Toggle */
 .view-toggle {
@@ -1000,7 +1206,81 @@ select.form-control {
         overflow-x: auto;
     }
 
-    .campaigns-table table {
-        min-width: 800px;
+        .campaigns-table table {
+            min-width: 800px;
+        }
+
+    .wizard-steps-new {
+        flex-wrap: wrap;
+        gap: 1.5rem 0;
     }
+
+    .wizard-step-new {
+        flex: 0 0 50%;
+    }
+
+        .wizard-step-new:nth-child(2) .step-connector,
+        .wizard-step-new:nth-child(4) .step-connector {
+            display: none;
+        }
+
+    .step-connector {
+        right: calc(-50% + 24px);
+    }
+}
+
+@media (max-width: 640px) {
+    .modal-content {
+        max-width: 95%;
+        margin: 1rem;
+    }
+
+    .modal-header {
+        padding: 1rem 1.5rem;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .wizard-progress-container {
+        padding: 1.5rem 1rem;
+    }
+
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+
+    .step-label {
+        font-size: 12px;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-cancel,
+    .btn-save {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .wizard-footer {
+        padding: 1rem 1.5rem;
+    }
+
+    .wizard-footer-left,
+    .wizard-footer-right {
+        flex-direction: column;
+        width: 100%;
+    }
+
+        .wizard-footer-left button,
+        .wizard-footer-right button {
+            width: 100%;
+            justify-content: center;
+        }
 }

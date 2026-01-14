@@ -52,7 +52,9 @@ namespace MarFin_Final
             builder.Services.AddScoped<RoleService>();
             builder.Services.AddScoped<UserService>();
             builder.Services.AddScoped<CustomerService>();
+            builder.Services.AddScoped<CustomerSegmentService>();
             builder.Services.AddScoped<DashboardService>();
+            builder.Services.AddScoped<EmailService>();
             builder.Services.AddSingleton<RemoteDatabaseService>();
             builder.Services.AddScoped<LocalDatabaseService>();
             builder.Services.AddScoped<AutoSyncService>();
