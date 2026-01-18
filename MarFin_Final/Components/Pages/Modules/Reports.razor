@@ -11,109 +11,10 @@
 @using Microsoft.Maui.Storage
 @using Microsoft.Maui.ApplicationModel
 @using System.IO
+@using System.Text
 
 @inject InvoiceService InvoiceService
-
-@code {
-    private ReportService reportService = new ReportService();
-    private bool isLoading = true;
-    private string errorMessage = "";
-
-    protected override async Task OnInitializedAsync()
-    {
-        if (!AuthService.IsAuthenticated)
-        {
-            Navigation.NavigateTo("/login", true);
-            return;
-        }
-
-        if (!AuthService.HasPermission(RolePermissions.Permissions.ViewReports))
-        {
-            Navigation.NavigateTo("/dashboard", true);
-            return;
-        }
-
-        await LoadReportData();
-    }
-
-    private async Task LoadReportData()
-    {
-        try
-        {
-            isLoading = true;
-            errorMessage = "";
-
-            // Load revenue data
-            revenueData = await reportService.GetRevenueByMonthAsync(startDate, endDate);
-
-            // Load campaign performance
-            campaignPerformance = await reportService.GetCampaignPerformanceAsync(startDate, endDate);
-
-            // Load top customers
-            topCustomers = await reportService.GetTopCustomersAsync(startDate, endDate);
-
-            // Load sales opportunities (summary + detailed rows)
-            salesOpportunities = await reportService.GetSalesOpportunitiesAsync(startDate, endDate);
-            salesOpportunityDetails = await reportService.GetSalesOpportunityDetailsAsync(startDate, endDate);
-
-            // Load customer segments
-            customerSegments = await reportService.GetCustomerSegmentsAsync(startDate, endDate);
-
-            // Load revenue sources
-            revenueSources = await reportService.GetRevenueBySourceAsync(startDate, endDate);
-
-            // Load invoices for invoice reports
-            invoices = await InvoiceService.GetInvoicesByDateRangeAsync(startDate, endDate);
-
-            _revenueChartRendered = false;
-            isLoading = false;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error loading report data: {ex.Message}";
-            isLoading = false;
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!isLoading && revenueData.Any() && !_revenueChartRendered)
-        {
-            await RenderRevenueChartAsync();
-            _revenueChartRendered = true;
-        }
-    }
-
-    private async Task RenderRevenueChartAsync()
-    {
-        var labels = revenueData
-            .Select(r => new DateTime(r.Year, r.Month, 1).ToString("MMM"))
-            .ToArray();
-
-        var incomeData = revenueData.Select(r => (double)r.Income).ToArray();
-        var expenseData = revenueData.Select(r => (double)r.Expense).ToArray();
-
-        await JS.InvokeVoidAsync(
-            "chartJsInterop.createBarChart",
-            "revenueByMonthChart",
-            labels,
-            new object[]
-            {
-                new
-                {
-                    label = "Income",
-                    data = incomeData,
-                    backgroundColor = "#10b981"
-                },
-                new
-                {
-                    label = "Expenses",
-                    data = expenseData,
-                    backgroundColor = "#ef4444"
-                }
-            });
-    }
-}
+@inject ReportService ReportService
 
 <div class="reports-container">
     <div class="reports-header">
@@ -1097,10 +998,41 @@
                 }
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" @onclick="CloseReportModal">Close</button>
-                <button class="btn-primary" @onclick="DownloadReportPdfFromModal">
-                    <i class="bi bi-download"></i> Download as PDF
+                <button class="modal-btn modal-btn-secondary" @onclick="CloseReportModal">
+                    <span>Close</span>
                 </button>
+
+                <div class="dropdown-filter">
+                    <button class="modal-btn modal-btn-primary export-toggle" @onclick="ToggleExportMenu">
+                        <i class="bi bi-download"></i>
+                        <span>Export</span>
+                        <i class="bi bi-chevron-down ms-1"></i>
+                    </button>
+
+                    @if (showExportMenu)
+                    {
+                        <div class="dropdown-menu show dropdown-menu-end export-dropdown-menu">
+                            <button type="button" @onclick="DownloadReportPdfFromModal">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                                <div class="dropdown-text">
+                                    <div class="dropdown-title">Download PDF</div>
+                                    <div class="dropdown-description">Best for printing and sharing</div>
+                                </div>
+                            </button>
+
+                            @if (CanExportCsv())
+                            {
+                                <button type="button" @onclick="DownloadReportCsvFromModal">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                                    <div class="dropdown-text">
+                                        <div class="dropdown-title">Download CSV</div>
+                                        <div class="dropdown-description">Open in Excel or Google Sheets</div>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>
@@ -1109,23 +1041,41 @@
 @code {
     private PdfExportService pdfExportService = new PdfExportService();
 
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
     private string selectedFilter = "thisMonth";
     private DateTime startDate = DateTime.Now.AddDays(-30);
     private DateTime endDate = DateTime.Now;
 
     private string? activeCardMenu;
     private bool showViewModal;
-    private string viewModalType = "";
-    private string viewModalTitle = "";
+    private string viewModalType = string.Empty;
+    private string viewModalTitle = string.Empty;
 
     private bool showReportModal;
-    private string reportModalType = "";
-    private string reportModalTitle = "";
+    private string reportModalType = string.Empty;
+    private string reportModalTitle = string.Empty;
 
-    private string pdfDownloadStatus = "";
+    private bool showExportMenu = false;
+
+    private string pdfDownloadStatus = string.Empty;
     private System.Threading.Timer? pdfStatusTimer;
 
     private List<Invoice> invoices = new();
+
+    private List<ReportService.RevenueData> revenueData = new();
+    private ReportService.CampaignPerformanceData? campaignPerformance;
+    private List<ReportService.TopCustomerData> topCustomers = new();
+    private ReportService.SalesOpportunitiesData? salesOpportunities;
+    private List<ReportService.SalesOpportunityDetailData> salesOpportunityDetails = new();
+    private List<ReportService.CustomerSegmentData> customerSegments = new();
+    private List<ReportService.RevenueSourceData> revenueSources = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReportData();
+    }
 
     private void SetFilter(string filter)
     {
@@ -1148,18 +1098,32 @@
         }
     }
 
-    private void ClosePdfStatus()
+    private async Task LoadReportData()
     {
-        pdfDownloadStatus = string.Empty;
-        pdfStatusTimer?.Dispose();
-        pdfStatusTimer = null;
-        StateHasChanged();
-    }
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
 
-    private string GetMonthName(int month)
-    {
-        var months = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-        return months[month % 12];
+            revenueData = await ReportService.GetRevenueByMonthAsync(startDate, endDate);
+            campaignPerformance = await ReportService.GetCampaignPerformanceAsync(startDate, endDate);
+            topCustomers = await ReportService.GetTopCustomersAsync(startDate, endDate);
+            salesOpportunities = await ReportService.GetSalesOpportunitiesAsync(startDate, endDate);
+            salesOpportunityDetails = await ReportService.GetSalesOpportunityDetailsAsync(startDate, endDate);
+            customerSegments = await ReportService.GetCustomerSegmentsAsync(startDate, endDate);
+            revenueSources = await ReportService.GetRevenueBySourceAsync(startDate, endDate);
+
+            invoices = await InvoiceService.GetInvoicesByDateRangeAsync(startDate, endDate);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load report data: {ex.Message}";
+            Console.WriteLine($"[Reports] Error loading report data: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void ToggleCardMenu(string cardKey)
@@ -1204,14 +1168,421 @@
         reportModalTitle = string.Empty;
     }
 
+    private void ToggleExportMenu()
+    {
+        showExportMenu = !showExportMenu;
+    }
+
     private async Task DownloadReportPdfFromModal()
     {
+        showExportMenu = false;
+
         if (string.IsNullOrEmpty(reportModalType))
         {
             return;
         }
 
         await GenerateReport(reportModalType);
+    }
+
+    private async Task DownloadReportCsvFromModal()
+    {
+        showExportMenu = false;
+
+        if (string.IsNullOrEmpty(reportModalType))
+        {
+            return;
+        }
+
+        var sb = new StringBuilder();
+
+        switch (reportModalType)
+        {
+            case "invoice":
+                if (invoices == null || !invoices.Any())
+                {
+                    return;
+                }
+
+                sb.AppendLine("InvoiceNumber,Date,Customer,Status,DueDate,Total");
+
+                foreach (var inv in invoices.OrderByDescending(i => i.InvoiceDate))
+                {
+                    var status = inv.IsOverdue && !string.Equals(inv.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase)
+                        ? "Overdue"
+                        : (inv.PaymentStatus ?? "Pending");
+
+                    var customerDisplay = string.IsNullOrEmpty(inv.CustomerCompany)
+                        ? inv.CustomerName
+                        : inv.CustomerCompany;
+
+                    sb.AppendLine(string.Join(",", new[]
+                    {
+                        EscapeCsv(inv.InvoiceNumber ?? "N/A"),
+                        EscapeCsv(inv.InvoiceDate.ToString("yyyy-MM-dd")),
+                        EscapeCsv(customerDisplay ?? "Unknown"),
+                        EscapeCsv(status),
+                        EscapeCsv(inv.DueDate.ToString("yyyy-MM-dd")),
+                        EscapeCsv((inv.TotalAmount ?? 0m).ToString("0.00", CultureInfo.InvariantCulture))
+                    }));
+                }
+                break;
+
+            case "financial":
+                if (revenueData == null || !revenueData.Any())
+                {
+                    return;
+                }
+
+                sb.AppendLine("Month,Income,Expenses,NetProfit");
+
+                foreach (var r in revenueData.OrderBy(x => x.Year).ThenBy(x => x.Month))
+                {
+                    var monthName = new DateTime(r.Year, r.Month, 1).ToString("yyyy-MM");
+                    var profit = r.Income - r.Expense;
+
+                    sb.AppendLine(string.Join(",", new[]
+                    {
+                        EscapeCsv(monthName),
+                        EscapeCsv(r.Income.ToString("0.00", CultureInfo.InvariantCulture)),
+                        EscapeCsv(r.Expense.ToString("0.00", CultureInfo.InvariantCulture)),
+                        EscapeCsv(profit.ToString("0.00", CultureInfo.InvariantCulture))
+                    }));
+                }
+                break;
+
+            case "customer":
+                if ((topCustomers == null || !topCustomers.Any()) && (customerSegments == null || !customerSegments.Any()))
+                {
+                    return;
+                }
+
+                if (topCustomers != null && topCustomers.Any())
+                {
+                    sb.AppendLine("Top Customers");
+                    sb.AppendLine("Rank,Customer,TotalAmount,Transactions");
+
+                    foreach (var c in topCustomers)
+                    {
+                        sb.AppendLine(string.Join(",", new[]
+                        {
+                            EscapeCsv(c.Rank.ToString(CultureInfo.InvariantCulture)),
+                            EscapeCsv(c.Name),
+                            EscapeCsv(c.Amount.ToString("0.00", CultureInfo.InvariantCulture)),
+                            EscapeCsv(c.Transactions.ToString(CultureInfo.InvariantCulture))
+                        }));
+                    }
+
+                    sb.AppendLine();
+                }
+
+                if (customerSegments != null && customerSegments.Any())
+                {
+                    sb.AppendLine("Customer Segments");
+                    sb.AppendLine("Segment,CustomerCount,Percentage");
+
+                    foreach (var s in customerSegments)
+                    {
+                        sb.AppendLine(string.Join(",", new[]
+                        {
+                            EscapeCsv(s.Name),
+                            EscapeCsv(s.Count.ToString(CultureInfo.InvariantCulture)),
+                            EscapeCsv(s.Percentage.ToString("0.00", CultureInfo.InvariantCulture))
+                        }));
+                    }
+                }
+                break;
+
+            case "campaign":
+                if (campaignPerformance == null)
+                {
+                    return;
+                }
+
+                sb.AppendLine("Metric,Value");
+                sb.AppendLine(string.Join(",", new[] { "Email Open Rate", EscapeCsv(campaignPerformance.OpenRate.ToString("0.00", CultureInfo.InvariantCulture)) }));
+                sb.AppendLine(string.Join(",", new[] { "Click-Through Rate", EscapeCsv(campaignPerformance.ClickRate.ToString("0.00", CultureInfo.InvariantCulture)) }));
+                sb.AppendLine(string.Join(",", new[] { "Conversion Rate", EscapeCsv(campaignPerformance.ConversionRate.ToString("0.00", CultureInfo.InvariantCulture)) }));
+                sb.AppendLine(string.Join(",", new[] { "ROI", EscapeCsv(campaignPerformance.ROI.ToString("0.00", CultureInfo.InvariantCulture)) }));
+                break;
+
+            case "sales":
+                if (salesOpportunities == null && (salesOpportunityDetails == null || !salesOpportunityDetails.Any()))
+                {
+                    return;
+                }
+
+                if (salesOpportunities != null)
+                {
+                    sb.AppendLine("Sales Summary");
+                    sb.AppendLine("TotalOpportunities,Active,Won,Lost,TotalPipelineValue,WinRate");
+
+                    var totalOpps = salesOpportunityDetails?.Count ?? 0;
+
+                    sb.AppendLine(string.Join(",", new[]
+                    {
+                        EscapeCsv(totalOpps.ToString(CultureInfo.InvariantCulture)),
+                        EscapeCsv(salesOpportunities.Active.ToString(CultureInfo.InvariantCulture)),
+                        EscapeCsv(salesOpportunities.Won.ToString(CultureInfo.InvariantCulture)),
+                        EscapeCsv(salesOpportunities.Lost.ToString(CultureInfo.InvariantCulture)),
+                        EscapeCsv(salesOpportunities.TotalPipelineValue.ToString("0.00", CultureInfo.InvariantCulture)),
+                        EscapeCsv(salesOpportunities.WinRate.ToString("0.00", CultureInfo.InvariantCulture))
+                    }));
+
+                    sb.AppendLine();
+                }
+
+                if (salesOpportunityDetails != null && salesOpportunityDetails.Any())
+                {
+                    sb.AppendLine("Opportunity Details");
+                    sb.AppendLine("Opportunity,Company,Stage,EstimatedRevenue,Probability,WeightedRevenue,Owner,EstimatedCloseDate");
+
+                    foreach (var opp in salesOpportunityDetails)
+                    {
+                        sb.AppendLine(string.Join(",", new[]
+                        {
+                            EscapeCsv(opp.OpportunityName),
+                            EscapeCsv(opp.CompanyName),
+                            EscapeCsv(opp.StageName),
+                            EscapeCsv(opp.DealValue.ToString("0.00", CultureInfo.InvariantCulture)),
+                            EscapeCsv(opp.Probability.ToString(CultureInfo.InvariantCulture)),
+                            EscapeCsv(opp.WeightedValue.ToString("0.00", CultureInfo.InvariantCulture)),
+                            EscapeCsv(opp.OwnerName),
+                            EscapeCsv(opp.ExpectedCloseDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty)
+                        }));
+                    }
+                }
+                break;
+
+            case "all":
+                var hasAnyData = false;
+
+                // Financial section
+                if (revenueData != null && revenueData.Any())
+                {
+                    hasAnyData = true;
+                    sb.AppendLine("Financial Performance");
+                    sb.AppendLine("Month,Income,Expenses,NetProfit");
+
+                    foreach (var r in revenueData.OrderBy(x => x.Year).ThenBy(x => x.Month))
+                    {
+                        var monthName = new DateTime(r.Year, r.Month, 1).ToString("yyyy-MM");
+                        var profit = r.Income - r.Expense;
+
+                        sb.AppendLine(string.Join(",", new[]
+                        {
+                            EscapeCsv(monthName),
+                            EscapeCsv(r.Income.ToString("0.00", CultureInfo.InvariantCulture)),
+                            EscapeCsv(r.Expense.ToString("0.00", CultureInfo.InvariantCulture)),
+                            EscapeCsv(profit.ToString("0.00", CultureInfo.InvariantCulture))
+                        }));
+                    }
+
+                    sb.AppendLine();
+                }
+
+                if (revenueSources != null && revenueSources.Any())
+                {
+                    hasAnyData = true;
+                    sb.AppendLine("Revenue by Source");
+                    sb.AppendLine("Source,Amount,Percentage");
+
+                    foreach (var s in revenueSources)
+                    {
+                        sb.AppendLine(string.Join(",", new[]
+                        {
+                            EscapeCsv(s.Name ?? "Unknown"),
+                            EscapeCsv(s.Amount.ToString("0.00", CultureInfo.InvariantCulture)),
+                            EscapeCsv(s.Percentage.ToString("0.00", CultureInfo.InvariantCulture))
+                        }));
+                    }
+
+                    sb.AppendLine();
+                }
+
+                // Campaign performance
+                if (campaignPerformance != null)
+                {
+                    hasAnyData = true;
+                    sb.AppendLine("Campaign Performance");
+                    sb.AppendLine("Metric,Value");
+                    sb.AppendLine(string.Join(",", new[] { "Email Open Rate", EscapeCsv(campaignPerformance.OpenRate.ToString("0.00", CultureInfo.InvariantCulture)) }));
+                    sb.AppendLine(string.Join(",", new[] { "Click-Through Rate", EscapeCsv(campaignPerformance.ClickRate.ToString("0.00", CultureInfo.InvariantCulture)) }));
+                    sb.AppendLine(string.Join(",", new[] { "Conversion Rate", EscapeCsv(campaignPerformance.ConversionRate.ToString("0.00", CultureInfo.InvariantCulture)) }));
+                    sb.AppendLine(string.Join(",", new[] { "ROI", EscapeCsv(campaignPerformance.ROI.ToString("0.00", CultureInfo.InvariantCulture)) }));
+                    sb.AppendLine();
+                }
+
+                // Sales pipeline
+                if (salesOpportunities != null || (salesOpportunityDetails != null && salesOpportunityDetails.Any()))
+                {
+                    hasAnyData = true;
+
+                    if (salesOpportunities != null)
+                    {
+                        sb.AppendLine("Sales Summary");
+                        sb.AppendLine("TotalOpportunities,Active,Won,Lost,TotalPipelineValue,WinRate");
+
+                        var totalOpps = salesOpportunityDetails?.Count ?? 0;
+
+                        sb.AppendLine(string.Join(",", new[]
+                        {
+                            EscapeCsv(totalOpps.ToString(CultureInfo.InvariantCulture)),
+                            EscapeCsv(salesOpportunities.Active.ToString(CultureInfo.InvariantCulture)),
+                            EscapeCsv(salesOpportunities.Won.ToString(CultureInfo.InvariantCulture)),
+                            EscapeCsv(salesOpportunities.Lost.ToString(CultureInfo.InvariantCulture)),
+                            EscapeCsv(salesOpportunities.TotalPipelineValue.ToString("0.00", CultureInfo.InvariantCulture)),
+                            EscapeCsv(salesOpportunities.WinRate.ToString("0.00", CultureInfo.InvariantCulture))
+                        }));
+
+                        sb.AppendLine();
+                    }
+
+                    if (salesOpportunityDetails != null && salesOpportunityDetails.Any())
+                    {
+                        sb.AppendLine("Opportunity Details");
+                        sb.AppendLine("Opportunity,Company,Stage,EstimatedRevenue,Probability,WeightedRevenue,Owner,EstimatedCloseDate");
+
+                        foreach (var opp in salesOpportunityDetails)
+                        {
+                            sb.AppendLine(string.Join(",", new[]
+                            {
+                                EscapeCsv(opp.OpportunityName),
+                                EscapeCsv(opp.CompanyName),
+                                EscapeCsv(opp.StageName),
+                                EscapeCsv(opp.DealValue.ToString("0.00", CultureInfo.InvariantCulture)),
+                                EscapeCsv(opp.Probability.ToString(CultureInfo.InvariantCulture)),
+                                EscapeCsv(opp.WeightedValue.ToString("0.00", CultureInfo.InvariantCulture)),
+                                EscapeCsv(opp.OwnerName),
+                                EscapeCsv(opp.ExpectedCloseDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty)
+                            }));
+                        }
+
+                        sb.AppendLine();
+                    }
+                }
+
+                // Customer analytics
+                if ((topCustomers != null && topCustomers.Any()) || (customerSegments != null && customerSegments.Any()))
+                {
+                    hasAnyData = true;
+
+                    if (topCustomers != null && topCustomers.Any())
+                    {
+                        sb.AppendLine("Top Customers");
+                        sb.AppendLine("Rank,Customer,TotalAmount,Transactions");
+
+                        foreach (var c in topCustomers)
+                        {
+                            sb.AppendLine(string.Join(",", new[]
+                            {
+                                EscapeCsv(c.Rank.ToString(CultureInfo.InvariantCulture)),
+                                EscapeCsv(c.Name),
+                                EscapeCsv(c.Amount.ToString("0.00", CultureInfo.InvariantCulture)),
+                                EscapeCsv(c.Transactions.ToString(CultureInfo.InvariantCulture))
+                            }));
+                        }
+
+                        sb.AppendLine();
+                    }
+
+                    if (customerSegments != null && customerSegments.Any())
+                    {
+                        sb.AppendLine("Customer Segments");
+                        sb.AppendLine("Segment,CustomerCount,Percentage");
+
+                        foreach (var s in customerSegments)
+                        {
+                            sb.AppendLine(string.Join(",", new[]
+                            {
+                                EscapeCsv(s.Name),
+                                EscapeCsv(s.Count.ToString(CultureInfo.InvariantCulture)),
+                                EscapeCsv(s.Percentage.ToString("0.00", CultureInfo.InvariantCulture))
+                            }));
+                        }
+
+                        sb.AppendLine();
+                    }
+                }
+
+                // Invoice summary
+                if (invoices != null && invoices.Any())
+                {
+                    hasAnyData = true;
+
+                    sb.AppendLine("Invoice Summary");
+                    sb.AppendLine("InvoiceNumber,Date,Customer,Status,DueDate,Total");
+
+                    foreach (var inv in invoices.OrderByDescending(i => i.InvoiceDate))
+                    {
+                        var status = inv.IsOverdue && !string.Equals(inv.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase)
+                            ? "Overdue"
+                            : (inv.PaymentStatus ?? "Pending");
+
+                        var customerDisplay = string.IsNullOrEmpty(inv.CustomerCompany)
+                            ? inv.CustomerName
+                            : inv.CustomerCompany;
+
+                        sb.AppendLine(string.Join(",", new[]
+                        {
+                            EscapeCsv(inv.InvoiceNumber ?? "N/A"),
+                            EscapeCsv(inv.InvoiceDate.ToString("yyyy-MM-dd")),
+                            EscapeCsv(customerDisplay ?? "Unknown"),
+                            EscapeCsv(status),
+                            EscapeCsv(inv.DueDate.ToString("yyyy-MM-dd")),
+                            EscapeCsv((inv.TotalAmount ?? 0m).ToString("0.00", CultureInfo.InvariantCulture))
+                        }));
+                    }
+                }
+
+                if (!hasAnyData)
+                {
+                    return;
+                }
+
+                break;
+
+            default:
+                return;
+        }
+
+        var fileName = $"MarFin_{reportModalType}_Report_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+        await JS.InvokeVoidAsync("downloadCsv", fileName, sb.ToString());
+    }
+
+    private static string EscapeCsv(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        if (value.Contains('"') || value.Contains(',') || value.Contains('\n') || value.Contains('\r'))
+        {
+            value = value.Replace("\"", "\"\"");
+            return $"\"{value}\"";
+        }
+
+        return value;
+    }
+
+    private bool CanExportCsv()
+    {
+        if (string.IsNullOrEmpty(reportModalType))
+        {
+            return false;
+        }
+
+        switch (reportModalType)
+        {
+            case "invoice":
+            case "financial":
+            case "customer":
+            case "campaign":
+            case "sales":
+            case "all":
+                return true;
+            default:
+                return false;
+        }
     }
 
     private async Task GenerateReport(string reportType)
@@ -1369,13 +1740,11 @@
         pdfStatusTimer?.Dispose();
     }
 
-    // Data properties
-    private bool _revenueChartRendered;
-    private List<ReportService.RevenueData> revenueData = new();
-    private ReportService.CampaignPerformanceData? campaignPerformance;
-    private List<ReportService.TopCustomerData> topCustomers = new();
-    private ReportService.SalesOpportunitiesData? salesOpportunities;
-    private List<ReportService.SalesOpportunityDetailData> salesOpportunityDetails = new();
-    private List<ReportService.CustomerSegmentData> customerSegments = new();
-    private List<ReportService.RevenueSourceData> revenueSources = new();
+    private void ClosePdfStatus()
+    {
+        pdfDownloadStatus = string.Empty;
+        pdfStatusTimer?.Dispose();
+        pdfStatusTimer = null;
+        StateHasChanged();
+    }
 }

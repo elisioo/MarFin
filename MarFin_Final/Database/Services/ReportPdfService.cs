@@ -30,7 +30,10 @@ public static class ReportPdfService
         {
             container.Page(page =>
             {
-                page.Size(PageSizes.A4);
+                // Use landscape orientation for the combined "all" report to better fit wide analytics tables
+                page.Size(reportType.Equals("all", StringComparison.OrdinalIgnoreCase)
+                    ? PageSizes.A4.Landscape()
+                    : PageSizes.A4);
                 page.Margin(40);
                 page.PageColor(Colors.White);
                 page.DefaultTextStyle(x => x.FontSize(11).FontFamily("Segoe UI"));
@@ -107,7 +110,7 @@ public static class ReportPdfService
     List<ReportService.TopCustomerData>? topCustomers,
     List<ReportService.CustomerSegmentData>? segments)
     {
-        column.Item().Text("Comprehensive Analytics Report").FontSize(18).Bold().LetterSpacing(20);
+        column.Item().Text("Comprehensive Analytics Report").FontSize(18).Bold();
 
         // Call each individual section in sequence
         GenerateFinancialReport(column, revenueData, revenueSources);

@@ -58,6 +58,7 @@ namespace MarFin_Final
             builder.Services.AddSingleton<RemoteDatabaseService>();
             builder.Services.AddScoped<LocalDatabaseService>();
             builder.Services.AddScoped<AutoSyncService>();
+            builder.Services.AddScoped<ReportService>();
 
             builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlServer(connectionString));

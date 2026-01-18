@@ -2,6 +2,8 @@
 @inject NavigationManager Navigation
 @inject AuthService AuthService
 @inject CustomerService CustomerService
+@inject CustomerSegmentService CustomerSegmentService
+@inject IJSRuntime JS
 @using MarFin_Final.Data
 @using MarFin_Final.Database.Services
 @using MarFin_Final.Models
@@ -68,44 +70,52 @@
                     </button>
                 }
 
-                @if (!showArchivedView)
+                @if (AuthService.IsAdmin() || AuthService.IsMarketing())
                 {
-                    <div class="filter-group" @onclick:stopPropagation>
-                        <button class="btn-secondary" @onclick="ToggleStatusFilter" @onclick:stopPropagation>
-                            <span><i class="bi bi-funnel"></i></span>
-                            Filter by
-                            @if (!string.IsNullOrEmpty(statusFilter))
-                            {
-                                <span class="filter-badge">@statusFilter</span>
-                            }
+                    @if (filteredCustomers.Any())
+                    {
+                        <button class="btn-secondary" @onclick="ShowExportCsvConfirmation">
+                            <span><i class="bi bi-file-earmark-spreadsheet"></i></span>
+                            Export CSV
                         </button>
-                        @if (showStatusFilter)
-                        {
-                            <div class="dropdown-menu show" @onclick:stopPropagation>
-                                <button type="button" class="@(string.IsNullOrEmpty(statusFilter) ? "active" : "")"
-                                        @onclick="() => ApplyStatusFilter(string.Empty)">
-                                    All Statuses
-                                </button>
-                                <button type="button" class="@(statusFilter == "Lead" ? "active" : "")"
-                                        @onclick='() => ApplyStatusFilter("Lead")'>
-                                    Lead
-                                </button>
-                                <button type="button" class="@(statusFilter == "Active" ? "active" : "")"
-                                        @onclick='() => ApplyStatusFilter("Active")'>
-                                    Active
-                                </button>
-                                <button type="button" class="@(statusFilter == "Inactive" ? "active" : "")"
-                                        @onclick='() => ApplyStatusFilter("Inactive")'>
-                                    Inactive
-                                </button>
-                                <button type="button" class="@(statusFilter == "Dormant" ? "active" : "")"
-                                        @onclick='() => ApplyStatusFilter("Dormant")'>
-                                    Dormant
-                                </button>
-                            </div>
-                        }
-                    </div>
+                    }
                 }
+
+                <div class="filter-group" @onclick:stopPropagation>
+                    <button class="btn-secondary" @onclick="ToggleStatusFilter" @onclick:stopPropagation>
+                        <span><i class="bi bi-funnel"></i></span>
+                        Filter by
+                        @if (!string.IsNullOrEmpty(statusFilter))
+                        {
+                            <span class="filter-badge">@statusFilter</span>
+                        }
+                    </button>
+                    @if (showStatusFilter)
+                    {
+                        <div class="dropdown-menu show" @onclick:stopPropagation>
+                            <button type="button" class="@(string.IsNullOrEmpty(statusFilter) ? "active" : "")"
+                                    @onclick="() => ApplyStatusFilter(string.Empty)">
+                                All Statuses
+                            </button>
+                            <button type="button" class="@(statusFilter == "Lead" ? "active" : "")"
+                                    @onclick='() => ApplyStatusFilter("Lead")'>
+                                Lead
+                            </button>
+                            <button type="button" class="@(statusFilter == "Active" ? "active" : "")"
+                                    @onclick='() => ApplyStatusFilter("Active")'>
+                                Active
+                            </button>
+                            <button type="button" class="@(statusFilter == "Inactive" ? "active" : "")"
+                                    @onclick='() => ApplyStatusFilter("Inactive")'>
+                                Inactive
+                            </button>
+                            <button type="button" class="@(statusFilter == "Dormant" ? "active" : "")"
+                                    @onclick='() => ApplyStatusFilter("Dormant")'>
+                                Dormant
+                            </button>
+                        </div>
+                    }
+                </div>
 
                 <div class="search-box">
                     <span class="search-icon"><i class="bi bi-search"></i></span>
@@ -121,6 +131,7 @@
                         <button class="search-clear" @onclick="ClearSearch">×</button>
                     }
                 </div>
+            </div>
             </div>
         </div>
 
@@ -317,7 +328,8 @@
                 </div>
             </div>
         }
-    </div>
+  
+    
 
     @* Add/Edit Customer Modal *@
     @if (showModal)
@@ -535,6 +547,23 @@
                     </div>
 
                     <div class="form-group">
+                        <label>Customer Segment</label>
+                        <select class="form-control" @bind="editingCustomer.SegmentId">
+                            @if (segments == null || !segments.Any())
+                            {
+                                <option value="1">Default</option>
+                            }
+                            else
+                            {
+                                @foreach (var segment in segments)
+                                {
+                                    <option value="@segment.SegmentId">@segment.SegmentName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <label>Customer Status</label>
                         <select class="form-control" @bind="editingCustomer.CustomerStatus">
                             <option value="Lead">Lead</option>
@@ -602,6 +631,52 @@
         </div>
     }
 
+    @* Export CSV Confirmation Modal *@
+    @if (showExportCsvModal)
+    {
+        <div class="modal-overlay" @onclick="CloseExportCsvModal">
+            <div class="modal-content confirm-modal" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span class="user-icon"><i class="bi bi-file-earmark-spreadsheet"></i></span>
+                        <h2>Export Customers to CSV</h2>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        You are about to export
+                        <strong>@(filteredCustomers?.Count ?? 0)</strong>
+                        customer@(filteredCustomers != null && filteredCustomers.Count == 1 ? string.Empty : "s")
+                        based on the current filters and search.
+                    </p>
+
+                    <p class="text-muted">The following details will be included for each customer:</p>
+                    <ul class="export-details-list">
+                        <li>Full Name</li>
+                        <li>Company</li>
+                        <li>Segment</li>
+                        <li>Email</li>
+                        <li>Phone</li>
+                        <li>Status</li>
+                        <li>Total Revenue</li>
+                        <li>Created Date</li>
+                    </ul>
+
+                    <div class="modal-footer">
+                        <button class="btn-cancel" @onclick="CloseExportCsvModal" disabled="@isExportingCsv">Cancel</button>
+                        <button class="btn-save" @onclick="ConfirmExportCsv" disabled="@isExportingCsv">
+                            @if (isExportingCsv)
+                            {
+                                <span class="spinner-small"></span>
+                            }
+                            Export CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     @* Confirmation Modal *@
     @if (showConfirmModal)
     {
@@ -636,15 +711,20 @@
     private CustomerService.PaginatedResult<Customer> customersResult = new CustomerService.PaginatedResult<Customer>();
 
     private List<Models.Customer> filteredCustomers = new();
+    private List<CustomerSegment> segments = new();
+
     private string searchTerm = string.Empty;
     private string statusFilter = string.Empty;
     private bool showStatusFilter = false;
     private bool showModal = false;
     private bool showArchiveModal = false;
     private bool showConfirmModal = false;
+    private bool showExportCsvModal = false;
     private bool isEditMode = false;
     private bool isLoading = true;
     private bool isSaving = false;
+    private bool isExportingCsv = false;
+
     private Customer editingCustomer = new();
     private Customer? customerToArchive = null;
     private string errorMessage = string.Empty;
@@ -712,6 +792,15 @@
         {
             Navigation.NavigateTo("/login", true);
             return;
+        }
+
+        try
+        {
+            segments = await Task.Run(() => CustomerSegmentService.GetAllSegments());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading customer segments: {ex}");
         }
 
         await LoadCustomers();
@@ -813,6 +902,99 @@
         statusFilter = string.Empty;
         currentPage = 1;
         await LoadCustomers();
+    }
+
+    private void ShowExportCsvConfirmation()
+    {
+        if (filteredCustomers == null || !filteredCustomers.Any())
+        {
+            return;
+        }
+
+        showExportCsvModal = true;
+    }
+
+    private void CloseExportCsvModal()
+    {
+        if (isExportingCsv)
+        {
+            return;
+        }
+
+        showExportCsvModal = false;
+    }
+
+    private async Task ConfirmExportCsv()
+    {
+        if (isExportingCsv)
+        {
+            return;
+        }
+
+        try
+        {
+            isExportingCsv = true;
+            StateHasChanged();
+
+            await ExportCustomersToCsv();
+        }
+        finally
+        {
+            isExportingCsv = false;
+            showExportCsvModal = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportCustomersToCsv()
+    {
+        try
+        {
+            if (filteredCustomers == null || !filteredCustomers.Any())
+            {
+                return;
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("FullName,Company,Segment,Email,Phone,Status,TotalRevenue,CreatedDate");
+
+            foreach (var customer in filteredCustomers.OrderByDescending(c => c.CreatedDate))
+            {
+                sb.AppendLine(string.Join(",", new[]
+                {
+                    EscapeCsv(customer.FullName),
+                    EscapeCsv(string.IsNullOrEmpty(customer.CompanyName) ? string.Empty : customer.CompanyName),
+                    EscapeCsv(string.IsNullOrEmpty(customer.CustomerSegment) ? string.Empty : customer.CustomerSegment),
+                    EscapeCsv(customer.Email ?? string.Empty),
+                    EscapeCsv(customer.Phone ?? string.Empty),
+                    EscapeCsv(customer.CustomerStatus ?? string.Empty),
+                    EscapeCsv(customer.TotalRevenue.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)),
+                    EscapeCsv(customer.CreatedDate.ToString("yyyy-MM-dd"))
+                }));
+            }
+
+            var fileName = $"MarFin_Customers_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            await JS.InvokeVoidAsync("downloadCsv", fileName, sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error exporting customers: {ex.Message}";
+            Console.WriteLine($"ExportCustomersToCsv Error: {ex}");
+        }
+    }
+
+    private static string EscapeCsv(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+
+        if (value.Contains('"') || value.Contains(',') || value.Contains('\n') || value.Contains('\r'))
+        {
+            value = value.Replace("\"", "\"\"");
+            return $"\"{value}\"";
+        }
+
+        return value;
     }
 
     private void OpenAddModal()
