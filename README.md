@@ -49,7 +49,7 @@ A cross-platform CRM (Customer Relationship Management) application built with *
 | Database | Microsoft SQL Server (LocalDB for dev, cloud for production) |
 | PDF Export | QuestPDF |
 | Spreadsheet | ClosedXML |
-| Target Platforms | Windows 10+, Android 7+, iOS 15+, macOS 12+ |
+| Target Platforms | Windows 10+|
 
 ---
 
