@@ -95,6 +95,7 @@
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("revenue", "Revenue by Month")'>View</button>
                                 <button type="button" @onclick='() => OpenReportModal("financial", "Financial Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => QuickExportCsv("financial")'>Export as CSV</button>
                             </div>
                         }
                     </div>
@@ -133,6 +134,7 @@
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("campaign", "Campaign Performance")'>View</button>
                                 <button type="button" @onclick='() => OpenReportModal("campaign", "Campaign Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => QuickExportCsv("campaign")'>Export as CSV</button>
                             </div>
                         }
                     </div>
@@ -198,6 +200,7 @@
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("topCustomers", "Top Customers")'>View</button>
                                 <button type="button" @onclick='() => OpenReportModal("customer", "Customer Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => QuickExportCsv("customer")'>Export as CSV</button>
                             </div>
                         }
                     </div>
@@ -206,7 +209,7 @@
                     <div class="customer-list">
                         @foreach (var customer in topCustomers)
                         {
-                            <div class="customer-item">
+                            <div class="customer-item" @onclick='() => GoToCustomer(customer.CustomerId)'>
                                 <span class="customer-rank">@customer.Rank.</span>
                                 <span class="customer-name">@customer.Name</span>
                                 <span class="customer-amount">@customer.Amount</span>
@@ -234,6 +237,7 @@
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("sales", "Sales Opportunities")'>View</button>
                                 <button type="button" @onclick='() => OpenReportModal("sales", "Sales Pipeline Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => QuickExportCsv("sales")'>Export as CSV</button>
                             </div>
                         }
                     </div>
@@ -291,6 +295,7 @@
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("segments", "Customer Segments")'>View</button>
                                 <button type="button" @onclick='() => OpenReportModal("customer", "Customer Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => QuickExportCsv("customer")'>Export as CSV</button>
                             </div>
                         }
                     </div>
@@ -330,6 +335,7 @@
                             <div class="chart-action-menu">
                                 <button type="button" @onclick='() => OpenViewModal("sources", "Revenue by Source")'>View</button>
                                 <button type="button" @onclick='() => OpenReportModal("financial", "Financial Report")'>Export as PDF</button>
+                                <button type="button" @onclick='() => QuickExportCsv("financial")'>Export as CSV</button>
                             </div>
                         }
                     </div>
@@ -1077,6 +1083,14 @@
         await LoadReportData();
     }
 
+    private void GoToCustomer(int? customerId)
+    {
+        if (customerId.HasValue && customerId.Value > 0)
+        {
+            Navigation.NavigateTo($"/customer-details/{customerId.Value}");
+        }
+    }
+
     private void SetFilter(string filter)
     {
         selectedFilter = filter;
@@ -1550,6 +1564,17 @@
         await JS.InvokeVoidAsync("downloadCsv", fileName, sb.ToString());
     }
 
+    private async Task QuickExportCsv(string reportType)
+    {
+        if (string.IsNullOrEmpty(reportType))
+        {
+            return;
+        }
+
+        reportModalType = reportType;
+        await DownloadReportCsvFromModal();
+    }
+
     private static string EscapeCsv(string? value)
     {
         if (string.IsNullOrEmpty(value))
@@ -1740,7 +1765,7 @@
         pdfStatusTimer?.Dispose();
     }
 
-    private void ClosePdfStatus()
+    private void ClosePdfStatus()                                          
     {
         pdfDownloadStatus = string.Empty;
         pdfStatusTimer?.Dispose();

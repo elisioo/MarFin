@@ -26,14 +26,15 @@ namespace MarFin_Final.Database.Services
             {
                 await connection.OpenAsync();
 
-                // Get total customers
+                // Get total customers and new customers in the selected period
                 var customerCmd = new SqlCommand(@"
                     SELECT 
                         COUNT(*) as TotalCustomers,
-                        COUNT(CASE WHEN created_date >= @StartDate THEN 1 END) as NewCustomers
+                        COUNT(CASE WHEN created_date BETWEEN @StartDate AND @EndDate THEN 1 END) as NewCustomers
                     FROM tbl_Customers 
                     WHERE is_archived = 0", connection);
                 customerCmd.Parameters.AddWithValue("@StartDate", startDate);
+                customerCmd.Parameters.AddWithValue("@EndDate", endDate);
 
                 using (var reader = await customerCmd.ExecuteReaderAsync())
                 {
@@ -44,14 +45,15 @@ namespace MarFin_Final.Database.Services
                     }
                 }
 
-                // Get revenue stats
+                // Get revenue stats for the selected period
                 var revenueCmd = new SqlCommand(@"
                     SELECT 
-                        ISNULL(SUM(total_amount), 0) as TotalRevenue,
-                        ISNULL(SUM(CASE WHEN invoice_date >= @StartDate THEN total_amount ELSE 0 END), 0) as PeriodRevenue
+                        ISNULL(SUM(CASE WHEN invoice_date BETWEEN @StartDate AND @EndDate THEN total_amount ELSE 0 END), 0) as TotalRevenue,
+                        ISNULL(SUM(CASE WHEN invoice_date BETWEEN @StartDate AND @EndDate THEN total_amount ELSE 0 END), 0) as PeriodRevenue
                     FROM tbl_Invoices 
                     WHERE is_archived = 0 AND payment_status = 'Paid'", connection);
                 revenueCmd.Parameters.AddWithValue("@StartDate", startDate);
+                revenueCmd.Parameters.AddWithValue("@EndDate", endDate);
 
                 using (var reader = await revenueCmd.ExecuteReaderAsync())
                 {
@@ -62,13 +64,16 @@ namespace MarFin_Final.Database.Services
                     }
                 }
 
-                // Get campaign stats
+                // Get campaign stats within the selected period
                 var campaignCmd = new SqlCommand(@"
                     SELECT 
                         COUNT(*) as TotalCampaigns,
                         COUNT(CASE WHEN campaign_status = 'Active' THEN 1 END) as ActiveCampaigns
                     FROM tbl_Campaigns 
-                    WHERE is_archived = 0", connection);
+                    WHERE is_archived = 0
+                      AND created_date BETWEEN @StartDate AND @EndDate", connection);
+                campaignCmd.Parameters.AddWithValue("@StartDate", startDate);
+                campaignCmd.Parameters.AddWithValue("@EndDate", endDate);
 
                 using (var reader = await campaignCmd.ExecuteReaderAsync())
                 {
@@ -79,13 +84,16 @@ namespace MarFin_Final.Database.Services
                     }
                 }
 
-                // Get conversion rate
+                // Get conversion rate for customers created in the selected period
                 var conversionCmd = new SqlCommand(@"
                     SELECT 
                         COUNT(DISTINCT customer_id) as TotalCustomers,
                         COUNT(DISTINCT CASE WHEN total_revenue > 0 THEN customer_id END) as ConvertedCustomers
                     FROM tbl_Customers 
-                    WHERE is_archived = 0", connection);
+                    WHERE is_archived = 0
+                      AND created_date BETWEEN @StartDate AND @EndDate", connection);
+                conversionCmd.Parameters.AddWithValue("@StartDate", startDate);
+                conversionCmd.Parameters.AddWithValue("@EndDate", endDate);
 
                 using (var reader = await conversionCmd.ExecuteReaderAsync())
                 {
@@ -163,7 +171,7 @@ namespace MarFin_Final.Database.Services
                     WHERE is_archived = 0", connection);
                 stats.TotalCustomers = (int)await customerCmd.ExecuteScalarAsync();
 
-                // Get campaign stats
+                // Get campaign stats (filtered by selected date range)
                 var campaignCmd = new SqlCommand(@"
                     SELECT 
                         COUNT(CASE WHEN campaign_status = 'Active' THEN 1 END) as ActiveCampaigns,
@@ -173,7 +181,10 @@ namespace MarFin_Final.Database.Services
                         ISNULL(SUM(total_converted), 0) as TotalConverted
                     FROM tbl_Campaigns 
                     WHERE is_archived = 0 
-                    AND campaign_status = 'Active'", connection);
+                    AND campaign_status = 'Active'
+                    AND created_date BETWEEN @StartDate AND @EndDate", connection);
+                campaignCmd.Parameters.AddWithValue("@StartDate", startDate);
+                campaignCmd.Parameters.AddWithValue("@EndDate", endDate);
 
                 using (var reader = await campaignCmd.ExecuteReaderAsync())
                 {
@@ -383,12 +394,13 @@ namespace MarFin_Final.Database.Services
                 var cmd = new SqlCommand(@"
                     SELECT TOP (@Limit)
                         i.invoice_number,
-                        c.company_name,
+                        COALESCE(c.company_name, c.first_name + ' ' + c.last_name, 'N/A') as CustomerName,
                         i.total_amount,
                         i.invoice_date,
-                        i.payment_status
+                        i.payment_status,
+                        i.customer_id
                     FROM tbl_Invoices i
-                    INNER JOIN tbl_Customers c ON i.customer_id = c.customer_id
+                    LEFT JOIN tbl_Customers c ON i.customer_id = c.customer_id
                     WHERE i.is_archived = 0
                     ORDER BY i.created_date DESC", connection);
                 cmd.Parameters.AddWithValue("@Limit", limit);
@@ -403,7 +415,8 @@ namespace MarFin_Final.Database.Services
                             Customer = reader.IsDBNull(1) ? "N/A" : reader.GetString(1),
                             Amount = $"₱{reader.GetDecimal(2):N2}",
                             Date = reader.GetDateTime(3).ToString("MMM dd"),
-                            Status = reader.GetString(4)
+                            Status = reader.GetString(4),
+                            CustomerId = reader.IsDBNull(5) ? (int?)null : reader.GetInt32(5)
                         });
                     }
                 }
@@ -790,6 +803,7 @@ namespace MarFin_Final.Database.Services
         public string Amount { get; set; }
         public string Date { get; set; }
         public string Status { get; set; }
+        public int? CustomerId { get; set; }
     }
 
     public class LineChartData

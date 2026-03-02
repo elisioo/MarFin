@@ -122,12 +122,13 @@ public class ReportService
                         ROW_NUMBER() OVER (ORDER BY SUM(i.total_amount) DESC) as Rank,
                         COALESCE(c.company_name, c.first_name + ' ' + c.last_name, 'Unknown Customer') as CustomerName,
                         SUM(i.total_amount) as TotalAmount,
-                        COUNT(*) as TransactionCount
+                        COUNT(*) as TransactionCount,
+                        c.customer_id
                     FROM tbl_Invoices i
                     LEFT JOIN tbl_Customers c ON i.customer_id = c.customer_id
                     WHERE i.created_date BETWEEN @StartDate AND @EndDate
                       AND i.is_archived = 0
-                    GROUP BY COALESCE(c.company_name, c.first_name + ' ' + c.last_name, 'Unknown Customer')
+                    GROUP BY c.customer_id, COALESCE(c.company_name, c.first_name + ' ' + c.last_name, 'Unknown Customer')
                     ORDER BY TotalAmount DESC";
 
                 using (var cmd = new SqlCommand(query, connection))
@@ -145,7 +146,8 @@ public class ReportService
                                 Rank = reader.GetInt32(0),
                                 Name = reader.GetString(1),
                                 Amount = reader.GetDecimal(2),
-                                Transactions = reader.GetInt32(3)
+                                Transactions = reader.GetInt32(3),
+                                CustomerId = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4)
                             });
                         }
                     }
@@ -408,6 +410,7 @@ public class ReportService
         public string Name { get; set; } = "";
         public decimal Amount { get; set; }
         public int Transactions { get; set; }
+        public int? CustomerId { get; set; }
     }
 
     public class SalesOpportunitiesData

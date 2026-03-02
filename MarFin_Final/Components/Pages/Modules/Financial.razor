@@ -361,7 +361,7 @@
                     <div class="invoice-summary">
                         <div class="summary-row"><span>Subtotal</span> <span>Php @((newInvoice.Subtotal ?? 0m).ToString("N2"))</span></div>
                         <div class="summary-row"><span>Tax (@(newInvoice.TaxRate ?? 0m)%)</span> <span>Php @((newInvoice.TaxAmount ?? 0m).ToString("N2"))</span></div>
-                        <div class="summary-row"><span>Discount</span> <span>-Php @((newInvoice.DiscountAmount ?? 0m).ToString("N2"))</span></div>
+                        <div class="summary-row"><span>Discount</span> <span>% @((newInvoice.DiscountAmount ?? 0m).ToString("N2"))</span></div>
                         <div class="summary-row total"><span>Total</span> <span>Php @((newInvoice.TotalAmount ?? 0m).ToString("N2"))</span></div>
                     </div>
                 </div>
@@ -651,6 +651,53 @@
         overdueCount = allInvoices.Count(i => i.IsOverdue);
     }
 
+    private bool CanEditInvoiceStatus(Invoice invoice)
+    {
+        // Only Admin and Finance roles can change status, and Paid invoices are locked
+        if (invoice.PaymentStatus == "Paid")
+        {
+            return false;
+        }
+
+        return AuthService.IsAdmin() || AuthService.IsFinance();
+    }
+
+    private async Task UpdateInvoiceStatus(Invoice invoice, ChangeEventArgs e)
+    {
+        if (!CanEditInvoiceStatus(invoice))
+        {
+            return;
+        }
+
+        var newStatus = e.Value?.ToString();
+
+        if (string.IsNullOrWhiteSpace(newStatus) || newStatus == invoice.PaymentStatus)
+        {
+            return;
+        }
+
+        invoice.PaymentStatus = newStatus;
+
+        try
+        {
+            var success = await InvoiceService.UpdateInvoiceAsync(invoice);
+            if (success)
+            {
+                ApplyFilters();
+                CalculateSummary();
+                successMessage = "Invoice status updated successfully.";
+            }
+            else
+            {
+                errorMessage = "Failed to update invoice status.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to update invoice status: {ex.Message}";
+        }
+    }
+
     private void ToggleSummaryCards()
     {
         showSummaryCards = !showSummaryCards;
@@ -675,6 +722,8 @@
                 DueDate = DateTime.Today.AddDays(30),
                 PaymentTerms = "Net 30",
                 TaxRate = 12.00m,
+                DiscountRate = 0m,
+                DiscountAmount = 0m,
                 PaymentStatus = "Draft",
                 LineItems = [new InvoiceItem
             {
@@ -897,9 +946,21 @@
     {
         newInvoice = await InvoiceService.GetInvoiceByIdAsync(invoice.InvoiceId) ?? new();
         selectedCustomer = await CustomerService.GetCustomerByIdAsync(newInvoice.CustomerId);
+
         customerSearchTerm = string.IsNullOrEmpty(selectedCustomer?.CompanyName)
             ? selectedCustomer?.FullName
             : selectedCustomer?.CompanyName;
+
+        var subtotal = newInvoice.Subtotal ?? 0m;
+        var discountAmount = newInvoice.DiscountAmount ?? 0m;
+        if (subtotal > 0m && discountAmount > 0m)
+        {
+            newInvoice.DiscountRate = Math.Round((discountAmount / subtotal) * 100m, 2);
+        }
+        else
+        {
+            newInvoice.DiscountRate = 0m;
+        }
 
         showViewModal = false;
         showInvoiceModal = true;

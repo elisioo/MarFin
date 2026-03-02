@@ -1,0 +1,394 @@
+@page "/audit-log"
+@using MarFin_Final.Database.Services
+@inject AuthService AuthService
+@inject AuditLogService AuditLogService
+@inject NavigationManager Navigation
+
+@if (isLoading)
+{
+    <div class="audit-loading">
+        <i class="bi bi-arrow-clockwise spin"></i>
+        <p>Loading audit log...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else
+{
+    <div class="audit-container">
+        <!-- Header -->
+        <div class="audit-header">
+            <div>
+                <h1><i class="bi bi-shield-lock-fill"></i> Audit Log</h1>
+                <p class="audit-subtitle">Complete record of all user activities across the system</p>
+            </div>
+            <button class="audit-refresh-btn" @onclick="LoadData">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+
+        <!-- Summary KPIs -->
+        @if (summary != null)
+        {
+            <div class="audit-kpi-row">
+                <div class="audit-kpi-card">
+                    <div class="audit-kpi-icon total"><i class="bi bi-list-ul"></i></div>
+                    <div class="audit-kpi-body">
+                        <p class="audit-kpi-label">Total Logs</p>
+                        <h2>@summary.TotalLogs.ToString("N0")</h2>
+                    </div>
+                </div>
+                <div class="audit-kpi-card">
+                    <div class="audit-kpi-icon today"><i class="bi bi-calendar-day"></i></div>
+                    <div class="audit-kpi-body">
+                        <p class="audit-kpi-label">Today</p>
+                        <h2>@summary.TodayLogs.ToString("N0")</h2>
+                    </div>
+                </div>
+                <div class="audit-kpi-card">
+                    <div class="audit-kpi-icon logins"><i class="bi bi-box-arrow-in-right"></i></div>
+                    <div class="audit-kpi-body">
+                        <p class="audit-kpi-label">Logins / Logouts</p>
+                        <h2>@summary.LoginCount.ToString("N0")</h2>
+                    </div>
+                </div>
+                <div class="audit-kpi-card">
+                    <div class="audit-kpi-icon changes"><i class="bi bi-pencil-square"></i></div>
+                    <div class="audit-kpi-body">
+                        <p class="audit-kpi-label">Data Changes</p>
+                        <h2>@summary.DataChanges.ToString("N0")</h2>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Filters -->
+        <div class="audit-filters-card">
+            <div class="audit-filters">
+                <!-- Search -->
+                <div class="audit-filter-group">
+                    <label>Search</label>
+                    <div class="audit-search-wrap">
+                        <i class="bi bi-search"></i>
+                        <input type="text" placeholder="Name, email, activity..." class="audit-input"
+                               @bind="filter.SearchText" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+                    </div>
+                </div>
+
+                <!-- User -->
+                <div class="audit-filter-group">
+                    <label>User</label>
+                    <select class="audit-select" @bind="selectedUserId" @bind:after="OnFilterChanged">
+                        <option value="0">All Users</option>
+                        @foreach (var u in users)
+                        {
+                            <option value="@u.UserId">@u.FullName</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Action -->
+                <div class="audit-filter-group">
+                    <label>Action</label>
+                    <select class="audit-select" @bind="filter.Action" @bind:after="OnFilterChanged">
+                        <option value="All">All Actions</option>
+                        <option value="LOGIN">Login</option>
+                        <option value="LOGOUT">Logout</option>
+                        <option value="INSERT">Insert</option>
+                        <option value="UPDATE">Update</option>
+                        <option value="DELETE">Delete</option>
+                        <option value="ARCHIVE">Archive</option>
+                        <option value="RESTORE">Restore</option>
+                        <option value="SELECT">View</option>
+                    </select>
+                </div>
+
+                <!-- Date range -->
+                <div class="audit-filter-group">
+                    <label>From</label>
+                    <input type="date" class="audit-input" @bind="filter.StartDate" @bind:after="OnFilterChanged" />
+                </div>
+                <div class="audit-filter-group">
+                    <label>To</label>
+                    <input type="date" class="audit-input" @bind="filter.EndDate" @bind:after="OnFilterChanged" />
+                </div>
+
+                <button class="audit-clear-btn" @onclick="ClearFilters">
+                    <i class="bi bi-x-circle"></i> Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="audit-table-card">
+            <div class="audit-table-header-row">
+                <span class="audit-results-count">
+                    Showing @((filter.Page - 1) * filter.PageSize + 1)–@Math.Min(filter.Page * filter.PageSize, result?.TotalCount ?? 0)
+                    of @(result?.TotalCount.ToString("N0") ?? "0") entries
+                </span>
+            </div>
+
+            @if (result?.Entries.Any() == true)
+            {
+                <div class="audit-table-wrapper">
+                    <table class="audit-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Activity</th>
+                                <th>Table</th>
+                                <th>Record</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in result.Entries)
+                            {
+                                <tr class="audit-row @GetRowClass(entry.Action)" @onclick="() => ToggleDetails(entry.LogId)">
+                                    <td class="audit-cell-id">@entry.LogId</td>
+                                    <td class="audit-cell-date">
+                                        <span class="audit-date">@entry.CreatedDate.ToString("MMM dd, yyyy")</span>
+                                        <span class="audit-time">@entry.CreatedDate.ToString("hh:mm:ss tt")</span>
+                                    </td>
+                                    <td class="audit-cell-user">
+                                        <div class="audit-user-avatar">@entry.UserFullName.Substring(0, 1).ToUpper()</div>
+                                        <div class="audit-user-info">
+                                            <span class="audit-user-name">@entry.UserFullName</span>
+                                            <span class="audit-user-email">@entry.UserEmail</span>
+                                        </div>
+                                    </td>
+                                    <td><span class="audit-role-badge @entry.UserRole.ToLower().Replace(" ", "-")">@entry.UserRole</span></td>
+                                    <td class="audit-cell-activity">@FormatActivityType(entry.ActivityType)</td>
+                                    <td class="audit-cell-table">@FormatTableName(entry.TableName)</td>
+                                    <td class="audit-cell-record">@(entry.RecordId.HasValue ? $"#{entry.RecordId}" : "—")</td>
+                                    <td>
+                                        <span class="audit-action-badge @entry.Action.ToLower()">
+                                            <i class="bi @GetActionIcon(entry.Action)"></i> @entry.Action
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(entry.OldValues) || !string.IsNullOrEmpty(entry.NewValues))
+                                        {
+                                            <button class="audit-detail-btn">
+                                                <i class="bi @(expandedLogId == entry.LogId ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="audit-no-detail">—</span>
+                                        }
+                                    </td>
+                                </tr>
+                                @if (expandedLogId == entry.LogId && (!string.IsNullOrEmpty(entry.OldValues) || !string.IsNullOrEmpty(entry.NewValues)))
+                                {
+                                    <tr class="audit-detail-row">
+                                        <td colspan="9">
+                                            <div class="audit-detail-content">
+                                                @if (!string.IsNullOrEmpty(entry.OldValues))
+                                                {
+                                                    <div class="audit-values-block old">
+                                                        <h5><i class="bi bi-arrow-left-circle"></i> Before</h5>
+                                                        <pre>@entry.OldValues</pre>
+                                                    </div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(entry.NewValues))
+                                                {
+                                                    <div class="audit-values-block new">
+                                                        <h5><i class="bi bi-arrow-right-circle"></i> After</h5>
+                                                        <pre>@entry.NewValues</pre>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                @if (result.TotalPages > 1)
+                {
+                    <div class="audit-pagination">
+                        <button class="audit-page-btn" disabled="@(filter.Page <= 1)" @onclick="PrevPage">
+                            <i class="bi bi-chevron-left"></i> Prev
+                        </button>
+
+                        @for (int p = Math.Max(1, filter.Page - 2); p <= Math.Min(result.TotalPages, filter.Page + 2); p++)
+                        {
+                            var pageNum = p;
+                            <button class="audit-page-btn @(pageNum == filter.Page ? "active" : "")"
+                                    @onclick="() => GoToPage(pageNum)">@pageNum</button>
+                        }
+
+                        <button class="audit-page-btn" disabled="@(filter.Page >= result.TotalPages)" @onclick="NextPage">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </button>
+
+                        <span class="audit-page-info">Page @filter.Page of @result.TotalPages</span>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="audit-empty">
+                    <i class="bi bi-inbox"></i>
+                    <p>No audit log entries found for the selected filters.</p>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private string errorMessage = "";
+
+    private AuditLogFilter filter = new AuditLogFilter
+    {
+        StartDate = DateTime.Now.AddDays(-30),
+        EndDate = DateTime.Now,
+        Action = "All",
+        PageSize = 50
+    };
+
+    private AuditLogResult? result;
+    private AuditLogSummary? summary;
+    private List<UserOption> users = new();
+    private int selectedUserId = 0;
+    private long? expandedLogId;
+
+    private System.Threading.Timer? _searchDebounce;
+
+    private class UserOption
+    {
+        public int UserId { get; set; }
+        public string FullName { get; set; } = "";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated || !AuthService.IsAdmin())
+        {
+            Navigation.NavigateTo("/dashboard", true);
+            return;
+        }
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = "";
+        try
+        {
+            filter.UserId = selectedUserId > 0 ? selectedUserId : null;
+
+            var usersRaw = await AuditLogService.GetAllUsersAsync();
+            users = usersRaw.Select(u => new UserOption { UserId = u.UserId, FullName = u.FullName }).ToList();
+
+            var summaryTask = AuditLogService.GetSummaryAsync();
+            var logTask = AuditLogService.GetLogsAsync(filter);
+
+            await Task.WhenAll(summaryTask, logTask);
+            summary = summaryTask.Result;
+            result = logTask.Result;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading audit log: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnFilterChanged()
+    {
+        filter.Page = 1;
+        filter.UserId = selectedUserId > 0 ? selectedUserId : null;
+        await LoadData();
+    }
+
+    private void OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        _searchDebounce?.Dispose();
+        _searchDebounce = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                filter.Page = 1;
+                await LoadData();
+                StateHasChanged();
+            });
+        }, null, 400, System.Threading.Timeout.Infinite);
+    }
+
+    private async Task ClearFilters()
+    {
+        filter = new AuditLogFilter
+        {
+            StartDate = DateTime.Now.AddDays(-30),
+            EndDate = DateTime.Now,
+            Action = "All",
+            PageSize = 50
+        };
+        selectedUserId = 0;
+        await LoadData();
+    }
+
+    private async Task PrevPage() { filter.Page--; await LoadData(); }
+    private async Task NextPage() { filter.Page++; await LoadData(); }
+    private async Task GoToPage(int p) { filter.Page = p; await LoadData(); }
+
+    private void ToggleDetails(long logId)
+    {
+        expandedLogId = expandedLogId == logId ? null : logId;
+    }
+
+    // ── display helpers ──────────────────────────────────────────────────────
+
+    private static string GetRowClass(string action) => action.ToLower() switch
+    {
+        "delete" or "archive" => "row-danger",
+        "update"              => "row-warning",
+        "insert" or "restore" => "row-success",
+        "login" or "logout"   => "row-info",
+        _                     => ""
+    };
+
+    private static string GetActionIcon(string action) => action.ToLower() switch
+    {
+        "login"   => "bi-box-arrow-in-right",
+        "logout"  => "bi-box-arrow-right",
+        "insert"  => "bi-plus-circle",
+        "update"  => "bi-pencil",
+        "delete"  => "bi-trash",
+        "archive" => "bi-archive",
+        "restore" => "bi-arrow-counterclockwise",
+        "select"  => "bi-eye",
+        _         => "bi-activity"
+    };
+
+    private static string FormatActivityType(string actType) =>
+        actType.Replace("_", " ").Replace("USER ", "").ToLower() switch
+        {
+            "registration" => "User Registration",
+            "login"        => "Login",
+            "logout"       => "Logout",
+            var s          => System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(s)
+        };
+
+    private static string FormatTableName(string table) =>
+        table.Replace("tbl_", "").Replace("_", " ") is { Length: > 0 } s
+            ? System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(s.ToLower())
+            : "—";
+}

@@ -1,15 +1,28 @@
 ﻿@using MarFin_Final.Database.Services
 @inject AuthService AuthService
 
-<div class="nav-container @(isDarkMode ? "" : "light-theme")">
+<div class="nav-container @(isDarkMode ? "" : "light-theme") @(IsCollapsed ? "collapsed" : "")">
+    <!-- Logo Header -->
     <div class="nav-header">
-        <div class="logo-container">
-            <NavLink href="/">
-                <img src="@(isDarkMode ? "img/marfin_logo.png" : "img/logo_blacktxt.png")" alt="MarFin Logo" class="logo" />
-            </NavLink>
+        <div class="logo-card">
+            <div class="logo-avatar">
+                <NavLink href="/">
+                    <img src="@(isDarkMode ? "img/logo_only.png" : "img/logo_only.png")"
+                         alt="MarFin Logo"
+                         class="logo" />
+                </NavLink>
+            </div>
+            @if (!IsCollapsed)
+            {
+                <div class="logo-text">
+                    <span class="logo-title">MarFin</span>
+                    <span class="logo-subtitle">Marketing & Finance CRM</span>
+                </div>
+            }
         </div>
     </div>
 
+    <!-- Navigation Menu -->
     <nav class="nav-menu">
         <!-- MAIN Section -->
         @if (!IsCollapsed)
@@ -18,7 +31,8 @@
         }
 
         <!-- Home - Available to all -->
-        <button class="nav-btn @(IsActive("") ? "active" : "")" @onclick="@(() => NavigateTo(""))">
+        <button class="nav-btn @(IsActive("") ? "active" : "")"
+                @onclick="@(() => NavigateTo(""))">
             <i class="bi bi-house-door nav-icon"></i>
             @if (!IsCollapsed)
             {
@@ -27,7 +41,8 @@
         </button>
 
         <!-- Dashboard - Available to all (role-specific content) -->
-        <button class="nav-btn @(IsActive("dashboard") ? "active" : "")" @onclick="@(() => NavigateTo("dashboard"))">
+        <button class="nav-btn @(IsActive("dashboard") ? "active" : "")"
+                @onclick="@(() => NavigateTo("dashboard"))">
             <i class="bi bi-grid nav-icon"></i>
             @if (!IsCollapsed)
             {
@@ -51,7 +66,8 @@
         <!-- Sales Pipeline - Admin, Sales -->
         @if (AuthService.HasPermission(RolePermissions.Permissions.ViewSalesPipeline))
         {
-            <button class="nav-btn @(IsActive("sales-pipeline") ? "active" : "")" @onclick="@(() => NavigateTo("sales-pipeline"))">
+            <button class="nav-btn @(IsActive("sales-pipeline") ? "active" : "")"
+                    @onclick="@(() => NavigateTo("sales-pipeline"))">
                 <i class="bi bi-bar-chart-line nav-icon"></i>
                 @if (!IsCollapsed)
                 {
@@ -63,7 +79,8 @@
         <!-- Marketing - Admin, Marketing -->
         @if (AuthService.HasPermission(RolePermissions.Permissions.ViewMarketing))
         {
-            <button class="nav-btn @(IsActive("marketing") ? "active" : "")" @onclick="@(() => NavigateTo("marketing"))">
+            <button class="nav-btn @(IsActive("marketing") ? "active" : "")"
+                    @onclick="@(() => NavigateTo("marketing"))">
                 <i class="bi bi-megaphone nav-icon"></i>
                 @if (!IsCollapsed)
                 {
@@ -75,7 +92,8 @@
         <!-- Financial - Admin, Finance -->
         @if (AuthService.HasPermission(RolePermissions.Permissions.ViewFinance))
         {
-            <button class="nav-btn @(IsActive("financial") ? "active" : "")" @onclick="@(() => NavigateTo("financial"))">
+            <button class="nav-btn @(IsActive("financial") ? "active" : "")"
+                    @onclick="@(() => NavigateTo("financial"))">
                 <i class="bi bi-bank nav-icon"></i>
                 @if (!IsCollapsed)
                 {
@@ -84,18 +102,16 @@
             </button>
         }
 
-        <div class="nav-divider"></div>
-
         <!-- REPORTS Section -->
-        @if (!IsCollapsed && AuthService.HasPermission(RolePermissions.Permissions.ViewReports))
-        {
-            <div class="nav-section-title">REPORTS</div>
-        }
-
-        <!-- Reports - Available to all (role-specific content) -->
         @if (AuthService.HasPermission(RolePermissions.Permissions.ViewReports))
         {
-            <button class="nav-btn @(IsActive("reports") ? "active" : "")" @onclick="@(() => NavigateTo("reports"))">
+            @if (!IsCollapsed)
+            {
+                <div class="nav-section-title">REPORTS</div>
+            }
+
+            <button class="nav-btn @(IsActive("reports") ? "active" : "")"
+                    @onclick="@(() => NavigateTo("reports"))">
                 <i class="bi bi-graph-up-arrow nav-icon"></i>
                 @if (!IsCollapsed)
                 {
@@ -107,27 +123,39 @@
         <!-- Documents - Admin only -->
         @if (AuthService.HasPermission(RolePermissions.Permissions.ViewDocuments))
         {
-            <button class="nav-btn @(IsActive("documents") ? "active" : "")" @onclick="@(() => NavigateTo("documents"))">
+            <button class="nav-btn @(IsActive("documents") ? "active" : "")"
+                    @onclick="@(() => NavigateTo("documents"))">
                 <i class="bi bi-file-earmark-text nav-icon"></i>
                 @if (!IsCollapsed)
                 {
                     <span class="nav-text">Documents</span>
                 }
             </button>
+        }
 
-            <div class="nav-divider"></div>
+        <!-- Audit Log - Admin only -->
+        @if (AuthService.HasPermission(RolePermissions.Permissions.ViewAuditLog))
+        {
+            <button class="nav-btn @(IsActive("audit-log") ? "active" : "")"
+                    @onclick="@(() => NavigateTo("audit-log"))">
+                <i class="bi bi-shield-lock nav-icon"></i>
+                @if (!IsCollapsed)
+                {
+                    <span class="nav-text">Audit Log</span>
+                }
+            </button>
         }
 
         <!-- SETTINGS Section -->
-        @if (!IsCollapsed && AuthService.HasPermission(RolePermissions.Permissions.ViewSettings))
-        {
-            <div class="nav-section-title">SETTINGS</div>
-        }
-
-        <!-- Settings - Admin only -->
         @if (AuthService.HasPermission(RolePermissions.Permissions.ViewSettings))
         {
-            <button class="nav-btn @(IsActive("settings") ? "active" : "")" @onclick="@(() => NavigateTo("settings"))">
+            @if (!IsCollapsed)
+            {
+                <div class="nav-section-title">SETTINGS</div>
+            }
+
+            <button class="nav-btn @(IsActive("settings") ? "active" : "")"
+                    @onclick="@(() => NavigateTo("settings"))">
                 <i class="bi bi-gear nav-icon"></i>
                 @if (!IsCollapsed)
                 {
@@ -195,10 +223,7 @@
         AuthService.OnAuthStateChanged += OnAuthStateChanged;
     }
 
-    private void OnAuthStateChanged()
-    {
-        StateHasChanged();
-    }
+    private void OnAuthStateChanged() => StateHasChanged();
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
@@ -223,10 +248,7 @@
         return false;
     }
 
-    private void NavigateTo(string path)
-    {
-        NavigationManager.NavigateTo(path);
-    }
+    private void NavigateTo(string path) => NavigationManager.NavigateTo(path);
 
     private async Task ToggleTheme()
     {

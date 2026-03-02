@@ -23,6 +23,7 @@ namespace MarFin_Final.Database.Services
             public const string ViewSegments = "SEGMENTS";
             public const string ViewInteractions = "INTERACTIONS";
             public const string ViewOpportunities = "OPPORTUNITIES";
+            public const string ViewAuditLog = "AUDITLOG";
         }
 
         // Define role permissions mapping
@@ -43,7 +44,8 @@ namespace MarFin_Final.Database.Services
                 Permissions.ViewSettings,
                 Permissions.ViewSegments,
                 Permissions.ViewInteractions,
-                Permissions.ViewOpportunities
+                Permissions.ViewOpportunities,
+                Permissions.ViewAuditLog
             },
             ["Finance"] = new HashSet<string>
             {
@@ -104,7 +106,8 @@ namespace MarFin_Final.Database.Services
                 ["financial"] = Permissions.ViewFinance,
                 ["reports"] = Permissions.ViewReports,
                 ["documents"] = Permissions.ViewDocuments,
-                ["settings"] = Permissions.ViewSettings
+                ["settings"] = Permissions.ViewSettings,
+                ["audit-log"] = Permissions.ViewAuditLog
             };
 
             if (pagePermissionMap.TryGetValue(page.ToLower(), out var permission))

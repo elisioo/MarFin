@@ -289,6 +289,11 @@
     private bool _autoSyncEnabled;
     private int _autoSyncIntervalMinutes = 15;
 
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? InitialTab { get; set; }
+
+
     private bool AutoSyncEnabled
     {
         get => _autoSyncEnabled;
@@ -335,6 +340,11 @@
         // Load saved theme preference
         var savedTheme = GetSavedTheme();
         selectedTheme = savedTheme ?? "dark";
+
+        if (!string.IsNullOrEmpty(InitialTab))
+        {
+            activeTab = InitialTab;
+        }
 
         // Test connection on load
         await TestConnectionOnLoad();

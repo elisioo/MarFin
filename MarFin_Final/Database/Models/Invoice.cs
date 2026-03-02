@@ -44,6 +44,10 @@ namespace MarFin_Final.Models
         [Column("discount_amount", TypeName = "decimal(12, 2)")]
         public decimal? DiscountAmount { get; set; } = 0m;
 
+        // Percentage-based discount used in the UI; not stored directly in the database
+        [NotMapped]
+        public decimal? DiscountRate { get; set; } = 0m;
+
         [Column("total_amount", TypeName = "decimal(12, 2)")]
         public decimal? TotalAmount { get; set; } = 0m;
 

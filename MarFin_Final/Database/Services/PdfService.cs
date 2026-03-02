@@ -29,7 +29,7 @@ namespace MarFin_Final.Services
                                 {
                                     col.Item().Text("MarFin").FontSize(20).Bold().FontColor("#1a5fb4");
                                     col.Item().Text("123 Business Street");
-                                    col.Item().Text("Makati, Manila Philippines 1200");
+                                    col.Item().Text("Davao City, Davao Philippines 8000");
                                     col.Item().Text("contact@marfin.com");
                                     col.Item().Text("+63 912 345 6789");
                                 });
@@ -142,7 +142,7 @@ namespace MarFin_Final.Services
                             {
                                 col.Item().Text("PAYMENT INFORMATION").Bold().FontSize(14);
                                 col.Item().Text("Bank Name: BPI (Bank of the Philippine Islands)");
-                                col.Item().Text("Account Number: 1234-5678-9012-3456");
+                                col.Item().Text("Account Number: ****-****-****-3456");
                                 col.Item().Text("Account Name: MarFin Business Account");
                             });
 

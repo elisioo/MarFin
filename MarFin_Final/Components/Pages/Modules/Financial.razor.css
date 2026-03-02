@@ -371,6 +371,17 @@
     display: inline-block;
 }
 
+/* Dropdown version of the status badge */
+.status-dropdown {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding-right: 20px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
 .status-paid {
     background-color: #d1fae5;
     color: #10b981;

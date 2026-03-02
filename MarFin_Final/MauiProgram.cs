@@ -59,6 +59,7 @@ namespace MarFin_Final
             builder.Services.AddScoped<LocalDatabaseService>();
             builder.Services.AddScoped<AutoSyncService>();
             builder.Services.AddScoped<ReportService>();
+            builder.Services.AddScoped<AuditLogService>();
 
             builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlServer(connectionString));

@@ -77,34 +77,69 @@ else
         <div class="kpi-row">
             @if (AuthService.IsAdmin() && adminStats != null)
             {
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToReports("revenue")'>
                     <div class="kpi-icon revenue"><i class="bi bi-bank"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Total Revenue</p>
                         <h2>₱@adminStats.TotalRevenue.ToString("N0")</h2>
-                        <span class="kpi-change positive"><i class="bi bi-arrow-up"></i> ₱@adminStats.PeriodRevenue.ToString("N0") this period</span>
+                        @if (adminStats.PeriodRevenue > 0)
+                        {
+                            <span class="kpi-change positive">
+                                <i class="bi bi-arrow-up"></i> ₱@adminStats.PeriodRevenue.ToString("N0") this period
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="kpi-change negative">
+                                <i class="bi bi-info-circle"></i> No revenue data for this period
+                            </span>
+                        }
                     </div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToReports("conversion")'>
                     <div class="kpi-icon conversion"><i class="bi bi-percent"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Conversion Rate</p>
-                        <h2>@adminStats.ConversionRate.ToString("F1")%</h2>
-                        <span class="kpi-change positive"><i class="bi bi-arrow-up"></i> Success rate</span>
+                        @if (adminStats.NewCustomers > 0)
+                        {
+                            <h2>@adminStats.ConversionRate.ToString("F1")%</h2>
+                            <span class="kpi-change positive">
+                                <i class="bi bi-arrow-up"></i> Success rate
+                            </span>
+                        }
+                        else
+                        {
+                            <h2>-</h2>
+                            <span class="kpi-change negative">
+                                <i class="bi bi-info-circle"></i> No conversion data for this period
+                            </span>
+                        }
                     </div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToReports("campaigns")'>
                     <div class="kpi-icon active"><i class="bi bi-megaphone"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Active Campaigns</p>
-                        <h2>@adminStats.ActiveCampaigns</h2>
-                        <span class="kpi-change positive"><i class="bi bi-arrow-up"></i> of @adminStats.TotalCampaigns total</span>
+                        @if (adminStats.TotalCampaigns > 0)
+                        {
+                            <h2>@adminStats.ActiveCampaigns</h2>
+                            <span class="kpi-change positive">
+                                <i class="bi bi-arrow-up"></i> of @adminStats.TotalCampaigns total
+                            </span>
+                        }
+                        else
+                        {
+                            <h2>0</h2>
+                            <span class="kpi-change negative">
+                                <i class="bi bi-info-circle"></i> No campaign data for this period
+                            </span>
+                        }
                     </div>
                 </div>
             }
             else if (AuthService.IsFinance() && financeStats != null)
             {
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToReports("financial")'>
                     <div class="kpi-icon revenue"><i class="bi bi-currency-dollar"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Total Revenue</p>
@@ -112,7 +147,7 @@ else
                         <span class="kpi-change positive"><i class="bi bi-arrow-up"></i> Collected</span>
                     </div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToStatusView("Pending")'>
                     <div class="kpi-icon pending"><i class="bi bi-hourglass-split"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Pending Amount</p>
@@ -120,7 +155,7 @@ else
                         <span class="kpi-change negative"><i class="bi bi-exclamation-circle"></i> Awaiting payment</span>
                     </div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToFinancial()'>
                     <div class="kpi-icon invoices"><i class="bi bi-file-earmark"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Total Invoices</p>
@@ -131,7 +166,7 @@ else
             }
             else if (AuthService.IsMarketing() && marketingStats != null)
             {
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToReports("campaign")'>
                     <div class="kpi-icon active"><i class="bi bi-megaphone"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Active Campaigns</p>
@@ -139,7 +174,7 @@ else
                         <span class="kpi-change positive"><i class="bi bi-arrow-up"></i> Running</span>
                     </div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToReports("campaign")'>
                     <div class="kpi-icon engagement"><i class="bi bi-envelope-open"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Emails Sent</p>
@@ -147,7 +182,7 @@ else
                         <span class="kpi-change positive"><i class="bi bi-arrow-up"></i> This period</span>
                     </div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToReports("campaign")'>
                     <div class="kpi-icon conversion"><i class="bi bi-percent"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Open Rate</p>
@@ -158,7 +193,7 @@ else
             }
             else if (AuthService.IsSalesRep() && salesStats != null)
             {
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToSalesPipeline()'>
                     <div class="kpi-icon revenue"><i class="bi bi-currency-dollar"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Pipeline Value</p>
@@ -166,7 +201,7 @@ else
                         <span class="kpi-change positive"><i class="bi bi-arrow-up"></i> Total</span>
                     </div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToSalesPipeline()'>
                     <div class="kpi-icon conversion"><i class="bi bi-percent"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Win Rate</p>
@@ -174,7 +209,7 @@ else
                         <span class="kpi-change positive"><i class="bi bi-arrow-up"></i> Success</span>
                     </div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card clickable-card" @onclick='() => GoToSalesPipeline()'>
                     <div class="kpi-icon active"><i class="bi bi-bullseye"></i></div>
                     <div class="kpi-content">
                         <p class="kpi-label">Closed Deals</p>
@@ -186,7 +221,7 @@ else
         </div>
 
         <div class="charts-grid">
-            <div class="chart-card large">
+            <div class="chart-card large clickable-card" @onclick='() => GoToReports("revenue")'>
                 <div class="card-header"><h3>Revenue Trend</h3></div>
                 @if (monthlyRevenueData?.Any() == true)
                 {
@@ -200,7 +235,7 @@ else
                 }
             </div>
 
-            <div class="chart-card">
+            <div class="chart-card clickable-card" @onclick='() => GoToReports("sources")'>
                 <div class="card-header"><h3>Lead Sources</h3></div>
                 @if (leadSourcesData?.Any() == true)
                 {
@@ -214,7 +249,7 @@ else
                 }
             </div>
 
-            <div class="chart-card">
+            <div class="chart-card clickable-card" @onclick='() => GoToReports("segments")'>
                 <div class="card-header"><h3>Revenue by Segment</h3></div>
                 @if (revenueBySegmentData?.Any() == true)
                 {
@@ -230,7 +265,7 @@ else
 
             @if (AuthService.IsSalesRep())
             {
-                <div class="chart-card">
+                <div class="chart-card clickable-card" @onclick='() => GoToSalesPipeline()'>
                     <div class="card-header"><h3>Pipeline by Stage</h3></div>
                     @if (salesPipelineData?.Any() == true)
                     {
@@ -247,7 +282,7 @@ else
 
             @if (AuthService.IsMarketing())
             {
-                <div class="chart-card large">
+                <div class="chart-card large clickable-card" @onclick='() => GoToReports("campaign")'>
                     <div class="card-header"><h3>Campaign Performance</h3></div>
                     @if (campaignMetricsData?.Any() == true)
                     {
@@ -265,7 +300,7 @@ else
 
         @if (AuthService.IsAdmin() || AuthService.IsFinance())
         {
-            <div class="chart-card large" style="margin-top: 2rem;">
+            <div class="chart-card large clickable-card" style="margin-top: 2rem;" @onclick='() => GoToReports("financial")'>
                 <div class="card-header"><h3>Financial Overview - OHLC</h3></div>
                 @if (financialData?.Any() == true)
                 {
@@ -322,10 +357,12 @@ else
                         {
                             <div class="table-row">
                                 <span class="transaction-invoice">@transaction.Invoice</span>
-                                <span class="transaction-customer">@transaction.Customer</span>
+                                <span class="transaction-customer clickable-card"
+                                      @onclick='() => GoToCustomer(transaction.CustomerId)'>@transaction.Customer</span>
                                 <span class="transaction-amount">@transaction.Amount</span>
                                 <span class="transaction-date">@transaction.Date</span>
-                                <span class="transaction-status @transaction.Status.ToLower()">@transaction.Status</span>
+                                <span class="transaction-status @transaction.Status.ToLower() clickable-card"
+                                      @onclick='() => GoToStatusView(transaction.Status)'>@transaction.Status</span>
                             </div>
                         }
                     </div>
@@ -649,4 +686,39 @@ else
     }
 
     private async Task ManualRefresh() => await RefreshDashboard();
+
+    private void GoToCustomer(int? customerId)
+    {
+        if (customerId.HasValue && customerId.Value > 0)
+        {
+            Navigation.NavigateTo($"/customer-details/{customerId.Value}");
+        }
+    }
+
+    private void GoToFinancial(string? status = null)
+    {
+        var url = "/financial";
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            url += $"?status={status}";
+        }
+        Navigation.NavigateTo(url);
+    }
+
+    private void GoToStatusView(string status) => GoToFinancial(status);
+
+    private void GoToReports(string? focus = null)
+    {
+        var url = "/reports";
+        if (!string.IsNullOrWhiteSpace(focus))
+        {
+            url += $"?focus={focus}";
+        }
+        Navigation.NavigateTo(url);
+    }
+
+    private void GoToSalesPipeline()
+    {
+        Navigation.NavigateTo("/sales-pipeline");
+    }
 }
